@@ -298,9 +298,9 @@
                                                 title="Password must be at least 8 characters long, include at least one letter, one number, and one of these special characters: @, #, $, %, *."
                                                 required
                                             >
-                                            <p id="passwordError" class="text-red-500 text-sm hidden">Password does not meet the requirements.</p>
+                                            <p id="passwordError" class="text-red-500 text-sm hidden">Password must be at least 8 characters long, include at least one letter, one number, and one special character (@, #, $, %, *).</p>
                                         </div>
-                                        
+
                                         <!-- Confirm New Password -->
                                         <div class="mb-4">
                                             <label for="confirmPassword" class="block text-sm font-medium text-gray-700">Confirm New Password</label>
@@ -314,19 +314,13 @@
                                             >
                                             <p id="confirmPasswordError" class="text-red-500 text-sm hidden">Passwords do not match.</p>
                                         </div>
-                                        
+
                                         <!-- Submit Button -->
-                                        <div class="mt-4">
-                                            <button
-                                                type="submit"
-                                                id="submitBtn"
-                                                class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                                disabled
-                                            >
-                                                Submit
-                                            </button>
+                                        <div class="flex justify-center mb-4">
+                                            <button type="submit"
+                                                class="w-52 bg-blue-500 text-white py-3 rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500">Update
+                                                Password</button>
                                         </div>
-                                        
                                     </form>
 
                                     <!-- Back Button -->

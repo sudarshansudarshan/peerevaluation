@@ -251,21 +251,32 @@
                                         {% csrf_token %}
                                         <!-- New Password -->
                                         <div class="mb-4">
-                                            <label for="password" class="block text-sm font-medium text-gray-700">New
-                                                Password</label>
-                                            <input type="password" id="password" name="password"
+                                            <label for="password" class="block text-sm font-medium text-gray-700">New Password</label>
+                                            <input
+                                                type="password"
+                                                id="password"
+                                                name="password"
                                                 class="mt-2 p-3 w-full border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                                placeholder="Enter your new password">
+                                                placeholder="Enter your new password"
+                                                pattern="^(?=.*[A-Za-z])(?=.*\d)(?=.*[@#$%*])[A-Za-z\d@#$%*]{8,}$"
+                                                title="Password must be at least 8 characters long, include at least one letter, one number, and one of these special characters: @, #, $, %, *."
+                                                required
+                                            >
+                                            <p id="passwordError" class="text-red-500 text-sm hidden">Password must be at least 8 characters long, include at least one letter, one number, and one special character (@, #, $, %, *).</p>
                                         </div>
 
                                         <!-- Confirm New Password -->
                                         <div class="mb-4">
-                                            <label for="confirmPassword"
-                                                class="block text-sm font-medium text-gray-700">Confirm New
-                                                Password</label>
-                                            <input type="password" id="confirmPassword" name="confirmPassword"
+                                            <label for="confirmPassword" class="block text-sm font-medium text-gray-700">Confirm New Password</label>
+                                            <input
+                                                type="password"
+                                                id="confirmPassword"
+                                                name="confirmPassword"
                                                 class="mt-2 p-3 w-full border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                                placeholder="Confirm your new password">
+                                                placeholder="Confirm your new password"
+                                                required
+                                            >
+                                            <p id="confirmPasswordError" class="text-red-500 text-sm hidden">Passwords do not match.</p>
                                         </div>
 
                                         <!-- Submit Button -->

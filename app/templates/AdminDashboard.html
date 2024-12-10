@@ -286,7 +286,8 @@
                             <div class="pb-5 text-sm text-slate-500">
                                 <div class="w-full bg-white p-8 rounded-lg shadow-lg">
                                     <form action="/changePassword/" method="POST">
-                                        {% csrf_token %}<!-- New Password -->
+                                        {% csrf_token %}
+                                        <!-- New Password -->
                                         <div class="mb-4">
                                             <label for="password" class="block text-sm font-medium text-gray-700">New Password</label>
                                             <input
@@ -296,12 +297,12 @@
                                                 class="mt-2 p-3 w-full border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                                                 placeholder="Enter your new password"
                                                 pattern="^(?=.*[A-Za-z])(?=.*\d)(?=.*[@#$%*])[A-Za-z\d@#$%*]{8,}$"
-                                                title="Password must be at least 8 characters long, include at least one letter, one number, and one special character: @, #, $, %, *."
+                                                title="Password must be at least 8 characters long, include at least one letter, one number, and one of these special characters: @, #, $, %, *."
                                                 required
                                             >
-                                            <p id="passwordError" class="text-red-500 text-sm hidden">Password does not meet the requirements.</p>
+                                            <p id="passwordError" class="text-red-500 text-sm hidden">Password must be at least 8 characters long, include at least one letter, one number, and one special character (@, #, $, %, *).</p>
                                         </div>
-                                        
+
                                         <!-- Confirm New Password -->
                                         <div class="mb-4">
                                             <label for="confirmPassword" class="block text-sm font-medium text-gray-700">Confirm New Password</label>
