@@ -628,7 +628,7 @@ def changePassword(request):
 def studentHome(request):
     try:
         # Step 1: Get UID of the current user from the Student table
-        student_profile = UserProfile.objects.filter(user_id=request.user).first()
+        student_profile = Student.objects.filter(student_id=request.user).first()
         
         if not student_profile:
             messages.error(request, "Invalid student profile. Wait for admin approval.")
@@ -680,14 +680,19 @@ def studentHome(request):
             for doc in own_documents
         ]
 
+
+        own_pdf = documents.objects.filter(uid=student_profile).first()
+
         # Render the data in the studentHome template
         return render(request, 'studentHome.html', {
             'evaluation_files': evaluation_files_data,
             'own_documents': own_documents_data,
+            'own_pdf': own_pdf.file.url
         })
 
     except Exception as e:
         # Handle unexpected errors
+        print(f"Error fetching data: {e}")
         return render(request, 'studentHome.html', {
             'evaluation_files': [],
             'own_documents': [],
@@ -784,16 +789,28 @@ def forgetPassword(request):
     if request.method == 'POST':
         # Fetch the user object based on the provided email
         user = User.objects.filter(username=request.POST.get('username')).first()
-        new_password = generate_password(10)
         if user:
-            user.set_password(new_password)
-            user.save()
-            send_mail(
-                subject="Password Reset",
-                message=f"Your new password is: {new_password}",
-                from_email="support@peereval.com",
-                recipient_list=[user.email],
+            random_password = generate_password(10)
+            html_message = render_to_string(
+                "ForgotPasswordMailTemplate.html",  # Path to your email template
+                {
+                    "username": user.username,
+                    "new_password": random_password  # Link to the evaluation
+                },
             )
+            plain_message = strip_tags(html_message)  # Fallback plain text version
+
+            # Send the email
+            send_mail(
+                subject="Credentials",
+                message=plain_message,
+                from_email="no-reply@evaluation-system.com",
+                recipient_list=[user.email],
+                html_message=html_message,  # Attach the HTML message
+                fail_silently=False,
+            )
+            user.set_password(random_password)
+            user.save()
             messages.success(request, 'Password reset email sent successfully!')
         else:
             messages.error(request, 'User not found.')

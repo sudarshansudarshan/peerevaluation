@@ -150,46 +150,53 @@
 
                 <!-- Results Section -->
                 <div id="results" class="content-section hidden bg-white p-6 rounded-lg shadow-md mb-6">
-                    <h2 class="text-xl font-semibold text-gray-800 mb-4">Results</h2>
+                    <!-- Title -->
+                    <h2 class="text-2xl font-semibold text-gray-800 mb-6 border-b pb-2">Results</h2>
 
                     {% if own_documents %}
-                    <!-- Button for PDF download -->
-                    <div class="mb-4">
-                        <a href="/download_results/" download
-                            class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-700">
-                            Download Results as PDF
+                    <!-- PDF Download Button -->
+                    <div class="mb-6">
+                        <span class="block text-gray-700 font-medium mb-2">Download File:</span>
+                        <a href="{{ own_pdf }}" download
+                            class="bg-blue-600 text-white px-5 py-2 rounded-lg hover:bg-blue-700 transition">
+                            Download Answer Sheet
                         </a>
                     </div>
 
-                    <!-- Table for results -->
-                    <table class="min-w-full table-auto mt-4">
-                        <thead>
-                            <tr>
-                                <th class="border px-4 py-2 text-left">Evaluation Item</th>
-                                <th class="border px-4 py-2 text-left">Feedback</th>
-                                <th class="border px-4 py-2 text-left">Score</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for document in own_documents %}
-                            {% for review in document.peer_reviews %}
-                            <tr>
-                                <td class="border px-4 py-2">Peer Evaluation</td>
-                                <td class="border px-4 py-2">{{ review.feedback }}</td>
-                                <td class="border px-4 py-2">{{ review.score }}</td>
-                            </tr>
-                            {% endfor %}
-                            <tr>
-                                <td class="border px-4 py-2"></td>
-                                <td class="border px-4 py-2"><strong>Aggregate Score</strong></td>
-                                <td class="border px-4 py-2"><strong>{{document.aggregate_marks}}</strong></td>
-                            </tr>
-                            {% endfor %}
-                            
-                        </tbody>
-                    </table>
+                    <!-- Summary Table -->
+                    <div class="mt-6">
+                        <span class="block text-gray-700 font-medium mb-2">Summary:</span>
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full table-auto border-collapse border border-gray-300">
+                                <thead class="bg-gray-100">
+                                    <tr>
+                                        <th class="border border-gray-300 px-4 py-2 text-left text-gray-700 font-semibold">Evaluation Item</th>
+                                        <th class="border border-gray-300 px-4 py-2 text-left text-gray-700 font-semibold">Feedback</th>
+                                        <th class="border border-gray-300 px-4 py-2 text-left text-gray-700 font-semibold">Score</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for document in own_documents %}
+                                    {% for review in document.peer_reviews %}
+                                    <tr class="hover:bg-gray-50">
+                                        <td class="border border-gray-300 px-4 py-2 text-gray-600">Peer Evaluation</td>
+                                        <td class="border border-gray-300 px-4 py-2 text-gray-600">{{ review.feedback }}</td>
+                                        <td class="border border-gray-300 px-4 py-2 text-gray-600">{{ review.score }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                    <tr class="bg-gray-100">
+                                        <td class="border border-gray-300 px-4 py-2"></td>
+                                        <td class="border border-gray-300 px-4 py-2 font-bold text-gray-800">Aggregate Score</td>
+                                        <td class="border border-gray-300 px-4 py-2 font-bold text-gray-800">{{ document.aggregate_marks }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
                     {% else %}
-                    <p class="text-gray-600">No peer reviews available for your documents.</p>
+                    <!-- No Reviews Message -->
+                    <p class="text-gray-600 mt-6">No peer reviews available for your documents.</p>
                     {% endif %}
                 </div>
             </div>
