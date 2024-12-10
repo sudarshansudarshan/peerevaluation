@@ -242,12 +242,22 @@ def TAHome(request):
             document.save()
             document_instances.append(document)
 
-        # Call setPeerEval function only once with the collected document instances
-        if document_instances:
-            setPeerEval(document_instances)
+        # Background thread function for calling setPeerEval
+        def run_peer_eval(documents):
+            try:
+                setPeerEval(documents)
+            except Exception as e:
+                # Log the error and notify the admin (adjust logging as per your project setup)
+                error_message = f"Error in Peer Evaluation assignment: {str(e)}"
+                print(error_message)  # Replace with a logging system if available
 
-        messages.success(request, 'Documents uploaded and Peer evaluations assigned successfully!')
-        return redirect('/TAHome/')
+        # Start the thread for setPeerEval
+        if document_instances:
+            thread = threading.Thread(target=run_peer_eval, args=(document_instances,))
+            thread.start()
+
+        messages.success(request, 'Documents uploaded successfully! Peer evaluations are being assigned in the background.')
+        return redirect('/AdminHome/')
 
     return render(request, 'TAHome.html', {'users': user_profile.serialize()})
 
@@ -290,12 +300,22 @@ def TeacherHome(request):
             document.save()
             document_instances.append(document)
 
-        # Call setPeerEval function only once with the collected document instances
-        if document_instances:
-            setPeerEval(document_instances)
+        # Background thread function for calling setPeerEval
+        def run_peer_eval(documents):
+            try:
+                setPeerEval(documents)
+            except Exception as e:
+                # Log the error and notify the admin (adjust logging as per your project setup)
+                error_message = f"Error in Peer Evaluation assignment: {str(e)}"
+                print(error_message)  # Replace with a logging system if available
 
-        messages.success(request, 'Documents uploaded and Peer evaluations assigned successfully!')
-        return redirect('/TeacherHome/')
+        # Start the thread for setPeerEval
+        if document_instances:
+            thread = threading.Thread(target=run_peer_eval, args=(document_instances,))
+            thread.start()
+
+        messages.success(request, 'Documents uploaded successfully! Peer evaluations are being assigned in the background.')
+        return redirect('/AdminHome/')
 
     return render(request, 'TeacherHome.html', {'users': user_profile.serialize()})
 
@@ -605,7 +625,6 @@ def changePassword(request):
     return render(request, 'login.html')  # Ensure this renders the correct template
 
 
-
 def studentHome(request):
     try:
         # Step 1: Get UID of the current user from the Student table
@@ -853,6 +872,7 @@ def send_reminder_mail(request):
 
 def home(request):
     return redirect('/login/')
+
 
 def logout_user(request):
     logout(request)
