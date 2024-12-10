@@ -551,12 +551,39 @@ def questionNumbers(request):
 # NOTE: Change password route
 def changePassword(request):
     if request.method == 'POST':
-        user = User.objects.get(username=request.user)
-        user.set_password(request.POST.get('password'))
-        user.save()
-        messages.error(request, 'Password changed')
-        return redirect('/logout/')
-    return render(request, 'login.html')
+        # Retrieve the password and confirmation from the POST data
+        password = request.POST.get('password')
+        confirm_password = request.POST.get('confirmPassword')
+
+        # Define the password pattern for validation
+        # At least 8 characters, one letter, one number, and one special character (@, #, $, %, *)
+        password_pattern = re.compile(r'^(?=.*[A-Za-z])(?=.*\d)(?=.*[@#$%*])[A-Za-z\d@#$%*]{8,}$')
+
+        # Validate password strength
+        if not password:
+            messages.error(request, "Password field cannot be empty.")
+            return redirect('/changePassword/')  # Update with your actual URL
+        elif not password_pattern.match(password):
+            messages.error(request, "Password must be at least 8 characters long, include at least one letter, one number, and one special character (@, #, $, %, *).")
+            return redirect('/changePassword/')  # Update with your actual URL
+
+        # Validate password confirmation
+        if password != confirm_password:
+            messages.error(request, "Passwords do not match.")
+            return redirect('/changePassword/')  # Update with your actual URL
+
+        # If all validations pass, update the password
+        try:
+            user = User.objects.get(username=request.user.username)
+            user.set_password(password)
+            user.save()
+            messages.success(request, 'Password changed successfully.')
+            return redirect('/logout/')  # Redirect to logout or another appropriate page
+        except User.DoesNotExist:
+            messages.error(request, "User does not exist.")
+            return redirect('/changePassword/')  # Update with your actual URL
+
+    return render(request, 'login.html')  # Ensure this renders the correct template
 
 
 def forgetPassword(request):
