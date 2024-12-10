@@ -6,6 +6,7 @@ from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from .models import *
+from django.db.models import Avg, Count, Q
 from app.ocr import process_uploaded_pdf
 import os
 from random import shuffle
@@ -265,15 +266,16 @@ def TAHome(request):
 # NOTE: This is Teacher dashboard
 def TeacherHome(request):
     """
-    Handles the Teacher Dashboard functionality, including document uploads and peer evaluation assignment.
+    Handles the Teacher Dashboard functionality, including document uploads and analytics.
     """
-    # Check if the user is an Teacher
+    # Check if the user is a Teacher
     user_profile = UserProfile.objects.filter(user=request.user).first()
     if not user_profile or user_profile.role != 'Teacher' or not request.user.is_authenticated:
         messages.error(request, 'Permission denied')
         return redirect('/login/')
 
     if request.method == 'POST':
+        # Handle document upload logic
         title = request.POST.get('title')
         description = request.POST.get('description')
         user = User.objects.get(username=request.user)
@@ -305,7 +307,6 @@ def TeacherHome(request):
             try:
                 setPeerEval(documents)
             except Exception as e:
-                # Log the error and notify the admin (adjust logging as per your project setup)
                 error_message = f"Error in Peer Evaluation assignment: {str(e)}"
                 print(error_message)  # Replace with a logging system if available
 
@@ -317,9 +318,52 @@ def TeacherHome(request):
         messages.success(request, 'Documents uploaded successfully! Peer evaluations are being assigned in the background.')
         return redirect('/TeacherHome/')
 
-    return render(request, 'TeacherHome.html', {'users': user_profile.serialize()})
+    # Analytics for Teacher Dashboard
+    try:
+        # Distribution of marks for students
+        marks_distribution = (
+            PeerEvaluation.objects.values('score')
+            .annotate(count=Count('score'))
+            .order_by('score')
+        )
 
+        # Total peer evaluations and their status
+        total_peer_evaluations = PeerEvaluation.objects.count()
+        evaluated_peer_evaluations = PeerEvaluation.objects.filter(evaluated=True).count()
+        pending_peer_evaluations = PeerEvaluation.objects.filter(evaluated=False).count()
 
+        peer_evaluations = {
+            'total': total_peer_evaluations,
+            'evaluated': evaluated_peer_evaluations,
+            'pending': pending_peer_evaluations,
+        }
+
+        # Number of documents submitted
+        total_documents = documents.objects.count()
+
+        # Data for rendering
+        analytics_data = {
+            'marks_distribution': list(marks_distribution),
+            'total_documents': total_documents,
+            'total_peer_evaluations': peer_evaluations['total'],
+            'evaluated_peer_evaluations': peer_evaluations['evaluated'],
+            'pending_peer_evaluations': peer_evaluations['pending'],
+        }
+
+    except Exception as e:
+        # Handle unexpected errors
+        print(f"Error fetching analytics: {e}")
+        analytics_data = {
+            'marks_distribution': [],
+            'total_documents': 0,
+            'total_peer_evaluations': 0,
+            'evaluated_peer_evaluations': 0,
+            'pending_peer_evaluations': 0,
+        }
+    return render(request, 'TeacherHome.html', {
+        'users': user_profile.serialize(),
+        'analytics_data': analytics_data,
+    })
 # NOTE: This is route for uploading bunch of PDF Files and creating the users
 def uploadFile(request):
     user_profile = UserProfile.objects.filter(user=user).first()
@@ -554,7 +598,6 @@ def change_role(request):
         if not current_user_profile or current_user_profile.role not in ['TA', 'Teacher', 'Admin']:
             messages.error(request, 'You do not have permission to modify roles.')
             return redirect(f"/{current_user_profile.role}Home/")
-
         try:
             user = User.objects.get(username=request.POST.get('username'))
             user_profile = UserProfile.objects.filter(user_id=user.id).first()
@@ -576,7 +619,7 @@ def questionNumbers(request):
     current_user_profile = UserProfile.objects.filter(user=request.user).first()
     if request.method == 'POST':
         number = request.POST.get('num-questions')
-        numQue = numberOfQuestions.objects.filter(id=1).first()
+        numQue = numberOfQuestions.objects.all().first()
         if not numQue:
             numQue = numberOfQuestions(number=number)
         else:
