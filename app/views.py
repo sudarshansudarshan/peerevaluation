@@ -257,7 +257,7 @@ def TAHome(request):
             thread.start()
 
         messages.success(request, 'Documents uploaded successfully! Peer evaluations are being assigned in the background.')
-        return redirect('/AdminHome/')
+        return redirect('/TAHome/')
 
     return render(request, 'TAHome.html', {'users': user_profile.serialize()})
 
@@ -315,7 +315,7 @@ def TeacherHome(request):
             thread.start()
 
         messages.success(request, 'Documents uploaded successfully! Peer evaluations are being assigned in the background.')
-        return redirect('/AdminHome/')
+        return redirect('/TeacherHome/')
 
     return render(request, 'TeacherHome.html', {'users': user_profile.serialize()})
 
