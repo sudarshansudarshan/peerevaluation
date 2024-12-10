@@ -29,6 +29,10 @@ import array
 
 base_url = "http://127.0.0.1:8080/"
 
+# Regex for validating a strong password
+PASSWORD_REGEX = r"^(?=.*[A-Za-z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$"
+
+
 def generate_password(length):
     MAX_LEN = 12
 
@@ -454,6 +458,15 @@ def uploadCSV(request):
         # Remove the first row (header)
         lines.pop(0)
 
+        # Delete all physical files associated with documents
+        documents_to_delete = documents.objects.all()
+        for doc in documents_to_delete:
+            if doc.file and os.path.isfile(doc.file.path):  # Check if file exists
+                try:
+                    os.remove(doc.file.path)  # Delete the file from the file system
+                except Exception as e:
+                    print(f"Error deleting file {doc.file.path}: {e}")
+
         # Delete all existing Student and document records
         documents.objects.all().delete()
         Student.objects.all().delete()
@@ -564,17 +577,21 @@ def studentHome(request):
         uid = student_profile.uid  # UID of the current user
 
         # Step 3: Check for all UIDs in PeerEvaluation table for associated document IDs
-        peer_evaluation_docs = PeerEvaluation.objects.filter(evaluator_id=uid).values_list('document_id', flat=True)
+        peer_evaluation_docs = PeerEvaluation.objects.filter(evaluator_id=uid).values('document_id', 'evaluated')
+
+        # Map document IDs to their evaluated_column values
+        peer_evaluation_map = {item['document_id']: item['evaluated'] for item in peer_evaluation_docs}
 
         # Step 4: Fetch all documents from the `documents` table
-        evaluation_files = documents.objects.filter(id__in=peer_evaluation_docs).select_related('uid')
+        evaluation_files = documents.objects.filter(id__in=peer_evaluation_map.keys()).select_related('uid')
 
         # Prepare data for the fetched documents
         evaluation_files_data = [
             {
                 'document_title': doc.title,
                 'description': doc.description,
-                'file_url': f"/studentEval/{doc.id}/{uid}"
+                'file_url': f"/studentEval/{doc.id}/{uid}",
+                'evaluated': peer_evaluation_map.get(doc.id)  # Get the evaluated_column value
             }
             for doc in evaluation_files
         ]
@@ -592,7 +609,7 @@ def studentHome(request):
                         'evaluator_id': review.evaluator_id,
                         'evaluation': review.evaluation or [],
                         'feedback': "No feedback found" if " ".join(eval(review.feedback)).strip() == "" else ",".join(eval(review.feedback)).strip(),
-                        'score': review.score or 0,
+                        'score': review.score or 0
                     }
                     for review in doc.peerevaluation_set.all()
                 ],
@@ -617,6 +634,28 @@ def studentHome(request):
             'evaluation_files': [],
             'own_documents': [],
         })
+
+
+def deleteDocs(request):
+    current_user_profile = UserProfile.objects.filter(user=request.user).first()
+    if not current_user_profile or current_user_profile.role not in ['TA', 'Teacher', 'Admin']:
+        messages.error(request, 'You do not have permission to modify roles.')
+        return redirect(f"/{current_user_profile.role}Home/")
+    # Delete all physical files associated with documents
+    documents_to_delete = documents.objects.all()
+    for doc in documents_to_delete:
+        if doc.file and os.path.isfile(doc.file.path):  # Check if file exists
+            try:
+                os.remove(doc.file.path)  # Delete the file from the file system
+            except Exception as e:
+                print(f"Error deleting file {doc.file.path}: {e}")
+                messages.error(request, f"Error deleting file {doc.file.path}.")
+    # Delete all existing Student and document records
+    documents.objects.all().delete()
+    Student.objects.all().delete()
+    PeerEvaluation.objects.all().delete()
+    messages.success(request, 'All documents deleted successfully!')
+    return redirect(f"/{current_user_profile.role}Home/")
 
 
 # NOTE: view and evaluate the assignment
@@ -720,6 +759,11 @@ def forgot_password(request):
 
 
 def send_reminder_mail(request):
+    current_user_profile = UserProfile.objects.filter(user=request.user).first()
+    if not current_user_profile or current_user_profile.role not in ['TA', 'Teacher', 'Admin']:
+        messages.error(request, 'You do not have permission to modify roles.')
+        return redirect(f"/{current_user_profile.role}Home/")
+    
     # Fetch PeerEvaluation entries where 'evaluated' is False
     pending_evaluations = PeerEvaluation.objects.filter(evaluated=False)
 
@@ -751,9 +795,7 @@ def send_reminder_mail(request):
                 messages.error(request, f"Error sending email to {email}: {e}")
     
     # Display a success message on the frontend
-    messages.success(request, "Reminder emails sent successfully!")
-    current_user_profile = UserProfile.objects.filter(user=request.user).first()
-    
+    messages.success(request, "Reminder emails sent successfully!")    
     return redirect(f"/{current_user_profile.role}Home/")
 
 
