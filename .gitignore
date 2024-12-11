@@ -1,5 +1,6 @@
 venv/
 __pycache__/
+app/__pycache__/
 public/static/documents/401.pdf
 public/static/documents/402.pdf
 public/static/documents/403.pdf

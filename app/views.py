@@ -28,7 +28,7 @@ import re
 import random
 import array
 
-base_url = "http://127.0.0.1:8080/"
+base_url = "http://127.0.0.1:8000/"
 
 # Regex for validating a strong password
 PASSWORD_REGEX = r"^(?=.*[A-Za-z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$"
@@ -217,6 +217,7 @@ def TAHome(request):
         return redirect('/login/')
 
     if request.method == 'POST':
+        # Handle document upload logic
         title = request.POST.get('title')
         description = request.POST.get('description')
         user = User.objects.get(username=request.user)
@@ -248,7 +249,6 @@ def TAHome(request):
             try:
                 setPeerEval(documents)
             except Exception as e:
-                # Log the error and notify the admin (adjust logging as per your project setup)
                 error_message = f"Error in Peer Evaluation assignment: {str(e)}"
                 print(error_message)  # Replace with a logging system if available
 
@@ -258,9 +258,71 @@ def TAHome(request):
             thread.start()
 
         messages.success(request, 'Documents uploaded successfully! Peer evaluations are being assigned in the background.')
-        return redirect('/TAHome/')
+        return redirect('/TeacherHome/')
 
-    return render(request, 'TAHome.html', {'users': user_profile.serialize()})
+    # Analytics for Teacher Dashboard
+    try:
+        # Distribution of marks for students: Group by document_id and calculate average score
+        marks_distribution = (
+            PeerEvaluation.objects.values('document_id')
+            .annotate(avg_score=Avg('score'))
+            .order_by('-avg_score')[:10]  # Get top 10 documents based on avg_score
+        )
+
+        # Fetch top 10 documents' scores as a list of dictionaries
+        top_students_scores = [
+            {"document_id": item["document_id"], "avg_score": float(item["avg_score"])}  # Convert to float
+            for item in marks_distribution
+        ]
+        
+        # Total peer evaluations and their status
+        total_peer_evaluations = PeerEvaluation.objects.count()
+        evaluated_peer_evaluations = PeerEvaluation.objects.filter(evaluated=True).count()
+        pending_peer_evaluations = PeerEvaluation.objects.filter(evaluated=False).count()
+
+        num_ques = numberOfQuestions.objects.all().first().total_marks
+
+        peer_evaluations = {
+            'total': total_peer_evaluations,
+            'evaluated': evaluated_peer_evaluations,
+            'pending': pending_peer_evaluations
+        }
+
+        # Number of documents submitted
+        total_documents = documents.objects.count()
+
+        tickets_raised = PeerEvaluation.objects.filter(ticket=2)
+
+        # Data for rendering
+        analytics_data = {
+            'top_students_scores': top_students_scores,  # Add top 10 students' scores
+            'total_documents': total_documents,
+            'total_peer_evaluations': peer_evaluations['total'],
+            'evaluated_peer_evaluations': peer_evaluations['evaluated'],
+            'pending_peer_evaluations': peer_evaluations['pending'],
+            'tickets_raised': [
+                {
+                    'evaluator': Student.objects.filter(uid=ticket.evaluator_id).first().student_id.username,
+                    'document': documents.objects.filter(id=ticket.document_id).first().file.url,
+                    'evaluation': ".".join([str(i) for i in eval(ticket.evaluation)]),
+                    'evaluation_sheet': f"{base_url}studentEval/{ticket.document_id}/{ticket.evaluator_id}/",
+                } for ticket in tickets_raised
+            ]
+        }
+    except Exception as e:
+        analytics_data = {
+            'top_students_scores': [],  # Default empty list
+            'total_documents': 0,
+            'total_peer_evaluations': 0,
+            'evaluated_peer_evaluations': 0,
+            'pending_peer_evaluations': 0,
+        }
+
+    return render(request, 'TAHome.html', {
+        'users': user_profile.serialize(),
+        'analytics_data': analytics_data,
+        'num_ques': num_ques,
+    })
 
 
 # NOTE: This is Teacher dashboard
@@ -273,6 +335,7 @@ def TeacherHome(request):
     if not user_profile or user_profile.role != 'Teacher' or not request.user.is_authenticated:
         messages.error(request, 'Permission denied')
         return redirect('/login/')
+    
 
     if request.method == 'POST':
         # Handle document upload logic
@@ -319,51 +382,71 @@ def TeacherHome(request):
         return redirect('/TeacherHome/')
 
     # Analytics for Teacher Dashboard
+
     try:
-        # Distribution of marks for students
+        # Distribution of marks for students: Group by document_id and calculate average score
         marks_distribution = (
-            PeerEvaluation.objects.values('score')
-            .annotate(count=Count('score'))
-            .order_by('score')
+            PeerEvaluation.objects.values('document_id')
+            .annotate(avg_score=Avg('score'))
+            .order_by('-avg_score')[:10]  # Get top 10 documents based on avg_score
         )
 
+        # Fetch top 10 documents' scores as a list of dictionaries
+        top_students_scores = [
+            {"document_id": item["document_id"], "avg_score": float(item["avg_score"])}  # Convert to float
+            for item in marks_distribution
+        ]
+        
         # Total peer evaluations and their status
         total_peer_evaluations = PeerEvaluation.objects.count()
         evaluated_peer_evaluations = PeerEvaluation.objects.filter(evaluated=True).count()
         pending_peer_evaluations = PeerEvaluation.objects.filter(evaluated=False).count()
 
+        num_ques = numberOfQuestions.objects.all().first().total_marks
+
         peer_evaluations = {
             'total': total_peer_evaluations,
             'evaluated': evaluated_peer_evaluations,
-            'pending': pending_peer_evaluations,
+            'pending': pending_peer_evaluations
         }
 
         # Number of documents submitted
         total_documents = documents.objects.count()
 
+        tickets_raised = PeerEvaluation.objects.filter(ticket=2)
+
         # Data for rendering
         analytics_data = {
-            'marks_distribution': list(marks_distribution),
+            'top_students_scores': top_students_scores,  # Add top 10 students' scores
             'total_documents': total_documents,
             'total_peer_evaluations': peer_evaluations['total'],
             'evaluated_peer_evaluations': peer_evaluations['evaluated'],
             'pending_peer_evaluations': peer_evaluations['pending'],
+            'tickets_raised': [
+                {
+                    'evaluator': Student.objects.filter(uid=ticket.evaluator_id).first().student_id.username,
+                    'document': documents.objects.filter(id=ticket.document_id).first().file.url,
+                    'evaluation': ".".join([str(i) for i in eval(ticket.evaluation)]),
+                    'evaluation_sheet': f"{base_url}studentEval/{ticket.document_id}/{ticket.evaluator_id}/",
+                } for ticket in tickets_raised
+            ]
         }
-
     except Exception as e:
-        # Handle unexpected errors
-        print(f"Error fetching analytics: {e}")
         analytics_data = {
-            'marks_distribution': [],
+            'top_students_scores': [],  # Default empty list
             'total_documents': 0,
             'total_peer_evaluations': 0,
             'evaluated_peer_evaluations': 0,
             'pending_peer_evaluations': 0,
         }
+
     return render(request, 'TeacherHome.html', {
         'users': user_profile.serialize(),
         'analytics_data': analytics_data,
+        'num_ques': num_ques,
     })
+
+
 # NOTE: This is route for uploading bunch of PDF Files and creating the users
 def uploadFile(request):
     user_profile = UserProfile.objects.filter(user=user).first()
@@ -438,6 +521,7 @@ def login_page(request):
     
     # Render the login page template (GET request)
     return render(request, 'login.html')
+
 
 # Regex for validating a strong password
 PASSWORD_REGEX = r"^(?=.*[A-Za-z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$"
@@ -618,14 +702,16 @@ def change_role(request):
 def questionNumbers(request):
     current_user_profile = UserProfile.objects.filter(user=request.user).first()
     if request.method == 'POST':
-        number = request.POST.get('num-questions')
+        number, total_marks = request.POST.get('num-questions'), request.POST.get('total_marks')
         numQue = numberOfQuestions.objects.all().first()
         if not numQue:
             numQue = numberOfQuestions(number=number)
+            numQue = numberOfQuestions(total_marks=total_marks)
         else:
             numQue.number = number
+            numQue.total_marks = total_marks
         numQue.save()
-        messages.success(request, 'Number of questions updated successfully!')
+        messages.success(request, 'Number of questions and total marks updated successfully!')
         return redirect(f"/{current_user_profile.role}Home/")
     return redirect('/logout/')
 
@@ -709,9 +795,11 @@ def studentHome(request):
                 'description': doc.description,
                 'peer_reviews': [
                     {
+                        'id': review.id,
                         'evaluator_id': review.evaluator_id,
                         'evaluation': review.evaluation or [],
                         'feedback': "No feedback found" if " ".join(eval(review.feedback)).strip() == "" else ",".join(eval(review.feedback)).strip(),
+                        'ticket': review.ticket,
                         'score': review.score or 0
                     }
                     for review in doc.peerevaluation_set.all()
@@ -722,7 +810,6 @@ def studentHome(request):
             }
             for doc in own_documents
         ]
-
 
         own_pdf = documents.objects.filter(uid=student_profile).first()
 
@@ -776,6 +863,7 @@ def studentEval(request, doc_id, eval_id):
     # Fetch document and evaluation objects
     document = documents.objects.filter(id=document_id).first()
     evaluation = PeerEvaluation.objects.filter(document_id=document_id, evaluator_id=evaluator_id).first()
+    total_marks = numberOfQuestions.objects.all().first().total_marks
 
     # Check user authentication and access permissions
     user_profile = UserProfile.objects.filter(user=request.user).first()
@@ -784,7 +872,7 @@ def studentEval(request, doc_id, eval_id):
         return redirect('/logout/')
     if evaluation.evaluated:
         messages.error(request, 'This document has already been evaluated.')
-        return redirect('/StudentHome/')
+        return redirect(f'/{user_profile.role}Home/')
 
     # Fetch the number of questions
     number_of_questions = numberOfQuestions.objects.filter(id=1).first()
@@ -799,6 +887,7 @@ def studentEval(request, doc_id, eval_id):
         'document_title': document.title,
         'document_description': document.description,
         'number_of_questions': [i + 1 for i in range(num_questions)],
+        'total_marks': round(total_marks/num_questions)
     }
 
     # Handle POST request for submitting the evaluation
@@ -822,7 +911,7 @@ def studentEval(request, doc_id, eval_id):
         evaluation.save()
 
         messages.success(request, 'Evaluation submitted successfully!')
-        return redirect('/StudentHome/')  # Redirect to a relevant page after submission
+        return redirect(f'/{user_profile.role}Home/')  # Redirect to a relevant page after submission
 
     # Render the template for viewing the document and providing evaluation
     return render(request, 'AssignmentView.html', context)
@@ -861,6 +950,23 @@ def forgetPassword(request):
     return render(request, 'changePassword.html')
 
 
+
+def raise_ticket(request, doc_id):
+    current_user_profile = UserProfile.objects.filter(user=request.user).first()
+    if not current_user_profile or current_user_profile.role not in ['TA', 'Student']:
+        messages.error(request, 'You do not have permission to modify roles.')
+        return redirect(f"/{current_user_profile.role}Home/")
+    
+    if request.method == 'POST':
+        if current_user_profile.role == 'TA':
+            peerevaluation = PeerEvaluation.objects.filter(id=doc_id).first()
+            peerevaluation.ticket = 2
+        elif current_user_profile.role == 'Student':
+            peerevaluation = PeerEvaluation.objects.filter(id=doc_id).first()
+            peerevaluation.ticket = 1
+        peerevaluation.save()
+        messages.success(request, 'Ticket raised successfully!')
+        return redirect(f"/{current_user_profile.role}Home/")
 
 # # NOTE: Send email to the assigned peer
 # def send_peer_evaluation_email(evaluation_link, email_id):
@@ -937,3 +1043,4 @@ def home(request):
 def logout_user(request):
     logout(request)
     return redirect('/login/')
+
