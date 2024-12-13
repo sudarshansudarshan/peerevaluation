@@ -1,100 +1,97 @@
 from django.db import models
 from django.contrib.auth.models import User
-from django.contrib.auth.models import AbstractUser
+from datetime import datetime
 
 
-class User(AbstractUser):
-    email = models.EmailField(unique=True)
-    login = models.BooleanField(default=False, help_text="Check if the user is currently logged in")
-    user_type = models.CharField(
-        max_length=50,
-        choices=[('Admin', 'Admin'), ('Student', 'Student'), ('Teacher', 'Teacher'), ('TA', 'TA')],
-        help_text="Role of the user"
-    )
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    # Add related_name attributes to resolve conflicts
-    groups = models.ManyToManyField(
-        'auth.Group',
-        related_name='custom_user_groups',
-        blank=True,
-        help_text="The groups this user belongs to. A user will get all permissions granted to each of their groups."
-    )
-    user_permissions = models.ManyToManyField(
-        'auth.Permission',
-        related_name='custom_user_permissions',
-        blank=True,
-        help_text="Specific permissions for this user."
-    )
-
-# Course Model
 class Course(models.Model):
-    id = models.BigAutoField(primary_key=True)
-    name = models.CharField(max_length=255, null=False)
-    description = models.TextField(null=True)
-    batch = models.TextField(null=True)
-    is_public = models.BooleanField(default=False, null=False)
-    start_date = models.DateTimeField(null=False)
-    end_date = models.DateTimeField(null=False)
+    id = models.AutoField(primary_key=True)
+    course_id = models.CharField(max_length=10, unique=True)
+    name = models.CharField(max_length=200, unique=True)
+    start_date = models.DateField(null=True, blank=True, default=datetime.now)
 
     def __str__(self):
         return self.name
 
-# Role in Course (Normalized)
-class CourseRole(models.Model):
-    ROLE_CHOICES = [
-        ('Teacher', 'Teacher'),
-        ('Student', 'Student'),
-        ('TA', 'Teaching Assistant'),
-        ('SuperPeer', 'Super Peer')
-    ]
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="course_roles")
-    course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name="roles")
-    role = models.CharField(max_length=20, choices=ROLE_CHOICES)
 
-# ExamType Model
-class ExamType(models.Model):
-    name = models.CharField(max_length=255, help_text="Type of an exam, e.g., Mid term, end term")
-    course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name="exam_types")
+class numberOfQuestions(models.Model):
+    id = models.AutoField(primary_key=True)
+    number = models.IntegerField()
+    total_marks = models.IntegerField(default=0)
+    course_id = models.ForeignKey(Course, on_delete=models.CASCADE)
 
     def __str__(self):
-        return f"{self.name} ({self.course.name})"
+        return f"{self.number} for {self.course_id.name}"
 
-# Exam Model
-class Exam(models.Model):
-    exam_type = models.ForeignKey(ExamType, on_delete=models.CASCADE, related_name="exams")
-    course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name="exams")
-    teacher = models.ForeignKey(User, on_delete=models.CASCADE, related_name="exams_as_teacher")
-    date = models.DateTimeField(help_text="Date of the Exam")
-    number_of_questions = models.IntegerField()
-    max_scores = models.IntegerField()
 
-# Document Model
-class Document(models.Model):
-    course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name="documents")
-    link = models.URLField(help_text="URL of document")
-    avg_score = models.FloatField(null=True, blank=True)
+class UserProfile(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    ROLE_CHOICES = [
+        ('TA', 'Teaching Assistant'),
+        ('Student', 'Student'),
+        ('Teacher', 'Teacher'),
+        ('Admin', 'Admin'),
+    ]
+    role = models.CharField(max_length=10, choices=ROLE_CHOICES)
+    course_id = models.ForeignKey(Course, on_delete=models.CASCADE, null=True, blank=True)
 
-# Peer Evaluation
-class PeerEvaluation(models.Model):
-    exam = models.ForeignKey(Exam, on_delete=models.CASCADE, related_name="peer_evaluations")
-    document = models.ForeignKey(Document, on_delete=models.CASCADE, related_name="peer_evaluations")
-    evaluator = models.ForeignKey(User, on_delete=models.CASCADE, related_name="evaluations_made")
-    course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name="peer_evaluations")
-    feedback = models.TextField(help_text="Feedback for the evaluation")
-    score = models.IntegerField()
+    def __str__(self):
+        return f"{self.user.username} - {self.role}"
 
-# Statistics Model
-class Statistics(models.Model):
-    course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name="statistics")
-    avg_score = models.FloatField()
-    std_dev = models.FloatField(help_text="Standard deviation of scores")
+    def serialize(self):
+        return {
+            'id': self.id,
+            'username': self.user.username,
+            'role': self.role
+        }
 
-# Incentivization Model
-class Incentivization(models.Model):
-    course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name="incentives")
-    student = models.ForeignKey(User, on_delete=models.CASCADE, related_name="incentives")
-    reward_points = models.IntegerField()
+
+class Student(models.Model):
+    id = models.AutoField(primary_key=True)
+    student_id = models.ForeignKey(User, on_delete=models.CASCADE, related_name='students')
+    course_id = models.ForeignKey(Course, on_delete=models.CASCADE)
+    uid = models.IntegerField(unique=True)
 
     class Meta:
-        unique_together = ('course', 'student')  # Ensures no duplicate entries
+        constraints = [
+            models.UniqueConstraint(fields=['student_id', 'course_id'], name='unique_student_course')
+        ]
+
+    def __str__(self):
+        return f"{self.student_id.username} - {self.course_id.name}"
+
+
+class Document(models.Model):
+    id = models.AutoField(primary_key=True)
+    title = models.CharField(max_length=200, blank=True, null=True)
+    description = models.TextField(null=True)
+    user_id = models.ForeignKey(User, on_delete=models.CASCADE, related_name='documents')
+    peer_evaluations = models.ManyToManyField(
+        'PeerEvaluation',
+        related_name='evaluated_documents'  # Updated related_name
+    )
+    uid = models.ForeignKey('Student', on_delete=models.CASCADE, related_name='student_documents')
+    file = models.FileField(upload_to='documents/')
+    course_id = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='course_documents')
+
+    def __str__(self):
+        return self.title
+
+
+class PeerEvaluation(models.Model):
+    evaluator_id = models.IntegerField()
+    evaluation_date = models.DateTimeField(auto_now_add=True)
+    evaluation = models.TextField()
+    feedback = models.TextField()
+    course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='peer_evaluations')
+    score = models.IntegerField()
+    document = models.ForeignKey(
+        Document,
+        on_delete=models.CASCADE,
+        related_name='document_peer_evaluations'  # Updated related_name
+    )
+    evaluated = models.BooleanField(default=False)
+    ticket = models.IntegerField(default=0)
+    evaluated_by = models.ForeignKey(User, on_delete=models.CASCADE, null=True, related_name='evaluated_by')
+
+    def __str__(self):
+        return f'Peer Evaluation for Document {self.document.title}'
