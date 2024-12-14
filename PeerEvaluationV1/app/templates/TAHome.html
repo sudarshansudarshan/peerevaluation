@@ -113,7 +113,7 @@
                             </td>
                             <td class="p-2">
                                 {% if record.ticket == 0 or record.ticket == 1 %}
-                                <form method="post" action="/raiseTicket/{{ record.id }}">
+                                <form method="post" action="/raiseTicket/{{ record.id }}"> 
                                     {% csrf_token %}
                                     <button class="bg-orange-600 text-white px-5 py-2 rounded-lg hover:bg-orange-700 transition">Raise Ticket</button>
                                 </form>
@@ -270,7 +270,7 @@
                     </div>
 
                     <!-- Submit Button -->
-                    <div class="flex justify-end">
+                    <div class="flex justify-left">
                         <button
                             type="submit"
                             class="bg-blue-500 hover:bg-blue-600 text-white font-medium px-6 py-3 rounded-lg shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-400 transition-all"

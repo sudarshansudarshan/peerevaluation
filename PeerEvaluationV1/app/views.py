@@ -139,6 +139,8 @@ def setPeerEval(document_instances):
                 current_assigned_count += 1
                 # encoded_doc_id = encode_id(str(document.id) + " " + str(student.uid))
                 evaluation_link = f"{base_url}studentEval/{document.id}/{student.uid}/"
+
+                # TODO: Fix mailing component
                 send_peer_evaluation_email(evaluation_link, email)
                 
                 if current_assigned_count == num_peers:
@@ -152,9 +154,13 @@ def AdminDashboard(request):
     """
     Handles the Admin Dashboard functionality, including document uploads and peer evaluation assignment.
     """
-    # Check if the user is an admin
+    # Check if the user in request
+    if not request.user.is_authenticated:
+        messages.error(request, 'Please login first')
+        return redirect('/login/')
+    
     user_profile = UserProfile.objects.filter(user=request.user).first()
-    if not user_profile or user_profile.role != 'Admin' or not request.user.is_authenticated:
+    if not user_profile or user_profile.role != 'Admin':
         messages.error(request, 'Permission denied')
         return redirect('/login/')
 
@@ -211,8 +217,12 @@ def TAHome(request):
     Handles the TA Dashboard functionality, including document uploads and peer evaluation assignment.
     """
     # Check if the user is an TA
+    if not request.user.is_authenticated:
+        messages.error(request, 'Please login first')
+        return redirect('/login/')
+    
     user_profile = UserProfile.objects.filter(user=request.user).first()
-    if not user_profile or user_profile.role != 'TA' or not request.user.is_authenticated:
+    if not user_profile or user_profile.role != 'TA':
         messages.error(request, 'Permission denied')
         return redirect('/login/')
 
@@ -258,7 +268,7 @@ def TAHome(request):
             thread.start()
 
         messages.success(request, 'Documents uploaded successfully! Peer evaluations are being assigned in the background.')
-        return redirect('/TeacherHome/')
+        return redirect('/TAHome/')
 
     # Analytics for Teacher Dashboard
     try:
@@ -291,7 +301,7 @@ def TAHome(request):
         # Number of documents submitted
         total_documents = documents.objects.count()
 
-        tickets_raised = PeerEvaluation.objects.filter(ticket=2)
+        tickets_raised = PeerEvaluation.objects.filter(ticket=1)
 
         # Data for rendering
         analytics_data = {
@@ -304,8 +314,10 @@ def TAHome(request):
                 {
                     'evaluator': Student.objects.filter(uid=ticket.evaluator_id).first().student_id.username,
                     'document': documents.objects.filter(id=ticket.document_id).first().file.url,
-                    'evaluation': ".".join([str(i) for i in eval(ticket.evaluation)]),
+                    'evaluation': ",".join([str(i) for i in eval(ticket.evaluation)]),
                     'evaluation_sheet': f"{base_url}studentEval/{ticket.document_id}/{ticket.evaluator_id}/",
+                    'ticket': ticket.ticket,
+                    'id': ticket.id
                 } for ticket in tickets_raised
             ]
         }
@@ -331,8 +343,12 @@ def TeacherHome(request):
     Handles the Teacher Dashboard functionality, including document uploads and analytics.
     """
     # Check if the user is a Teacher
+    if not request.user.is_authenticated:
+        messages.error(request, 'Please login first')
+        return redirect('/login/')
+    
     user_profile = UserProfile.objects.filter(user=request.user).first()
-    if not user_profile or user_profile.role != 'Teacher' or not request.user.is_authenticated:
+    if not user_profile or user_profile.role != 'Teacher':
         messages.error(request, 'Permission denied')
         return redirect('/login/')
     
@@ -633,7 +649,9 @@ def uploadCSV(request):
                             'last_name': data[0].split()[1] if len(data[0].split()) > 1 else '',
                         }
                     )
+
                     if created:
+
                         random_password = generate_password(10)
                         html_message = render_to_string(
                             "ForgotPasswordMailTemplate.html",  # Path to your email template
@@ -646,10 +664,10 @@ def uploadCSV(request):
 
                         # Send the email
                         send_mail(
-                            subject="Credentials",
+                            subject="Account created : Credentials",
                             message=plain_message,
                             from_email="no-reply@evaluation-system.com",
-                            recipient_list=[data[1].split("@")[0]],
+                            recipient_list=[data[1]],
                             html_message=html_message,  # Attach the HTML message
                             fail_silently=False,
                         )
@@ -870,7 +888,10 @@ def studentEval(request, doc_id, eval_id):
     if not request.user.is_authenticated or not user_profile or not document or not evaluation:
         messages.error(request, 'Permission denied.')
         return redirect('/logout/')
-    if evaluation.evaluated:
+    
+    if user_profile.role != 'Student':
+        pass
+    elif evaluation.evaluated:
         messages.error(request, 'This document has already been evaluated.')
         return redirect(f'/{user_profile.role}Home/')
 
@@ -908,6 +929,7 @@ def studentEval(request, doc_id, eval_id):
         evaluation.feedback = feedback
         evaluation.score = total_marks
         evaluation.evaluated = True
+        evaluation.ticket = 0
         evaluation.save()
 
         messages.success(request, 'Evaluation submitted successfully!')
@@ -934,7 +956,7 @@ def forgetPassword(request):
 
             # Send the email
             send_mail(
-                subject="Credentials",
+                subject="Peer Evaluation Forget Password credentials",
                 message=plain_message,
                 from_email="no-reply@evaluation-system.com",
                 recipient_list=[user.email],
@@ -967,6 +989,7 @@ def raise_ticket(request, doc_id):
         peerevaluation.save()
         messages.success(request, 'Ticket raised successfully!')
         return redirect(f"/{current_user_profile.role}Home/")
+
 
 # # NOTE: Send email to the assigned peer
 # def send_peer_evaluation_email(evaluation_link, email_id):
