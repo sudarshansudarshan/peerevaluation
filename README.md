@@ -30,8 +30,8 @@ To set up the software for development, the following tools are required:
    ```
 
 2. Set Up settings.py of peereval
-   * Add your PostgreSQL credentials in the Database section (line 78) of the file, or use the credentials there to set up the environment on your system.
-   * Add your email details in the email configuration section near line 143 to send emails from your email ID.
+   * Add your PostgreSQL credentials in the Database section (line number 78) of the file, or use the credentials there to set up the environment on your system.
+   * Add your email details in the email configuration section near line number 143 to send emails from your email ID.
 
 3. Run application using
    * Navigate to the folder where manage.py is located using cd <folder_name>, and run the commands provided below.
