@@ -142,5 +142,5 @@ EMAIL_PORT = 587               # TLS port
 EMAIL_USE_TLS = True           # Use TLS for secure connection
 EMAIL_USE_SSL = False          # SSL not required with TLS
 EMAIL_HOST_USER = "Enter your email address"  # Replace with your Gmail address
-EMAIL_HOST_PASSWORD = "Enter app specific password"     # Replace with your Gmail password
+EMAIL_HOST_PASSWORD = "Enter your app specific password"     # Replace with your Gmail password
 DEFAULT_FROM_EMAIL = "Enter your email address"

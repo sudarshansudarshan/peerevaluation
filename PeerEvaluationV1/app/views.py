@@ -987,7 +987,7 @@ def forgetPassword(request):
 def raise_ticket(request, doc_id):
     current_user_profile = UserProfile.objects.filter(user=request.user).first()
     if not current_user_profile or current_user_profile.role not in ['TA', 'Student']:
-        messages.error(request, 'You do not have permission to raise ticket.')
+        messages.error(request, 'You do not have permission to modify roles.')
         return redirect(f"/{current_user_profile.role}Home/")
     
     if request.method == 'POST':
