@@ -122,6 +122,17 @@ docker-compose --version
    ```
 
 2. **Run the Application Using Docker**
+
+   #### On Windows:
+
+   Execute the following commands to build and start the application:
+   ```cmd
+   docker-compose up --build
+   ```
+
+   #### On MacOS / Linux:
+
+
    Execute the following commands to build and start the application:
    ```bash
    sudo docker-compose down || true
