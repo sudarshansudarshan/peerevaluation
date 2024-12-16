@@ -75,14 +75,22 @@ WSGI_APPLICATION = 'peereval.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.postgresql',
+#         'NAME': 'peereval',
+#         'USER': 'postgres',
+#         'PASSWORD': '12345678',
+#         'HOST': 'localhost',
+#         'PORT': '5432',
+#     }
+# }
+
+# Configure this for sqlite
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'peereval',
-        'USER': 'postgres',
-        'PASSWORD': '12345678',
-        'HOST': 'localhost',
-        'PORT': '5432',
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
     }
 }
 
@@ -141,6 +149,6 @@ EMAIL_HOST = "smtp.gmail.com"  # Gmail SMTP server
 EMAIL_PORT = 587               # TLS port
 EMAIL_USE_TLS = True           # Use TLS for secure connection
 EMAIL_USE_SSL = False          # SSL not required with TLS
-EMAIL_HOST_USER = "Enter your email address"  # Replace with your Gmail address
-EMAIL_HOST_PASSWORD = "Enter your app specific password"     # Replace with your Gmail password
-DEFAULT_FROM_EMAIL = "Enter your email address"
+EMAIL_HOST_USER = "aivs-coordinator@iitrpr.ac.in"  # Replace with your Gmail address
+EMAIL_HOST_PASSWORD = "wygr ualf pfsv ksmh"     # Replace with your Gmail password
+DEFAULT_FROM_EMAIL = "aivs-coordinator@iitrpr.ac.in"
