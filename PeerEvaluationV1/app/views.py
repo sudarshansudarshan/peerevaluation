@@ -141,7 +141,10 @@ def setPeerEval(document_instances):
                 evaluation_link = f"{base_url}studentEval/{document.id}/{student.uid}/"
 
                 # TODO: Fix mailing component
-                send_peer_evaluation_email(evaluation_link, email)
+                try:
+                    send_peer_evaluation_email(evaluation_link, email)
+                except:
+                    pass
                 
                 if current_assigned_count == num_peers:
                     break
@@ -271,6 +274,13 @@ def TAHome(request):
         return redirect('/TAHome/')
 
     # Analytics for Teacher Dashboard
+    total_marks = numberOfQuestions.objects.all().first()
+    if not total_marks:
+        total_marks = 0
+    else:
+        total_marks = total_marks.total_marks
+
+    # Analytics for Teacher Dashboard
     try:
         # Distribution of marks for students: Group by document_id and calculate average score
         marks_distribution = (
@@ -289,8 +299,6 @@ def TAHome(request):
         total_peer_evaluations = PeerEvaluation.objects.count()
         evaluated_peer_evaluations = PeerEvaluation.objects.filter(evaluated=True).count()
         pending_peer_evaluations = PeerEvaluation.objects.filter(evaluated=False).count()
-
-        num_ques = numberOfQuestions.objects.all().first().total_marks
 
         peer_evaluations = {
             'total': total_peer_evaluations,
@@ -321,6 +329,7 @@ def TAHome(request):
                 } for ticket in tickets_raised
             ]
         }
+
     except Exception as e:
         analytics_data = {
             'top_students_scores': [],  # Default empty list
@@ -333,7 +342,7 @@ def TAHome(request):
     return render(request, 'TAHome.html', {
         'users': user_profile.serialize(),
         'analytics_data': analytics_data,
-        'num_ques': num_ques,
+        'num_ques': total_marks,
     })
 
 
@@ -398,6 +407,11 @@ def TeacherHome(request):
         return redirect('/TeacherHome/')
 
     # Analytics for Teacher Dashboard
+    total_marks = numberOfQuestions.objects.all().first()
+    if not total_marks:
+        total_marks = 0
+    else:
+        total_marks = total_marks.total_marks
 
     try:
         # Distribution of marks for students: Group by document_id and calculate average score
@@ -417,8 +431,6 @@ def TeacherHome(request):
         total_peer_evaluations = PeerEvaluation.objects.count()
         evaluated_peer_evaluations = PeerEvaluation.objects.filter(evaluated=True).count()
         pending_peer_evaluations = PeerEvaluation.objects.filter(evaluated=False).count()
-
-        num_ques = numberOfQuestions.objects.all().first().total_marks
 
         peer_evaluations = {
             'total': total_peer_evaluations,
@@ -459,7 +471,7 @@ def TeacherHome(request):
     return render(request, 'TeacherHome.html', {
         'users': user_profile.serialize(),
         'analytics_data': analytics_data,
-        'num_ques': num_ques,
+        'num_ques': total_marks,
     })
 
 
@@ -723,8 +735,7 @@ def questionNumbers(request):
         number, total_marks = request.POST.get('num-questions'), request.POST.get('total_marks')
         numQue = numberOfQuestions.objects.all().first()
         if not numQue:
-            numQue = numberOfQuestions(number=number)
-            numQue = numberOfQuestions(total_marks=total_marks)
+            numQue = numberOfQuestions(number=number, total_marks=total_marks)
         else:
             numQue.number = number
             numQue.total_marks = total_marks
@@ -832,7 +843,7 @@ def studentHome(request):
         own_pdf = documents.objects.filter(uid=student_profile).first()
 
         # Render the data in the studentHome template
-        return render(request, 'studentHome.html', {
+        return render(request, 'StudentHome.html', {
             'evaluation_files': evaluation_files_data,
             'own_documents': own_documents_data,
             'own_pdf': own_pdf.file.url
@@ -841,7 +852,7 @@ def studentHome(request):
     except Exception as e:
         # Handle unexpected errors
         print(f"Error fetching data: {e}")
-        return render(request, 'studentHome.html', {
+        return render(request, 'StudentHome.html', {
             'evaluation_files': [],
             'own_documents': [],
         })
@@ -976,7 +987,7 @@ def forgetPassword(request):
 def raise_ticket(request, doc_id):
     current_user_profile = UserProfile.objects.filter(user=request.user).first()
     if not current_user_profile or current_user_profile.role not in ['TA', 'Student']:
-        messages.error(request, 'You do not have permission to modify roles.')
+        messages.error(request, 'You do not have permission to raise ticket.')
         return redirect(f"/{current_user_profile.role}Home/")
     
     if request.method == 'POST':
