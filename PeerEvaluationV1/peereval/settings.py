@@ -134,12 +134,13 @@ STATICFILES_DIR = {
 MEDIA_ROOT = os.path.join(BASE_DIR, 'public/static')
 MEDIA_URL = '/media/'
 
+# Email configuration for MailHog
 # Email configuration for Gmail
 EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
 EMAIL_HOST = "smtp.gmail.com"  # Gmail SMTP server
 EMAIL_PORT = 587               # TLS port
 EMAIL_USE_TLS = True           # Use TLS for secure connection
 EMAIL_USE_SSL = False          # SSL not required with TLS
-EMAIL_HOST_USER = "Email address"  # Replace with your Gmail address
-EMAIL_HOST_PASSWORD = "App specific password generated from google account"     # Replace with your Gmail password
-DEFAULT_FROM_EMAIL = "Email address"
+EMAIL_HOST_USER = "Enter your email address"  # Replace with your Gmail address
+EMAIL_HOST_PASSWORD = "Enter app specific password"     # Replace with your Gmail password
+DEFAULT_FROM_EMAIL = "Enter your email address"
