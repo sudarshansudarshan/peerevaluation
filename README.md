@@ -145,9 +145,12 @@ docker-compose --version
 
 3. **Test the app**
 
-   For testing purposes, the default access provided would be an **Admin** role
+   For testing purposes, the default access provided would be an **Admin** role.
+   
    For which:-
+   
    Username (Default): admin
+   
    Password (Default): Abcd@1234
 
    The 'Teacher' role can be accessed by registering on the registration page and then update the role from default Admin ID.
