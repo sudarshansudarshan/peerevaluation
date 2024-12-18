@@ -6,6 +6,7 @@ class numberOfQuestions(models.Model):
     id = models.AutoField(primary_key=True)
     number = models.IntegerField()
     total_marks = models.IntegerField(default=0)
+    k = models.IntegerField(default=0)
 
     def __str__(self):
         return self.number
@@ -20,6 +21,7 @@ class UserProfile(models.Model):
         ('Admin', 'Admin'),
     ]
     role = models.CharField(max_length=10, choices=ROLE_CHOICES)
+    password_updated = models.BooleanField(default=False)
 
     def __str__(self):
         return f"{self.user.username} - {self.role}"

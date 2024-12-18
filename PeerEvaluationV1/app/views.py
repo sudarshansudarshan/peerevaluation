@@ -104,7 +104,7 @@ def setPeerEval(document_instances):
     Assign peer evaluations to students.
     """
     # Calculate the number of peers required per document
-    num_peers = floor(sqrt(len(document_instances)))
+    num_peers = numberOfQuestions.objects.all().first().k
     all_students = list(Student.objects.all())
     shuffle(all_students)
 
@@ -499,7 +499,7 @@ def uploadFile(request):
                     user, created = User.objects.get_or_create(
                         email=data[1],
                         defaults={
-                            'username': data[1].split("@")[0],
+                            'username': data[1],
                             'first_name': data[0].split()[0],
                             'last_name': data[0].split()[1] if len(data[0].split()) > 1 else '',
                         }
@@ -545,7 +545,11 @@ def login_page(request):
         else:
             user_profile = UserProfile.objects.filter(user=user).first()
             login(request, user)
-            return redirect(f"/{user_profile.role}Home/")
+            if user_profile.password_updated:
+                return redirect(f"/{user_profile.role}Home/")
+            else:
+                messages.error(request, "Please change your password to continue.")
+                return redirect('/changePassword/')
     
     # Render the login page template (GET request)
     return render(request, 'login.html')
@@ -560,14 +564,11 @@ def register_page(request):
     if request.method == 'POST':
         first_name = request.POST.get('first_name')
         last_name = request.POST.get('last_name')
-        username = request.POST.get('username')
         email = request.POST.get('email')
         password = request.POST.get('password')
 
-        print(first_name, last_name, username, email, password)
-
         # Check if a user with the provided username already exists
-        user = User.objects.filter(username=username)
+        user = User.objects.filter(username=email)
         
         if user.exists():
             # Display an information message if the username is taken
@@ -586,7 +587,7 @@ def register_page(request):
         user = User.objects.create_user(
             first_name=first_name,
             last_name=last_name,
-            username=username,
+            username=email,
             email=email
         )
         
@@ -594,7 +595,7 @@ def register_page(request):
         user.set_password(password)
         user.save()
 
-        user_id = User.objects.get(username=username).id
+        user_id = User.objects.get(username=email).id
         user_profile = UserProfile(user_id=user_id, role="Student")
         user_profile.save()
         
@@ -656,9 +657,9 @@ def uploadCSV(request):
                     user, created = User.objects.get_or_create(
                         email=data[1],
                         defaults={
-                            'username': data[1].split("@")[0],
+                            'username': data[1],
                             'first_name': data[0].split()[0],
-                            'last_name': data[0].split()[1] if len(data[0].split()) > 1 else '',
+                            'last_name': data[0].split()[1] if len(data[0].split()) > 1 else ''
                         }
                     )
 
@@ -668,7 +669,7 @@ def uploadCSV(request):
                         html_message = render_to_string(
                             "ForgotPasswordMailTemplate.html",  # Path to your email template
                             {
-                                "username": data[1].split("@")[0],
+                                "username": data[1],
                                 "new_password": random_password  # Link to the evaluation
                             },
                         )
@@ -686,7 +687,7 @@ def uploadCSV(request):
                         user.set_password(random_password)
                         user.save()
 
-                        user_id = User.objects.get(username=data[1].split("@")[0]).id
+                        user_id = User.objects.get(username=data[1]).id
                         new_user_profile = UserProfile(user_id=user_id, role="Student")
                         new_user_profile.save()
 
@@ -732,21 +733,27 @@ def change_role(request):
 def questionNumbers(request):
     current_user_profile = UserProfile.objects.filter(user=request.user).first()
     if request.method == 'POST':
-        number, total_marks = request.POST.get('num-questions'), request.POST.get('total_marks')
+        number, total_marks, k = request.POST.get('num-questions'), request.POST.get('total_marks'), request.POST.get('k')
         numQue = numberOfQuestions.objects.all().first()
         if not numQue:
-            numQue = numberOfQuestions(number=number, total_marks=total_marks)
+            numQue = numberOfQuestions(number=number, total_marks=total_marks, k=k)
         else:
             numQue.number = number
             numQue.total_marks = total_marks
+            numQue.k = k
         numQue.save()
-        messages.success(request, 'Number of questions and total marks updated successfully!')
+        messages.success(request, 'Number of questions, total marks and number of evaluations (k) updated successfully!')
         return redirect(f"/{current_user_profile.role}Home/")
     return redirect('/logout/')
 
 
 # NOTE: Change password route
 def changePassword(request):
+    current_user_profile = UserProfile.objects.filter(user=request.user).first()
+    if not current_user_profile:
+        messages.error(request, 'You do not have permission to access thiis page.')
+        return redirect(f"/{current_user_profile.role}Home/")
+
     if request.method == 'POST':
         # Retrieve the password and confirmation from the POST data
         password = request.POST.get('password')
@@ -759,7 +766,8 @@ def changePassword(request):
         # Validate password strength
         if not password:
             messages.error(request, "Password field cannot be empty.")
-            return redirect('/changePassword/')  # Update with your actual URL
+            return redirect('/changePassword/')
+        
         elif not password_pattern.match(password):
             messages.error(request, "Password must be at least 8 characters long, include at least one letter, one number, and one special character (@, #, $, %, *).")
             return redirect('/changePassword/')  # Update with your actual URL
@@ -771,16 +779,18 @@ def changePassword(request):
 
         # If all validations pass, update the password
         try:
-            user = User.objects.get(username=request.user.username)
+            user = User.objects.get(id=current_user_profile.user_id)
             user.set_password(password)
             user.save()
+            current_user_profile.password_updated = True
+            current_user_profile.save()
             messages.success(request, 'Password changed successfully.')
             return redirect('/logout/')  # Redirect to logout or another appropriate page
         except User.DoesNotExist:
             messages.error(request, "User does not exist.")
-            return redirect('/changePassword/')  # Update with your actual URL
+            return redirect('/logout/')  # Update with your actual URL
 
-    return render(request, 'login.html')  # Ensure this renders the correct template
+    return render(request, 'NewPassword.html')
 
 
 def studentHome(request):
@@ -954,6 +964,8 @@ def forgetPassword(request):
     if request.method == 'POST':
         # Fetch the user object based on the provided email
         user = User.objects.filter(username=request.POST.get('username')).first()
+        user_profile = UserProfile.objects.filter(user_id=user.id).first()
+
         if user:
             random_password = generate_password(10)
             html_message = render_to_string(
@@ -976,6 +988,8 @@ def forgetPassword(request):
             )
             user.set_password(random_password)
             user.save()
+            user_profile.password_updated = False
+            user_profile.save()
             messages.success(request, 'Password reset email sent successfully!')
         else:
             messages.error(request, 'User not found.')
