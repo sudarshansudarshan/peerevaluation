@@ -160,7 +160,7 @@ docker-compose --version
 ## Documentation
 For detailed documentation and guides, refer to the PDF files in the **Documentation** folder of the repository.
 
-For SOP of the Peer Evaluation please refer link provided "https://github.com/sudarshansudarshan/peerevaluation/blob/main/Documentation/SOP_Peer_Evaluation.pdf"
+For SOP of the Peer Evaluation please refer link provided [SOP](https://github.com/sudarshansudarshan/peerevaluation/blob/main/Documentation/SOP_Peer_Evaluation.pdf)
 
 ---
 
