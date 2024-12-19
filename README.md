@@ -155,7 +155,7 @@ docker-compose --version
 
    The 'Teacher' role can be accessed by registering on the registration page and then update the role from default Admin ID.
 
-   The application is compatible with desktops.
+   The application is only compatible with desktops.
 
 ---
 
