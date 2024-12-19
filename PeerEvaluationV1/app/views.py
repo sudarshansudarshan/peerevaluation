@@ -9,7 +9,7 @@ from .models import *
 from django.db.models import Avg, Count, Q
 from app.ocr import process_uploaded_pdf
 import os
-from random import shuffle
+from random import shuffle, choice, sample
 from collections import defaultdict
 import random
 from math import sqrt, ceil, floor
@@ -101,7 +101,7 @@ def send_peer_evaluation_email(evaluation_link, email_id):
 
 def setPeerEval(document_instances):
     """
-    Assign peer evaluations to students.
+    Assign peer evaluations to students using a mapping approach.
     """
     num_peers = numberOfQuestions.objects.all().first().k  # Number of peers per document
     students = list(Student.objects.all())
@@ -109,45 +109,41 @@ def setPeerEval(document_instances):
     num_students = len(students)
     num_documents = len(documents)
 
-    # Total evaluations needed
-    total_evaluations = num_documents * num_peers
-    # Evaluations per student
-    evaluations_per_student = ceil(total_evaluations / num_students)
-
     # Map student's own document
     student_documents = {document.uid.uid: document.id for document in documents}
 
-    # Create list of possible assignments (student, document) excluding self
-    possible_assignments = []
-    for student in students:
-        for document in documents:
-            if student.uid != document.uid.uid:  # Exclude self
-                possible_assignments.append((student.uid, document.id))
-
-    shuffle(possible_assignments)  # Randomize the assignment order
-
-    # Initialize assignments tracking
+    # Track assignments
     document_evaluations = defaultdict(list)  # document_id -> list of evaluator_ids
-    student_evaluations = defaultdict(list)   # evaluator_id -> list of document_ids
+    student_evaluations = defaultdict(int)    # evaluator_id -> count of assigned documents
 
-    # Proceed to assign evaluations
-    for evaluator_id, document_id in possible_assignments:
-        if len(document_evaluations[document_id]) >= num_peers:
-            continue  # Document already has enough evaluations
-        if len(student_evaluations[evaluator_id]) >= evaluations_per_student:
-            continue  # Student has enough evaluations assigned
-        if evaluator_id in document_evaluations[document_id]:
-            continue  # Already assigned
+    # Rotate through students to assign evaluators for each document
+    student_ids = [student.uid for student in students]
 
-        # Assign evaluation
-        document_evaluations[document_id].append(evaluator_id)
-        student_evaluations[evaluator_id].append(document_id)
+    for document in documents:
+        document_id = document.id
+        document_owner = document.uid.uid
 
-        # Check if all evaluations are assigned
-        if sum(len(v) for v in document_evaluations.values()) >= total_evaluations:
-            break
+        # Start assigning evaluators
+        assigned_count = 0
+        start_index = student_ids.index(document_owner) + 1  # Skip the owner
+        current_index = start_index
 
-    # Now create PeerEvaluation objects
+        while assigned_count < num_peers:
+            evaluator_id = student_ids[current_index % num_students]
+            if (
+                evaluator_id != document_owner
+                and evaluator_id not in document_evaluations[document_id]
+                and student_evaluations[evaluator_id] < num_peers
+            ):
+                # Assign evaluator to the document
+                document_evaluations[document_id].append(evaluator_id)
+                student_evaluations[evaluator_id] += 1
+                assigned_count += 1
+
+            # Move to the next student in a circular manner
+            current_index += 1
+
+    # Create PeerEvaluation objects and send emails
     for document_id, evaluator_ids in document_evaluations.items():
         for evaluator_id in evaluator_ids:
             PeerEvaluation.objects.create(
@@ -158,6 +154,7 @@ def setPeerEval(document_instances):
                 score=0,  # Placeholder
                 document_id=document_id,
             )
+
             # Get evaluator's email
             student = Student.objects.get(uid=evaluator_id)
             email = student.student_id.email
@@ -166,6 +163,7 @@ def setPeerEval(document_instances):
                 send_peer_evaluation_email(evaluation_link, email)
             except:
                 pass
+
 
 # NOTE: The Admin dashboard
 def AdminDashboard(request):
