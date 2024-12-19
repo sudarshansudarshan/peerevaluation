@@ -1,0 +1,152 @@
+{% extends 'layouts/base.html' %}
+
+{% block title %} Dashboard {% endblock title %}
+
+<!-- Specific CSS goes HERE -->
+{% block stylesheets %}{% endblock stylesheets %}
+
+{% block content %}
+
+    <!-- Header -->
+    <div class="header bg-primary pb-6">
+      <div class="container-fluid">
+        <div class="header-body">
+          <div class="row align-items-center py-4">
+            <div class="col-lg-6 col-7">
+              <h6 class="h2 text-white d-inline-block mb-0">Teacher Dashboard</h6>
+              <nav aria-label="breadcrumb" class="d-none d-md-inline-block ml-md-4">
+                <ol class="breadcrumb breadcrumb-links breadcrumb-dark">
+                  <li class="breadcrumb-item"><a href="#"><i class="fas fa-home"></i></a></li>
+                  <li class="breadcrumb-item"><a href="#">Dashboards</a></li>
+                  <li class="breadcrumb-item active" aria-current="page">Default</li>
+                </ol>
+              </nav>
+            </div>
+            <div class="col-lg-6 col-5 text-right">
+              <!-- Button to trigger modal -->
+              <button data-toggle="modal" data-target="#csvModal" class="btn btn-sm btn-neutral">Download CSV</button>
+            </div>
+          </div>
+          <!-- Card stats (same as before) -->
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal for CSV download -->
+    <div class="modal fade" id="csvModal" tabindex="-1" aria-labelledby="csvModalLabel" aria-hidden="true">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="csvModalLabel">Select Course and Batch</h5>
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+              <span aria-hidden="true">&times;</span>
+            </button>
+          </div>
+          <div class="modal-body">
+            <form id="csvForm" method="POST" action="{% url 'download_csv' %}">
+              {% csrf_token %}
+              <div class="form-group">
+                <label for="batchSelect">Select Batch</label>
+                <select class="form-control" id="batchSelect" name="batch">
+                  {% for batch in batches %}
+                    <option value="{{ batch.batch_id }}">{{ batch.course_name }} | {{ batch.course_id }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+              <button type="submit" class="btn btn-primary">Download CSV</button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Page content -->
+    <div class="container-fluid mt--6">
+      <div class="row">
+        <div class="col-xl-8">
+          <div class="card">
+            <div class="card-header border-0">
+              <div class="row align-items-center">
+                <div class="col">
+                  <h3 class="mb-0">Enrolled Students</h3>
+                </div>
+              </div>
+            </div>
+            <div class="table-responsive">
+              <!-- Students table -->
+              <table class="table align-items-center table-flush">
+                <thead class="thead-light">
+                  <tr>
+                    <th scope="col">Student Username</th>
+                    <th scope="col">Email</th>
+                    <th scope="col">Batch ID</th>
+                    <th scope="col">Course Name</th>
+                    <th scope="col">Course ID</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for student in students %}
+                  <tr>
+                    <td>{{ student.student_username }}</td>
+                    <td>{{ student.student_email }}</td>
+                    <td>{{ student.batch_id }}</td>
+                    <td>{{ student.course_name }}</td>
+                    <td>{{ student.course_id }}</td>
+                  </tr>
+                  {% endfor %}
+                  {% if students|length == 0 %}
+                  <tr>
+                    <td colspan="5" class="text-center">No students enrolled</td>
+                  </tr>
+                  {% endif %}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+        <div class="col-xl-4">
+          <div class="card">
+            <div class="card-header border-0 d-flex justify-content-between">
+              <h3 class="mb-0">Batches</h3>
+            </div>
+            <div class="table-responsive">
+              <table class="table align-items-center table-flush">
+                <thead class="thead-light">
+                  <tr>
+                    <th scope="col">Batch Name</th>
+                    <th scope="col">Course</th>
+                    <th scope="col">Strength</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% if batches %}
+                    {% for batch in batches %}
+                    <tr>
+                      <td>{{ batch.batch_id }}</td>
+                      <td>{{ batch.course_name }}</td>
+                      <td>{{ batch.strength }}</td>
+                    </tr>
+                    {% endfor %}
+                  {% else %}
+                    <tr>
+                      <td colspan="3">No batches available</td>
+                    </tr>
+                  {% endif %}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {% include "includes/footer.html" %}
+
+    </div>
+
+{% endblock content %}
+
+<!-- Specific JS goes HERE --> 
+{% block javascripts %}
+  <script src="/static/assets/vendor/chart.js/dist/Chart.min.js"></script>
+  <script src="/static/assets/vendor/chart.js/dist/Chart.extension.js"></script>
+{% endblock javascripts %}

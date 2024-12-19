@@ -1,0 +1,29 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="apple-touch-icon" sizes="76x76" href="{% static 'img/apple-icon.png' %}" />
+    <link rel="icon" type="image/png" href="{% static 'img/favicon.png' %}" />
+    <link href="https://fonts.googleapis.com/css?family=Open+Sans:300,400,600,700" rel="stylesheet">
+    <script src="https://kit.fontawesome.com/42d5adcbca.js" crossorigin="anonymous"></script>
+    <link href="{% static 'css/nucleo-icons.css' %}" rel="stylesheet">
+    <link href="{% static 'css/nucleo-svg.css' %}" rel="stylesheet">
+    <link href="{% static 'css/argon-dashboard-tailwind.css?v=1.0.1' %}" rel="stylesheet">
+    <title>{% block title %}Default Title{% endblock %}</title>
+</head>
+    {% block content %}{% endblock %}
+<!-- Include Tailwind CSS and any additional custom styles -->
+<style>
+    @tailwind base;
+    @tailwind components;
+    @tailwind utilities;
+</style>
+
+<!-- External scripts -->
+<script src="{% static 'js/plugins/perfect-scrollbar.min.js' %}" async></script>
+<script src="{% static 'js/argon-dashboard-tailwind.js' %}" async></script>
+</html>

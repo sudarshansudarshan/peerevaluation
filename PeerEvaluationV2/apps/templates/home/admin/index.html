@@ -1,0 +1,374 @@
+{% extends 'layouts/base.html' %}
+
+{% block title %} Admin Dashboard {% endblock title %}
+
+<!-- Specific CSS goes HERE -->
+{% block stylesheets %}{% endblock stylesheets %}
+
+{% block content %}
+
+    <!-- Header -->
+    <div class="header bg-primary pb-6">
+      <div class="container-fluid">
+        <div class="header-body">
+          <div class="row align-items-center py-4">
+            <div class="col-lg-6 col-7">
+              <h6 class="h2 text-white d-inline-block mb-0">Admin Dashboard</h6>
+              <nav aria-label="breadcrumb" class="d-none d-md-inline-block ml-md-4">
+                <ol class="breadcrumb breadcrumb-links breadcrumb-dark">
+                  <li class="breadcrumb-item"><a href="#"><i class="fas fa-home"></i></a></li>
+                  <li class="breadcrumb-item"><a href="#">Dashboard</a></li>
+                </ol>
+              </nav>
+            </div>
+          </div>
+          <!-- Card stats -->
+          <div class="row">
+            <div class="col-xl-3 col-md-6">
+              <div class="card card-stats">
+                <!-- Card body -->
+                <div class="card-body">
+                  <div class="row">
+                    <div class="col">
+                      <h5 class="card-title text-uppercase text-muted mb-0">Students</h5>
+                      <span class="h2 font-weight-bold mb-0">{{ counts.students }}</span>
+                    </div>
+                    <div class="col-auto">
+                      <div class="icon icon-shape bg-gradient-red text-white rounded-circle shadow">
+                        <i class="ni ni-paper-diploma"></i>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="col-xl-3 col-md-6">
+              <div class="card card-stats">
+                <!-- Card body -->
+                <div class="card-body">
+                  <div class="row">
+                    <div class="col">
+                      <h5 class="card-title text-uppercase text-muted mb-0">Teachers</h5>
+                      <span class="h2 font-weight-bold mb-0">{{ counts.teachers }}</span>
+                    </div>
+                    <div class="col-auto">
+                      <div class="icon icon-shape bg-gradient-orange text-white rounded-circle shadow">
+                        <i class="ni ni-tablet-button"></i>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="col-xl-3 col-md-6">
+              <div class="card card-stats">
+                <!-- Card body -->
+                <div class="card-body">
+                  <div class="row">
+                    <div class="col">
+                      <h5 class="card-title text-uppercase text-muted mb-0">Courses</h5>
+                      <span class="h2 font-weight-bold mb-0">{{ counts.courses }}</span>
+                    </div>
+                    <div class="col-auto">
+                      <div class="icon icon-shape bg-gradient-green text-white rounded-circle shadow">
+                        <i class="ni ni-money-coins"></i>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="col-xl-3 col-md-6">
+              <div class="card card-stats">
+                <!-- Card body -->
+                <div class="card-body">
+                  <div class="row">
+                    <div class="col">
+                      <h5 class="card-title text-uppercase text-muted mb-0">Batches</h5>
+                      <span class="h2 font-weight-bold mb-0">{{ counts.batches }}</span>
+                    </div>
+                    <div class="col-auto">
+                      <div class="icon icon-shape bg-gradient-info text-white rounded-circle shadow">
+                        <i class="ni ni-chart-bar-32"></i>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+<!-- Page content -->
+<div class="container-fluid mt--6">
+  <div class="row">
+    <!-- Courses Table -->
+    <div class="col-md-6">
+      <div class="card">
+        <div class="card-header border-0 d-flex justify-content-between">
+          <h3 class="mb-0">Courses</h3>
+          <button class="btn btn-sm btn-primary" data-toggle="modal" data-target="#addCourseModal">Add Course</button>
+        </div>
+        <div class="table-responsive">
+          <table class="table align-items-center table-flush">
+            <thead class="thead-light">
+              <tr>
+                <th scope="col">Course ID</th>
+                <th scope="col">Course Name</th>
+                <th scope="col">Is Public</th>
+                <th scope="col">End date</th>
+                <th scope="col">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% if courses %}
+                {% for course in courses %}
+                <tr>
+                  <td>{{ course.course_id }}</td>
+                  <td>{{ course.name }}</td>
+                  <td>
+                      {% if course.is_public %}
+                        <span class="badge badge-success">Yes</span>
+                      {% else %}
+                        <span class="badge badge-danger">No</span>
+                      {% endif %}
+                  </td>
+                  <td>{{ course.end_date|date:"d M Y" }}</td>
+                  <td>
+                    <!-- Use JavaScript for DELETE request -->
+                    <button 
+                        class="btn btn-sm" 
+                        style="color: red; background: none; border: none;" 
+                        onclick="deleteCourse({{ course.id }})">
+                        Delete
+                    </button>
+                  </td>
+                </tr>
+                {% endfor %}
+              {% else %}
+                <tr>
+                  <td colspan="3">No courses available</td>
+                </tr>
+              {% endif %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+        <!-- Batches Table -->
+    <div class="col-md-6">
+      <div class="card">
+        <div class="card-header border-0 d-flex justify-content-between">
+          <h3 class="mb-0">Batches</h3>
+          <button class="btn btn-sm btn-primary" data-toggle="modal" data-target="#addBatchModal">Add Batch</button>
+        </div>
+        <div class="table-responsive">
+          <table class="table align-items-center table-flush">
+            <thead class="thead-light">
+              <tr>
+                <th scope="col">Batch Name</th>
+                <th scope="col">Course</th>
+                <th scope="col">Teacher</th>
+                <th scope="col">Strength</th>
+                <th scope="col">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% if batches %}
+                {% for batch in batches %}
+                <tr>
+                  <td>{{ batch.batch_id }}</td>
+                  <td>{{ batch.course_name }}</td>
+                  <td>{{ batch.teacher }}</td>
+                  <td>{{ 0 }}</td>
+                  <td>
+                    <!-- Use JavaScript for DELETE request -->
+                    <button 
+                        class="btn btn-sm" 
+                        style="color: red; background: none; border: none;" 
+                        onclick="deleteBatch({{ batch.id }})">
+                        Delete
+                    </button>
+                  </td>
+                </tr>
+                {% endfor %}
+              {% else %}
+                <tr>
+                  <td colspan="5">No batches available</td>
+                </tr>
+              {% endif %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+<!-- Modals -->
+<!-- Add Course Modal -->
+<div class="modal fade" id="addCourseModal" tabindex="-1" role="dialog" aria-labelledby="addCourseModalLabel" aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <form method="POST" action="{% url 'add_course' %}">
+      {% csrf_token %}
+      <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="addCourseModalLabel">Add Course</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+        <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <!-- Course ID -->
+        <div class="form-group">
+        <label for="course_id">Course ID</label>
+        <input type="text" class="form-control" id="course_id" name="course_id" required>
+        </div>
+        <!-- Name -->
+        <div class="form-group">
+        <label for="courseName">Course Name</label>
+        <input type="text" class="form-control" id="courseName" name="course_name" required>
+        </div>
+        <!-- Description -->
+        <div class="form-group">
+        <label for="courseDescription">Description</label>
+        <textarea class="form-control" id="courseDescription" name="description" rows="3"></textarea>
+        </div>
+        <!-- Is Public -->
+        <div class="form-group form-check">
+        <input type="checkbox" class="form-check-input" id="courseIsPublic" name="is_public">
+        <label class="form-check-label" for="courseIsPublic">Is Public</label>
+        </div>
+        <!-- Start Date -->
+        <div class="form-group">
+        <label for="courseStartDate">Start Date</label>
+        <input type="date" class="form-control" id="courseStartDate" name="start_date" required>
+        </div>
+        <!-- End Date -->
+        <div class="form-group">
+        <label for="courseEndDate">End Date</label>
+        <input type="date" class="form-control" id="courseEndDate" name="end_date" required>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+        <button type="submit" class="btn btn-primary">Add Course</button>
+      </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Add Batch Modal -->
+<div class="modal fade" id="addBatchModal" tabindex="-1" role="dialog" aria-labelledby="addBatchModalLabel" aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <form method="POST" action="{% url 'add_batch' %}">
+      {% csrf_token %}
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="addBatchModalLabel">Add Batch</h5>
+          <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        <div class="modal-body">
+          <!-- Batch Name -->
+          <div class="form-group">
+            <label for="batchName">Batch Name</label>
+            <input type="text" class="form-control" id="batchName" name="batchName" required>
+          </div>
+
+          <!-- Course Selection -->
+          <div class="form-group">
+            <label for="batchCourse">Course</label>
+            <select class="form-control" id="batchCourse" name="batchCourse" required>
+              <option value="">Select a Course</option>
+              {% for course in courses %}
+                <option value="{{ course.id }}">{{ course.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <!-- Teacher Selection -->
+          <div class="form-group">
+            <label for="batchTeacher">Teacher</label>
+            <select class="form-control" id="batchTeacher" name="batchTeacher" required>
+              <option value="">Select a Teacher</option>
+              {% for teacher in teachers %}
+                <option value="{{ teacher.username }}">{{ teacher.username }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+          <button type="submit" class="btn btn-primary">Add Batch</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+
+{% endblock content %}
+
+<!-- Specific JS goes HERE -->
+{% block javascripts %}
+<script>
+  function deleteBatch(batchId) {
+    const csrfToken = "{{ csrf_token }}"; // CSRF token from Django context
+    const url = "{% url 'add_batch' %}"; // Correctly resolved URL
+    console.log(batchId);
+    fetch(url, {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': csrfToken,
+      },
+      body: JSON.stringify({ batch_id: batchId })
+    })
+    .then(response => {
+      if (response.ok) {
+        alert('Batch deleted successfully!');
+        window.location.reload(); // Reload to reflect changes
+      } else {
+        alert('Failed to delete the batch.');
+      }
+    })
+    .catch(error => {
+      console.error('Error:', error);
+      alert('An error occurred while deleting the batch.');
+    });
+  };
+
+  function deleteCourse(courseId) {
+    const csrfToken = "{{ csrf_token }}";
+    const url = "{% url 'add_course' %}";
+    fetch(url, {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': csrfToken,
+      },
+      body: JSON.stringify({ course_id: courseId })
+    })
+    .then(response => {
+      if (response.ok) {
+        window.location.reload();
+      } else {
+        alert('Failed to delete the course.');
+      }
+    })
+    .catch(error => {
+      console.error('Error:', error);
+      alert('An error occurred while deleting the course.');
+    });
+  };
+</script>
+<script src="/static/assets/vendor/chart.js/dist/Chart.min.js"></script>
+<script src="/static/assets/vendor/chart.js/dist/Chart.extension.js"></script>
+{% endblock javascripts %}
