@@ -149,7 +149,7 @@ docker-compose --version
    
    For which:-
    
-   Username (Default): admin
+   Username (Default): admin@gmail.com
    
    Password (Default): Abcd@1234
 
