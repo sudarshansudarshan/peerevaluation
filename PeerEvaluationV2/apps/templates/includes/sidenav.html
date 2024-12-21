@@ -23,19 +23,27 @@
               <span class="nav-link-text">Profile</span>
             </a>
           </li>
-          {% if user.is_teacher %}
-          <li class="nav-item">
-            <a class="nav-link {% if 'courses' in segment %} active {% endif %}" href="/courses.html">
-              <i class="ni ni-bullet-list-67 text-default"></i>
-              <span class="nav-link-text">Courses</span>
-            </a>
-          </li>
-          {% endif %}
           {% if user.is_student %}
           <li class="nav-item">
             <a class="nav-link {% if 'enrollment' in segment %} active {% endif %}" href="/enrollment.html">
               <i class="ni ni-bullet-list-67 text-default"></i>
               <span class="nav-link-text">Enrollment</span>
+            </a>
+          </li>
+          {% if is_ta %}
+          <li class="nav-item">
+            <a class="nav-link {% if 'ta' in segment %} active {% endif %}" href="/ta_hub">
+              <i class="ni ni-single-02 text-red"></i>
+              <span class="nav-link-text">TA Hub</span>
+            </a>
+          </li>
+          {% endif %}
+          {% endif %}
+          {% if user.is_assistant %}
+          <li class="nav-item">
+            <a class="nav-link {% if 'enrollment' in segment %} active {% endif %}" href="/enrollment.html">
+              <i class="ni ni-bullet-list-67 text-default"></i>
+              <span class="nav-link-text">Exam Scheduling</span>
             </a>
           </li>
           {% endif %}

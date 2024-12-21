@@ -9,7 +9,7 @@ from django.http import HttpResponse, HttpResponseRedirect
 from django.template import loader
 from django.urls import reverse
 from django.shortcuts import get_object_or_404, redirect
-from .models import Course, Batch, Staffs, StudentEnrollment, Exam, Document, Statistics, Incentivization
+from .models import Course, Batch, Staffs, StudentEnrollment, Exam, Document, Statistics, Incentivization, TeachingAssistantAssociation
 from django.contrib.auth.decorators import user_passes_test
 from django.shortcuts import render, redirect
 from django.contrib import messages
@@ -20,20 +20,30 @@ import random
 import csv
 import json
 
+def is_superuser(user):
+    return user.is_superuser
+
 # Overwrite User table from django to add method is_teacher
 def is_teacher(self):
     return self.staffs.role == 'teacher'
 User.add_to_class('is_teacher', is_teacher)
+
 
 # Overwrite User table from django to add method is_student
 def is_student(self):
     return not self.is_staff and not self.is_superuser
 User.add_to_class('is_student', is_student)
 
+
 # Overwrite User table from django to add method is_staff
 def is_staff(self):
     return self.staffs.role == 'staff'
 User.add_to_class('is_staff', is_staff)
+
+
+def is_assistant(self):
+    return self.staffs.role == 'assistant'
+User.add_to_class('is_assistant', is_assistant)
 
 
 @login_required(login_url="/login/")
@@ -66,89 +76,71 @@ def index(request):
         }
         html_template = loader.get_template('home/admin/index.html')
         return HttpResponse(html_template.render(context, request))
+    
     elif request.user.is_staff:
-        # Check the user_id of current user
-        user_id = request.user.id
-        staff = Staffs.objects.get(user_id=user_id)
-        # Teacher
-        if staff.role == 'teacher':
-            batches = Batch.objects.filter(teacher=request.user)
-            batches_list = []
-            for batch in batches:
-                batches_list.append({
+        batches = Batch.objects.filter(teacher=request.user)
+
+        batches_list = []
+        for batch in batches:
+            batches_list.append({
+                'id': batch.id,
+                'batch_id': batch.batch_id,
+                'course_name': batch.course.name,
+                'course_id': batch.course.course_id,
+                'teacher': batch.teacher.username,
+                'strength': StudentEnrollment.objects.filter(batch=batch, approval_status=True).count()
+            })
+        
+        # Fetch students for these batches
+        students_list = []
+        tas = []
+        for batch in batches:
+            tas_for_batch = TeachingAssistantAssociation.objects.filter(batch=batch)
+            students = StudentEnrollment.objects.filter(batch=batch, approval_status=True)
+            ta = User.objects.filter(is_staff=True, staffs__role='assistant').first()
+            for enrollment in students:
+                students_list.append({
+                    'student_username': enrollment.student.username,
+                    'student_email': enrollment.student.email,
                     'batch_id': batch.batch_id,
                     'course_name': batch.course.name,
-                    'course_id': batch.course.course_id,
-                    'teacher': batch.teacher.username,
-                    'strength': StudentEnrollment.objects.filter(batch=batch, approval_status=True).count()
+                    'course_id': batch.course.course_id
                 })
-            
-            # Fetch students for these batches
-            students_list = []
-            for batch in batches:
-                students = StudentEnrollment.objects.filter(batch=batch, approval_status=True)
-                for enrollment in students:
-                    students_list.append({
-                        'student_username': enrollment.student.username,
-                        'student_email': enrollment.student.email,
-                        'batch_id': batch.batch_id,
-                        'course_name': batch.course.name,
-                        'course_id': batch.course.course_id
-                    })
-
-            # Pass data to the template
-            context = {
-                'segment': 'index',
-                'batches': batches_list,
-                'students': students_list
-            }
-        
-        if staff.role == 'assistant':
-            batches = Batch.objects.filter(teacher=request.user)
-            batches_list = []
-            for batch in batches:
-                batches_list.append({
+            for ta in tas_for_batch:
+                tas.append({
+                    'ta_username': ta.teaching_assistant.username,
+                    'ta_email': ta.teaching_assistant.email,
                     'batch_id': batch.batch_id,
                     'course_name': batch.course.name,
-                    'course_id': batch.course.course_id,
-                    'teacher': batch.teacher.username,
-                    'strength': StudentEnrollment.objects.filter(batch=batch, approval_status=True).count()
+                    'course_id': batch.course.course_id
                 })
-            
-            # Fetch students for these batches
-            students_list = []
-            for batch in batches:
-                students = StudentEnrollment.objects.filter(batch=batch, approval_status=True)
-                for enrollment in students:
-                    students_list.append({
-                        'student_username': enrollment.student.username,
-                        'student_email': enrollment.student.email,
-                        'batch_id': batch.batch_id,
-                        'course_name': batch.course.name,
-                        'course_id': batch.course.course_id
-                    })
 
-            # Pass data to the template
-            context = {
-                'segment': 'index',
-                'batches': batches_list,
-                'students': students_list
-            }
-            html_template = loader.get_template('home/teacher/index.html')
-            return HttpResponse(html_template.render(context, request))
-        
+        # Pass data to the template
+        context = {
+            'segment': 'index',
+            'batches': batches_list,
+            'students': students_list,
+            'tas': tas,
+        }
+
         html_template = loader.get_template('home/teacher/index.html')
         return HttpResponse(html_template.render(context, request))
     
     elif not request.user.is_staff or not request.user.is_superuser: # Student role
+
         enrolled_courses = StudentEnrollment.objects.filter(student=request.user).values_list('batch', flat=True)
-        print(enrolled_courses)
         batches = Batch.objects.all()
+        tas = [{
+            'batch': ta.batch.batch_id,
+            'course': ta.batch.course.name,
+            'ta_username': ta.teaching_assistant.username,
+            'ta_email': ta.teaching_assistant.email,
+        } for ta in TeachingAssistantAssociation.objects.filter(teaching_assistant=request.user)]
         batches_list = []
         for batch in batches:
-            print(batch.id)
             course = batch.course
             batches_list.append({
+                "batchID": batch.id,
                 'course_id': course.course_id,
                 'batch': batch.batch_id,
                 'name': course.name,
@@ -156,9 +148,9 @@ def index(request):
                 'is_public': course.is_public,
                 'start_date': course.start_date,
                 'end_date': course.end_date,
-                'is_enrolled': batch.id in enrolled_courses
+                'is_enrolled': batch.id in enrolled_courses,
             })
-        context = {'segment': 'index', 'courses': batches_list, 'data': 'data'}
+        context = {'segment': 'index', 'courses': batches_list, 'ta': tas, 'is_ta': len(tas) > 0}
         html_template = loader.get_template('home/student/index.html')
         return HttpResponse(html_template.render(context, request))
 
@@ -183,6 +175,27 @@ def enroll_course(request):
         except Course.DoesNotExist:
             messages.error(request, "Course not found")
     return redirect('student_enrollment')
+
+
+@user_passes_test(is_teacher)
+def assign_ta(request):
+
+    if request.method == 'POST':
+        batch_id = request.POST.get('batch_id')
+        ta_username = request.POST.get('teachingAssistantName')
+        batch = Batch.objects.get(id=batch_id)
+        ta = User.objects.get(username=ta_username)
+        try:
+            TeachingAssistantAssociation.objects.create(
+                batch=batch,
+                teaching_assistant=ta
+            )
+            messages.success(request, 'TA assigned successfully!')
+        except IntegrityError:
+            messages.error(request, 'TA already assigned to this batch.')
+        except Exception as e:
+            messages.error(request, f'An error occurred: {str(e)}')
+    return redirect('home')
 
 
 @login_required(login_url="/login/")
@@ -210,9 +223,6 @@ def pages(request):
         html_template = loader.get_template('home/page-500.html')
         return HttpResponse(html_template.render(context, request))
 
-
-def is_superuser(user):
-    return user.is_superuser
 
 
 @user_passes_test(is_superuser)
@@ -390,10 +400,10 @@ def download_csv(request):
 
 
 def enrollment(request):
+
     if request.method == 'POST':
-        course_id, batch_id = str(request.POST.get('details')).split("_")
-        course = Course.objects.get(course_id=course_id)
-        batch = Batch.objects.get(batch_id=batch_id)
+        batch_id = int(request.POST.get('details'))
+        batch = Batch.objects.get(id=batch_id)
         student_username = request.user.username
 
         if course and student_username:
@@ -401,7 +411,6 @@ def enrollment(request):
                 student = User.objects.get(username=student_username)
 
                 enrolment = StudentEnrollment.objects.filter(student_id=student.id, batch_id=batch.id).first()
-                print(enrolment)
 
                 if enrolment:
                     if enrolment.approval_status:
@@ -414,7 +423,7 @@ def enrollment(request):
                 else:
                     StudentEnrollment.objects.create(
                         student=student,
-                        course=course,
+                        course=batch.course,
                         batch=batch,
                         uid=f"{random.randint(10000, 99999)}"
                     )
@@ -430,42 +439,33 @@ def enrollment(request):
         else:
             messages.error(request, 'Please fill in all required fields.')
             return redirect('home')
+    
     else:
         messages.error(request, 'Invalid request method.')
         return redirect('home')
 
 
-@login_required(login_url="/login/")
-def delete_course(request):
-    """
-    Handles the deletion of a course via POST request.
-    """
+def ta_hub(request):
+
+    if request.method == 'GET':
+        print('GET request')
+        batches = Batch.objects.filter(teacher=request.user)
+        return render(request, 'map.html', {'batches': batches})
+
     if request.method == 'POST':
-        # Retrieve the course_id from the POST data
-        course_id = request.POST.get('course_id')
-
-        # Ensure the course exists
-        course = get_object_or_404(Course, course_id=course_id)
-
-        # Check and clean up related records
-        related_batches = Batch.objects.filter(course=course).count()
-        related_enrollments = StudentEnrollment.objects.filter(course=course).count()
-
-        if related_batches > 0 or related_enrollments > 0:
-            messages.warning(request, f"Deleting '{course.name}' will also delete {related_batches} batches and {related_enrollments} enrollments.")
-
-        # Clean up related models explicitly (optional if CASCADE is used)
-        Batch.objects.filter(course=course).delete()
-        StudentEnrollment.objects.filter(course=course).delete()
-
-        # Delete the course
-        course_name = course.name
-        course.delete()
-
-        # Send a success message
-        messages.success(request, f"Course '{course_name}' has been deleted successfully.")
-        return redirect('home')  # Redirect to the home page of the dashboard
-    else:
-        messages.error(request, 'Invalid request method.')
-        return redirect('home')
-
+        batch_id = request.POST.get('batch_id')
+        ta_username = request.POST.get('teachingAssistantName')
+        batch = Batch.objects.get(id=batch_id)
+        ta = User.objects.get(username=ta_username)
+        try:
+            TeachingAssistantAssociation.objects.create(
+                batch=batch,
+                teaching_assistant=ta
+            )
+            messages.success(request, 'TA assigned successfully!')
+        except IntegrityError:
+            messages.error(request, 'TA already assigned to this batch.')
+        except Exception as e:
+            messages.error(request, f'An error occurred: {str(e)}')
+    
+    return redirect('home')

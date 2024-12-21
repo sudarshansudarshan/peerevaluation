@@ -14,8 +14,7 @@ urlpatterns = [
     path('/add_batch', views.batch, name='add_batch'),
     path('/download_csv', views.download_csv, name='download_csv'),
     path('/enrollment', views.enrollment, name='enrollment'),
+    path('ta_hub/', views.ta_hub, name='ta_hub'),
 
-    # Matches any html file
-    re_path(r'^.*\.*', views.pages, name='pages'),
-
+    # re_path(r'^.*\.*', views.pages, name='pages'),
 ]

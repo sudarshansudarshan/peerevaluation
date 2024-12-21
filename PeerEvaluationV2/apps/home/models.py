@@ -99,3 +99,13 @@ class StudentEnrollment(models.Model):
 
     def __str__(self):
         return f"{self.student.username}"
+    
+class TeachingAssistantAssociation(models.Model):
+    batch = models.ForeignKey(Batch, on_delete=models.CASCADE, related_name="ta_associations")
+    teaching_assistant = models.ForeignKey(User, on_delete=models.CASCADE, related_name="ta_associations")
+
+    class Meta:
+        unique_together = ('batch', 'teaching_assistant')
+
+    def __str__(self):
+        return f"{self.teaching_assistant.username} - {self.batch.batch_id}"

@@ -141,17 +141,12 @@
                     <td>{{ course.end_date|date:"M d, Y" }}</td>
                     <td>
                       {% if course.is_enrolled %}
-                        <form method="POST" action="{% url 'enrollment' %}">
-                          {% csrf_token %}
-                          <input type="hidden" name="details" value="{{ course.course_id }}_{{ course.batch }}">
-                          <button type="submit" class="btn btn-sm btn-success">Enroll</button>
-                        </form>
+                        <a href="/course/{{ course.id }}/enroll" class="btn btn-sm btn-danger">Withdraw</a>
                       {% else %}
-                        <!-- Enroll Button -->
                         <form method="POST" action="{% url 'enrollment' %}">
                           {% csrf_token %}
-                          <input type="hidden" name="details" value="{{ course.course_id }}_{{ course.batch }}">
-                          <button type="submit" class="btn btn-sm btn-danger">Withdraw</button>
+                          <input type="hidden" name="details" value="{{ course.batchID }}">
+                          <button type="submit" class="btn btn-sm btn-success">Enroll</button>
                         </form>
                       {% endif %}
                     </td>

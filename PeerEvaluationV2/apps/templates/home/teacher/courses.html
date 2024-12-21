@@ -13,7 +13,7 @@
         <div class="header-body">
           <div class="row align-items-center py-4">
             <div class="col-lg-6 col-7">
-              <h6 class="h2 text-white d-inline-block mb-0">Teacher Dashboard</h6>
+              <h6 class="h2 text-white d-inline-block mb-0">Assistant Dashboard</h6>
               <nav aria-label="breadcrumb" class="d-none d-md-inline-block ml-md-4">
                 <ol class="breadcrumb breadcrumb-links breadcrumb-dark">
                   <li class="breadcrumb-item"><a href="#"><i class="fas fa-home"></i></a></li>
@@ -63,40 +63,7 @@
     <!-- Page content -->
     <div class="container-fluid mt--6">
       <div class="row">
-        <div class="col-xl-5">
-          <div class="card">
-            <div class="card-header border-0 d-flex justify-content-between">
-              <h3 class="mb-0">Batches</h3>
-            </div>
-            <div class="table-responsive">
-              <table class="table align-items-center table-flush">
-                <thead class="thead-light">
-                  <tr>
-                    <th scope="col">Batch Name</th>
-                    <th scope="col">Course</th>
-                    <th scope="col">Strength</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {% if batches %}
-                    {% for batch in batches %}
-                    <tr>
-                      <td>{{ batch.batch_id }}</td>
-                      <td>{{ batch.course_name }}</td>
-                      <td>{{ batch.strength }}</td>
-                    </tr>
-                    {% endfor %}
-                  {% else %}
-                    <tr>
-                      <td colspan="3">No batches available</td>
-                    </tr>
-                  {% endif %}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-        <div class="col-xl-7">
+        <div class="col-xl-8">
           <div class="card">
             <div class="card-header border-0">
               <div class="row align-items-center">
@@ -137,41 +104,33 @@
             </div>
           </div>
         </div>
-      </div>
-
-      <div class="row">
-        <div class="col-xl-12">
+        <div class="col-xl-4">
           <div class="card">
             <div class="card-header border-0 d-flex justify-content-between">
-              <h3 class="mb-0">Teaching Assistant</h3>
-              <button class="btn btn-sm btn-primary" data-toggle="modal" data-target="#addTeachingAssistantModal">Enroll TA</button>
+              <h3 class="mb-0">Batches</h3>
             </div>
             <div class="table-responsive">
-              <!-- Students table -->
               <table class="table align-items-center table-flush">
                 <thead class="thead-light">
                   <tr>
-                    <th scope="col">Student Username</th>
-                    <th scope="col">Email</th>
-                    <th scope="col">Batch ID</th>
-                    <th scope="col">Course Name</th>
-                    <th scope="col">Course ID</th>
+                    <th scope="col">Batch Name</th>
+                    <th scope="col">Course</th>
+                    <th scope="col">Strength</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {% for student in tas %}
-                  <tr>
-                    <td>{{ student.ta_username }}</td>
-                    <td>{{ student.ta_email }}</td>
-                    <td>{{ student.batch_id }}</td>
-                    <td>{{ student.course_name }}</td>
-                    <td>{{ student.course_id }}</td>
-                  </tr>
-                  {% endfor %}
-                  {% if students|length == 0 %}
-                  <tr>
-                    <td colspan="5" class="text-center">No students enrolled</td>
-                  </tr>
+                  {% if batches %}
+                    {% for batch in batches %}
+                    <tr>
+                      <td>{{ batch.batch_id }}</td>
+                      <td>{{ batch.course_name }}</td>
+                      <td>{{ batch.strength }}</td>
+                    </tr>
+                    {% endfor %}
+                  {% else %}
+                    <tr>
+                      <td colspan="3">No batches available</td>
+                    </tr>
                   {% endif %}
                 </tbody>
               </table>
@@ -179,47 +138,9 @@
           </div>
         </div>
       </div>
-      
 
       {% include "includes/footer.html" %}
 
-    </div>
-
-    <!-- Add Course Modal -->
-    <div class="modal fade" id="addTeachingAssistantModal" tabindex="-1" role="dialog" aria-labelledby="addTeachingAssistantModalLabel" aria-hidden="true">
-      <div class="modal-dialog" role="document">
-        <form method="POST" action="{% url 'ta_hub' %}">
-          {% csrf_token %}
-          <div class="modal-content">
-            <div class="modal-header">
-              <h5 class="modal-title" id="addTeachingAssistantModalLabel">Assign Teaching Assistant</h5>
-              <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                <span aria-hidden="true">&times;</span>
-              </button>
-            </div>
-            <div class="modal-body">
-              <!-- Select Batch -->
-              <div class="form-group">
-                <label for="batch_id">Select Batch</label>
-                <select class="form-control" id="batch_id" name="batch_id" required>
-                  {% for batch in batches %}
-                  <option value="{{ batch.id }}">{{ batch.batch_id }} | {{ batch.course_id }} | {{ batch.course_name }}</option>
-                  {% endfor %}
-                </select>
-              </div>
-              <!-- Teaching Assistant Name -->
-              <div class="form-group">
-                <label for="teachingAssistantName">Teaching Assistant Name</label>
-                <input type="text" class="form-control" id="teachingAssistantName" name="teachingAssistantName" required>
-              </div>
-            </div>
-            <div class="modal-footer">
-              <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-              <button type="submit" class="btn btn-primary">Assign</button>
-            </div>
-          </div>
-        </form>
-      </div>
     </div>
 
 {% endblock content %}
