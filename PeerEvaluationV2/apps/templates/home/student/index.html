@@ -18,7 +18,6 @@
                 <ol class="breadcrumb breadcrumb-links breadcrumb-dark">
                   <li class="breadcrumb-item"><a href="#"><i class="fas fa-home"></i></a></li>
                   <li class="breadcrumb-item"><a href="#">Dashboards</a></li>
-                  <li class="breadcrumb-item active" aria-current="page">Default</li>
                 </ol>
               </nav>
             </div>
@@ -141,7 +140,11 @@
                     <td>{{ course.end_date|date:"M d, Y" }}</td>
                     <td>
                       {% if course.is_enrolled %}
-                        <a href="/course/{{ course.id }}/enroll" class="btn btn-sm btn-danger">Withdraw</a>
+                        <form method="POST" action="{% url 'enrollment' %}">
+                          {% csrf_token %}
+                          <input type="hidden" name="details" value="{{ course.batchID }}">
+                          <button type="submit" class="btn btn-sm btn-danger">Un-Enroll</button>
+                        </form>
                       {% else %}
                         <form method="POST" action="{% url 'enrollment' %}">
                           {% csrf_token %}

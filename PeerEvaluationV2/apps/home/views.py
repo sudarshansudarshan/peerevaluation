@@ -402,10 +402,38 @@ def download_csv(request):
 def enrollment(request):
 
     if request.method == 'POST':
-        batch_id = int(request.POST.get('details'))
+        print(request.body)
+        
+        data = request.body.decode('utf-8')
+        batch_id = int(json.loads(data)['batch_id'])
+        role = json.loads(data)['role']
+        username = str(json.loads(data)['student_username'])
+        action = json.loads(data)['student_action']
+        print(role, username, action)
+        if role == "TA":
+            username = User.objects.get(email=username)
+            print(username, action)
+            studentenrollment = StudentEnrollment.objects.filter(batch_id=batch_id, student__username=username).first()
+            print(studentenrollment)
+            if studentenrollment:
+                if action == "1":
+                    studentenrollment.approval_status = True
+                    studentenrollment.save()
+                    messages.success(request, 'Student approved successfully!')
+                    print("Approved")
+                elif action == "0":
+                    studentenrollment.delete()
+                    messages.error(request, 'Student rejected successfully!')
+                    print("Rejected")
+            else:
+                messages.error(request, 'Student not found in the selected batch.')
+                print("Not found")
+            return redirect('home')
+       
+        batch_id = int(batch_id)
         batch = Batch.objects.get(id=batch_id)
         student_username = request.user.username
-
+        print(batch, student_username)
         if course and student_username:
             try:
                 student = User.objects.get(username=student_username)
@@ -439,7 +467,6 @@ def enrollment(request):
         else:
             messages.error(request, 'Please fill in all required fields.')
             return redirect('home')
-    
     else:
         messages.error(request, 'Invalid request method.')
         return redirect('home')
@@ -448,9 +475,23 @@ def enrollment(request):
 def ta_hub(request):
 
     if request.method == 'GET':
-        print('GET request')
         batches = Batch.objects.filter(teacher=request.user)
-        return render(request, 'map.html', {'batches': batches})
+        tas = [{
+            'batch': ta.batch,
+            'course': ta.batch.course.name,
+            'start_date': ta.batch.course.start_date,
+            'instructor': f"{ta.batch.teacher.first_name} {ta.batch.teacher.last_name}",
+            'instructor_email': ta.batch.teacher.email,
+            'students': [
+                {
+                    "name": f"{student.student.first_name} {student.student.last_name}",
+                    "username": student.student.username,
+                    "email": student.student.email,
+                }
+                for student in StudentEnrollment.objects.filter(batch=ta.batch.id).order_by('approval_status')
+            ],
+        } for ta in TeachingAssistantAssociation.objects.filter(teaching_assistant=request.user)]
+        return render(request, 'home/student/ta_hub.html', {'batches': batches, 'ta': tas, 'is_ta': len(tas) > 0})
 
     if request.method == 'POST':
         batch_id = request.POST.get('batch_id')

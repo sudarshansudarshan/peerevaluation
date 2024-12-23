@@ -109,3 +109,7 @@ class TeachingAssistantAssociation(models.Model):
 
     def __str__(self):
         return f"{self.teaching_assistant.username} - {self.batch.batch_id}"
+    
+    @staticmethod
+    def is_ta(user, batch):
+        return TeachingAssistantAssociation.objects.filter(teaching_assistant=user, batch=batch).exists()
