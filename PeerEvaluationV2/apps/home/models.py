@@ -31,7 +31,6 @@ class Batch(models.Model):
     batch_id = models.CharField(max_length=100, help_text="Unique identifier for the batch")
     course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name="batches")
     teacher = models.ForeignKey(User, on_delete=models.CASCADE, related_name="batches_as_teacher")
-    teaching_assistant = models.ForeignKey(User, on_delete=models.CASCADE, related_name="batches_as_ta", null=True, blank=True)
 
     class Meta:
         unique_together = ('course', 'batch_id', 'teacher')  # Ensures uniqueness of the teacher for a batch in a course
@@ -59,10 +58,11 @@ class Document(models.Model):
 # Peer Evaluation
 class PeerEvaluation(models.Model):
     exam = models.ForeignKey(Exam, on_delete=models.CASCADE, related_name="peer_evaluations")
-    document = models.ForeignKey(Document, on_delete=models.CASCADE, related_name="peer_evaluations")
+    document = models.ForeignKey(Document, on_delete=models.CASCADE, related_name="peer_evaluations", null=True, blank=True)
     evaluator = models.ForeignKey(User, on_delete=models.CASCADE, related_name="evaluations_made")
     feedback = models.TextField(help_text="Feedback for the evaluation")
     score = models.IntegerField()
+
 
 # Statistics Model
 class Statistics(models.Model):
@@ -72,6 +72,7 @@ class Statistics(models.Model):
 
     def __str__(self):
         return f"Statistics for {self.batch.batch_id}"
+    
 
 # Incentivization Model
 class Incentivization(models.Model):
@@ -91,7 +92,6 @@ class StudentEnrollment(models.Model):
     student = models.ForeignKey(User, on_delete=models.CASCADE, related_name="enrollments")
     batch = models.ForeignKey(Batch, on_delete=models.CASCADE, related_name="enrolled_students")
     course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name="enrolled_students")
-    uid = models.CharField(max_length=100, help_text="Unique identifier for the student", null=True, blank=True)
     approval_status = models.BooleanField(default=False, help_text="Indicates whether the enrollment is approved")
 
     class Meta:
@@ -100,6 +100,7 @@ class StudentEnrollment(models.Model):
     def __str__(self):
         return f"{self.student.username}"
     
+
 class TeachingAssistantAssociation(models.Model):
     batch = models.ForeignKey(Batch, on_delete=models.CASCADE, related_name="ta_associations")
     teaching_assistant = models.ForeignKey(User, on_delete=models.CASCADE, related_name="ta_associations")
@@ -113,3 +114,4 @@ class TeachingAssistantAssociation(models.Model):
     @staticmethod
     def is_ta(user, batch):
         return TeachingAssistantAssociation.objects.filter(teaching_assistant=user, batch=batch).exists()
+

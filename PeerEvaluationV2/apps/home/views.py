@@ -48,6 +48,7 @@ User.add_to_class('is_assistant', is_assistant)
 
 @login_required(login_url="/login/")
 def index(request):
+    # Handle login for Admin
     if request.user.is_superuser:
         courses = Course.objects.all()
         batches = Batch.objects.all()
@@ -77,6 +78,7 @@ def index(request):
         html_template = loader.get_template('home/admin/index.html')
         return HttpResponse(html_template.render(context, request))
     
+    # Handle login for Teacher
     elif request.user.is_staff:
         batches = Batch.objects.filter(teacher=request.user)
 
@@ -126,6 +128,7 @@ def index(request):
         html_template = loader.get_template('home/teacher/index.html')
         return HttpResponse(html_template.render(context, request))
     
+    # Handle login for Student and TA
     elif not request.user.is_staff or not request.user.is_superuser: # Student role
 
         enrolled_courses = StudentEnrollment.objects.filter(student=request.user).values_list('batch', flat=True)
@@ -149,8 +152,9 @@ def index(request):
                 'start_date': course.start_date,
                 'end_date': course.end_date,
                 'is_enrolled': batch.id in enrolled_courses,
+                'is_accepted': batch.id in StudentEnrollment.objects.filter(student=request.user, approval_status=True).values_list('batch', flat=True)
             })
-        context = {'segment': 'index', 'courses': batches_list, 'ta': tas, 'is_ta': len(tas) > 0}
+        context = {'segment': 'index', 'courses': batches_list, 'is_ta': len(tas) > 0}
         html_template = loader.get_template('home/student/index.html')
         return HttpResponse(html_template.render(context, request))
 
@@ -177,27 +181,7 @@ def enroll_course(request):
     return redirect('student_enrollment')
 
 
-@user_passes_test(is_teacher)
-def assign_ta(request):
-
-    if request.method == 'POST':
-        batch_id = request.POST.get('batch_id')
-        ta_username = request.POST.get('teachingAssistantName')
-        batch = Batch.objects.get(id=batch_id)
-        ta = User.objects.get(username=ta_username)
-        try:
-            TeachingAssistantAssociation.objects.create(
-                batch=batch,
-                teaching_assistant=ta
-            )
-            messages.success(request, 'TA assigned successfully!')
-        except IntegrityError:
-            messages.error(request, 'TA already assigned to this batch.')
-        except Exception as e:
-            messages.error(request, f'An error occurred: {str(e)}')
-    return redirect('home')
-
-
+# Invalid URL
 @login_required(login_url="/login/")
 def pages(request):
     context = {}
@@ -228,6 +212,7 @@ def pages(request):
 @user_passes_test(is_superuser)
 def course(request):
 
+    # Create new course
     if request.method == 'POST':
         course_id = request.POST.get('course_id')
         course_name = request.POST.get('course_name')
@@ -251,6 +236,7 @@ def course(request):
         else:
             messages.error(request, 'Please fill in all required fields.')
     
+    # Delete a course
     elif request.method == 'DELETE':
         try:
             data = request.body.decode('utf-8')
@@ -276,6 +262,8 @@ def course(request):
 
 @user_passes_test(is_superuser)
 def batch(request):
+
+    # Create new batch
     if request.method == 'POST':
         # Extract form data
         batch_name = request.POST.get('batchName')
@@ -317,6 +305,7 @@ def batch(request):
 
         return redirect('home')
 
+    # Delete a batch
     elif request.method == 'DELETE':
         try:
             data = request.body.decode('utf-8')
@@ -340,6 +329,8 @@ def batch(request):
         return redirect('home')
     
 
+@user_passes_test(is_teacher)
+# Generate UID for each student and Download the CSV file
 def download_csv(request):
     if request.method == 'POST':
         try:
@@ -399,38 +390,40 @@ def download_csv(request):
     return redirect('home')  # Replace with the appropriate redirect
 
 
+# Enrollment of student
+@login_required
 def enrollment(request):
 
-    if request.method == 'POST':
-        print(request.body)
-        
-        data = request.body.decode('utf-8')
-        batch_id = int(json.loads(data)['batch_id'])
-        role = json.loads(data)['role']
-        username = str(json.loads(data)['student_username'])
-        action = json.loads(data)['student_action']
-        print(role, username, action)
-        if role == "TA":
-            username = User.objects.get(email=username)
-            print(username, action)
-            studentenrollment = StudentEnrollment.objects.filter(batch_id=batch_id, student__username=username).first()
-            print(studentenrollment)
-            if studentenrollment:
-                if action == "1":
-                    studentenrollment.approval_status = True
-                    studentenrollment.save()
-                    messages.success(request, 'Student approved successfully!')
-                    print("Approved")
-                elif action == "0":
-                    studentenrollment.delete()
-                    messages.error(request, 'Student rejected successfully!')
-                    print("Rejected")
-            else:
-                messages.error(request, 'Student not found in the selected batch.')
-                print("Not found")
-            return redirect('home')
-       
-        batch_id = int(batch_id)
+    if request.method == 'POST':     
+        try:   
+            data = request.body.decode('utf-8')
+            batch_id = int(json.loads(data)['batch_id'])
+            role = json.loads(data)['role']
+            if role == "TA":
+                username = str(json.loads(data)['student_username'])
+                action = json.loads(data)['student_action']
+                print(role, username, action)
+                username = User.objects.get(email=username)
+                print(username, action)
+                studentenrollment = StudentEnrollment.objects.filter(batch_id=batch_id, student__username=username).first()
+                print(studentenrollment)
+                if studentenrollment:
+                    if action == "1":
+                        studentenrollment.approval_status = True
+                        studentenrollment.save()
+                        messages.success(request, 'Student approved successfully!')
+                        print("Approved")
+                    elif action == "0":
+                        studentenrollment.delete()
+                        messages.error(request, 'Student rejected successfully!')
+                        print("Rejected")
+                else:
+                    messages.error(request, 'Student not found in the selected batch.')
+                    print("Not found")
+                return redirect('home')
+        except Exception as e:
+            pass
+        batch_id = int(request.POST.get('batch_id'))
         batch = Batch.objects.get(id=batch_id)
         student_username = request.user.username
         print(batch, student_username)
@@ -467,13 +460,16 @@ def enrollment(request):
         else:
             messages.error(request, 'Please fill in all required fields.')
             return redirect('home')
+    
     else:
         messages.error(request, 'Invalid request method.')
         return redirect('home')
 
 
+@login_required
 def ta_hub(request):
 
+    # Fetch data for TA hub
     if request.method == 'GET':
         batches = Batch.objects.filter(teacher=request.user)
         tas = [{
@@ -486,13 +482,14 @@ def ta_hub(request):
                 {
                     "name": f"{student.student.first_name} {student.student.last_name}",
                     "username": student.student.username,
-                    "email": student.student.email,
+                    "email": student.student.email
                 }
-                for student in StudentEnrollment.objects.filter(batch=ta.batch.id).order_by('approval_status')
+                for student in StudentEnrollment.objects.filter(batch=ta.batch.id, approval_status=False).order_by('approval_status')
             ],
         } for ta in TeachingAssistantAssociation.objects.filter(teaching_assistant=request.user)]
         return render(request, 'home/student/ta_hub.html', {'batches': batches, 'ta': tas, 'is_ta': len(tas) > 0})
 
+    # Associate Teaching associate with batch
     if request.method == 'POST':
         batch_id = request.POST.get('batch_id')
         ta_username = request.POST.get('teachingAssistantName')
@@ -510,3 +507,49 @@ def ta_hub(request):
             messages.error(request, f'An error occurred: {str(e)}')
     
     return redirect('home')
+
+
+@login_required
+def examination(request):
+
+    if request.method == 'GET':
+        exams = Exam.objects.filter(batch__course__teacher=request.user)
+        if request.user.is_teacher:
+            exams = Exam.objects.filter(batch__teacher=request.user)
+            return render(request, 'home/teacher/examination.html', {'exams': exams})
+
+
+    if request.method == 'POST':
+        try:
+            data = request.body.decode('utf-8')
+            batch_id = int(json.loads(data)['batch_id'])
+            exam_id = json.loads(data)['exam_id']
+            exam_name = json.loads(data)['exam_name']
+            exam_date = json.loads(data)['exam_date']
+            exam_duration = json.loads(data)['exam_duration']
+            exam = Exam.objects.create(
+                exam_id=exam_id,
+                name=exam_name,
+                date=exam_date,
+                duration=exam_duration,
+                batch_id=batch_id
+            )
+            messages.success(request, 'Exam added successfully!')
+        except Exception as e:
+            messages.error(request, f'An error occurred: {str(e)}')
+        return redirect('home')
+    
+
+    elif request.method == 'DELETE':
+        try:
+            data = request.body.decode('utf-8')
+            exam_id = json.loads(data)['exam_id']
+            exam = Exam.objects.get(id=exam_id)
+            exam.delete()
+            messages.success(request, 'Exam deleted successfully!')
+        except Exception as e:
+            messages.error(request, f'An error occurred: {str(e)}')
+        return redirect('home')
+    else:
+        messages.error(request, 'Invalid request method.')
+        return redirect('home')

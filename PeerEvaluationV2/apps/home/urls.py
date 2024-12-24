@@ -15,6 +15,7 @@ urlpatterns = [
     path('/download_csv', views.download_csv, name='download_csv'),
     path('/enrollment', views.enrollment, name='enrollment'),
     path('ta_hub/', views.ta_hub, name='ta_hub'),
+    path('examination/', views.examination, name='examination'),
 
-    # re_path(r'^.*\.*', views.pages, name='pages'),
+    re_path(r'^.*\.*', views.pages, name='pages'),
 ]
