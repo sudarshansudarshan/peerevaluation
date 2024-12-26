@@ -34,7 +34,7 @@
         <div class="header-body">
           <div class="row align-items-center py-4">
             <div class="col-lg-6 col-7">
-              <h6 class="h2 text-white d-inline-block mb-0">TA Dashboard</h6>
+              <h6 class="h2 text-white d-inline-block mb-0">Teacher Dashboard</h6>
               <nav aria-label="breadcrumb" class="d-none d-md-inline-block ml-md-4">
                 <ol class="breadcrumb breadcrumb-links breadcrumb-dark">
                   <li class="breadcrumb-item"><a href="#"><i class="fas fa-home"></i></a></li>
@@ -54,12 +54,12 @@
 
     <div class="container-fluid mt--6">
       <div class="row">
-        <div class="col-xl-8">
+        <div class="col-xl-7">
           <div class="card">
             <div class="card-header border-0">
               <div class="row align-items-center">
                 <div class="col">
-                  <h3 class="mb-0">Available Courses</h3>
+                  <h3 class="mb-0">Available Batches</h3>
                 </div>
               </div>
             </div>
@@ -68,71 +68,59 @@
               <table class="table align-items-center table-flush" id="courses-table">
                 <thead class="thead-light">
                   <tr>
-                    <th scope="col"></th>
                     <th scope="col">Course</th>
-                    <th scope="col">Batch Name</th>
-                    <th scope="col">Start Date</th>
-                    <th scope="col">Instructor</th>
-                    <th scope="col">Instructor Email</th>
+                    <th scope="col">Exam Date</th>
+                    <th scope="col">Duration</th>
+                    <th scope="col">Max. marks</th>
+                    <th scope="col">Questions</th>
+                    <th scope="col">Action</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {% for a in ta %}
-                  <tr class="course-row">
-                    <td>
-                      <button class="btn btn-sm btn-neutral toggle-btn">→</button>
-                    </td>
-                    <td>{{ a.course }}</td>
-                    <td id={{ a.batch.id }}>{{ a.batch.batch_id }}</td>
-                    <td>{{ a.start_date|date:"M d, Y" }}</td>
-                    <td>{{ a.instructor }}</td>
-                    <td>
-                      <a href="mailto:{{ a.instructor_email }}">{{ a.instructor_email }}</a>
-                    </td>
-                  </tr>
-                  <tr class="details-row" style="display: none;">
-                    <td colspan="6">
-                      <div class="student-list">
-                        <!-- Title for the encapsulated table -->
-                        <table class="table">
-                          <thead colspan="3">
-                            <tr>
-                              <th colspan="3" class="text-center">Student Enrollment Requests for <strong>{{ a.course }}</strong></th>
-                            </tr>
-                          </thead>
-                          <thead class="thead-light">
-                            <tr>
-                              <th scope="col">Student Name</th>
-                              <th scope="col">Student Email</th>
-                              <th scope="col">Action</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {% for student in a.students %}
-                            <tr>
-                              <td>{{ student.name }}</td>
-                              <td>{{ student.email }}</td>
-                              <td>
-                                <button class="btn btn-success btn-sm accept-btn">✔</button>
-                                <button class="btn btn-danger btn-sm reject-btn">✘</button>
-                              </td>
-                            </tr>
-                            {% endfor %}
-                            {% if a.students|length == 0 %}
-                            <tr>
-                              <td colspan="3" class="text-center">No students available</td>
-                            </tr>
-                            {% endif %}
-                          </tbody>
-                        </table>
-                      </div>
-                    </td>
-                  </tr>
-                  {% endfor %}
-                  {% if ta|length == 0 %}
+                  {% if batch_data|length == 0 %}
                   <tr>
-                    <td colspan="6" class="text-center">No courses available</td>
+                    <td colspan="6" class="text-center">No batches available</td>
                   </tr>
+                  {% else %}
+                    {% for batch in batch_data %}
+                      <tr class="course-row">
+                        <td class="px-4 py-2"><strong>{{ batch.batch.course }}</strong> ({{ batch.batch.batch_id }})</td>
+                          {% if not batch.exams %}
+                            <form class="course-form" method="post" action="/examination/">
+                              {% csrf_token %}
+                              <td class="px-4 py-2">
+                                <input type="hidden" class="form-control border rounded px-2 py-1" id="batch_id" name="batch_id" value="{{ batch.batch.id }}">
+                                <input type="datetime-local" class="form-control border rounded px-2 py-1" id="exam_date" name="exam_date">
+                              </td>
+                              <td class="px-4 py-2">
+                                <input type="number" class="form-control border rounded px-2 py-1" id="duration" name="duration" minValue="0">
+                              </td>
+                              <td class="px-4 py-2">
+                                <input type="number" class="form-control border rounded px-2 py-1" id="num_que" name="num_que" minValue="0">
+                              </td>
+                              <td class="px-4 py-2">
+                                <input type="number" class="form-control border rounded px-2 py-1" id="max_marks" name="max_marks" minValue="0">
+                              </td>
+                              <td class="px-4 py-2">
+                                <button type="submit" class="btn btn-sm btn-success">Save</button>
+                              </td>
+                            </form>
+                          {% else %}
+                            <td class="px-4 py-2">{{ batch.exams.date }}</td>
+                            <td class="px-4 py-2">{{ batch.exams.duration }} mins</td>
+                            <td class="px-4 py-2">{{ batch.exams.number_of_questions }}</td>
+                            <td class="px-4 py-2">{{ batch.exams.max_scores }}</td>
+                            <td class="px-4 py-2">
+                              <form method="DELETE" action="/examination/">
+                                {% csrf_token %}
+                                <input type="hidden" class="form-control border rounded px-2 py-1" id="exam_id" name="exam_id" value="{{ batch.exams.id }}">
+                                <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+                              </form>
+                            </td>
+                          {% endif %}
+                        
+                      </tr>
+                    {% endfor %}
                   {% endif %}
                 </tbody>
               </table>

@@ -9,7 +9,7 @@ from django.http import HttpResponse, HttpResponseRedirect
 from django.template import loader
 from django.urls import reverse
 from django.shortcuts import get_object_or_404, redirect
-from .models import Course, Batch, Staffs, StudentEnrollment, Exam, Document, Statistics, Incentivization, TeachingAssistantAssociation
+from .models import Course, Batch, StudentEnrollment, Exam, Document, Statistics, Incentivization, TeachingAssistantAssociation
 from django.contrib.auth.decorators import user_passes_test
 from django.shortcuts import render, redirect
 from django.contrib import messages
@@ -19,14 +19,10 @@ from django.db import IntegrityError
 import random
 import csv
 import json
+from datetime import datetime
 
 def is_superuser(user):
     return user.is_superuser
-
-# Overwrite User table from django to add method is_teacher
-def is_teacher(self):
-    return self.staffs.role == 'teacher'
-User.add_to_class('is_teacher', is_teacher)
 
 
 # Overwrite User table from django to add method is_student
@@ -37,13 +33,9 @@ User.add_to_class('is_student', is_student)
 
 # Overwrite User table from django to add method is_staff
 def is_staff(self):
-    return self.staffs.role == 'staff'
+    return self.is_staff
 User.add_to_class('is_staff', is_staff)
 
-
-def is_assistant(self):
-    return self.staffs.role == 'assistant'
-User.add_to_class('is_assistant', is_assistant)
 
 
 @login_required(login_url="/login/")
@@ -52,7 +44,7 @@ def index(request):
     if request.user.is_superuser:
         courses = Course.objects.all()
         batches = Batch.objects.all()
-        teachers = User.objects.filter(is_superuser=False, is_staff=True, staffs__role='teacher')
+        teachers = User.objects.filter(is_superuser=False, is_staff=True)
         batches_list = []
 
         for batch in batches:
@@ -99,7 +91,7 @@ def index(request):
         for batch in batches:
             tas_for_batch = TeachingAssistantAssociation.objects.filter(batch=batch)
             students = StudentEnrollment.objects.filter(batch=batch, approval_status=True)
-            ta = User.objects.filter(is_staff=True, staffs__role='assistant').first()
+            ta = User.objects.filter(is_staff=True).first()
             for enrollment in students:
                 students_list.append({
                     'student_username': enrollment.student.username,
@@ -290,11 +282,6 @@ def batch(request):
             teacher.is_staff = True
             teacher.save()
 
-            Staffs.objects.update_or_create(
-                user=teacher,
-                defaults={'role': 'teacher'}
-            )
-
             messages.success(request, 'Batch added successfully!')
         except Course.DoesNotExist:
             messages.error(request, 'Course not found.')
@@ -329,7 +316,7 @@ def batch(request):
         return redirect('home')
     
 
-@user_passes_test(is_teacher)
+@user_passes_test(is_staff)
 # Generate UID for each student and Download the CSV file
 def download_csv(request):
     if request.method == 'POST':
@@ -426,7 +413,6 @@ def enrollment(request):
         batch_id = int(request.POST.get('batch_id'))
         batch = Batch.objects.get(id=batch_id)
         student_username = request.user.username
-        print(batch, student_username)
         if course and student_username:
             try:
                 student = User.objects.get(username=student_username)
@@ -445,8 +431,7 @@ def enrollment(request):
                     StudentEnrollment.objects.create(
                         student=student,
                         course=batch.course,
-                        batch=batch,
-                        uid=f"{random.randint(10000, 99999)}"
+                        batch=batch
                     )
                     messages.success(request, 'Student enrolled successfully!')
                     return redirect('home')
@@ -513,43 +498,56 @@ def ta_hub(request):
 def examination(request):
 
     if request.method == 'GET':
-        exams = Exam.objects.filter(batch__course__teacher=request.user)
-        if request.user.is_teacher:
-            exams = Exam.objects.filter(batch__teacher=request.user)
-            return render(request, 'home/teacher/examination.html', {'exams': exams})
+        if request.user.is_staff:
+            batches = Batch.objects.filter(teacher=request.user)
+            batch_data = []
+            for batch in batches:
+                exams = Exam.objects.filter(batch=batch, completed=False).first()
+                batch_data.append({'batch': batch, 'exams': exams})  # Store batch and its exams together
+
+            return render(request, 'home/teacher/examination.html', {'batch_data': batch_data})
 
 
-    if request.method == 'POST':
+    elif request.method == 'POST':
         try:
-            data = request.body.decode('utf-8')
-            batch_id = int(json.loads(data)['batch_id'])
-            exam_id = json.loads(data)['exam_id']
-            exam_name = json.loads(data)['exam_name']
-            exam_date = json.loads(data)['exam_date']
-            exam_duration = json.loads(data)['exam_duration']
-            exam = Exam.objects.create(
-                exam_id=exam_id,
-                name=exam_name,
-                date=exam_date,
-                duration=exam_duration,
-                batch_id=batch_id
-            )
-            messages.success(request, 'Exam added successfully!')
+            data = request.POST
+            batch_id = int(data['batch_id'])
+            exam_date = datetime.fromisoformat(data["exam_date"])
+            exam_duration = int(data['duration'])
+            num_que = int(data["num_que"])
+            max_marks = int(data["max_marks"])
+            new_exam = Exam.objects.update_or_create(batch_id=batch_id,
+                                                        defaults={
+                                                            'date': exam_date,
+                                                            'duration': exam_duration,
+                                                            'number_of_questions': num_que,
+                                                            'max_scores': max_marks,
+                                                            'completed': False,
+                                                        })
+            if new_exam[1]:  # If a new exam was created
+                print("Updated exam")
+                messages.success(request, 'Exam updated successfully!')
+            else:
+                print("Created exam")
+                messages.success(request, 'Exam created successfully!')
         except Exception as e:
+            print(e)
             messages.error(request, f'An error occurred: {str(e)}')
-        return redirect('home')
+        return redirect('examination')
     
 
     elif request.method == 'DELETE':
-        try:
+        if request.user.is_staff:
             data = request.body.decode('utf-8')
-            exam_id = json.loads(data)['exam_id']
+            exam_id = int(json.loads(data)['exam_id'])
             exam = Exam.objects.get(id=exam_id)
-            exam.delete()
-            messages.success(request, 'Exam deleted successfully!')
-        except Exception as e:
-            messages.error(request, f'An error occurred: {str(e)}')
-        return redirect('home')
+            print(exam)
+            try:
+                exam.delete()
+                messages.success(request, 'Exam deleted successfully!')
+            except Exception as e:
+                messages.error(request, f'An error occurred: {str(e)}')
+            return redirect('home')
     else:
         messages.error(request, 'Invalid request method.')
         return redirect('home')

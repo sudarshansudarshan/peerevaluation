@@ -13,19 +13,6 @@ class Course(models.Model):
     def __str__(self):
         return self.name
     
-
-class Staffs(models.Model):
-    ROLES = [
-        ('teacher', 'Teacher'),
-        ('assistant', 'Assistant'),
-    ]
-    user = models.OneToOneField(User, on_delete=models.CASCADE)
-    role = models.CharField(max_length=10, choices=ROLES)
-
-    def __str__(self):
-        return f"{self.user.username} ({self.get_role_display()})"
-    
-
 # Batch Model
 class Batch(models.Model):
     batch_id = models.CharField(max_length=100, help_text="Unique identifier for the batch")
@@ -41,13 +28,27 @@ class Batch(models.Model):
 
 # Exam Model
 class Exam(models.Model):
+    id = models.AutoField(primary_key=True)
     batch = models.ForeignKey(Batch, on_delete=models.CASCADE, related_name="exams")
     date = models.DateTimeField(help_text="Date of the Exam")
     number_of_questions = models.IntegerField()
+    duration = models.IntegerField(help_text="Duration of the exam in minutes")
     max_scores = models.IntegerField()
+    completed = models.BooleanField(default=False, help_text="Indicates whether the exam is completed")
 
     def __str__(self):
-        return f"{self.exam_type.name} for {self.batch.batch_id}"
+        return f"{self.batch.batch_id}"
+    
+class UIDMapping(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="uid_mappings")
+    exam = models.ForeignKey(Exam, on_delete=models.CASCADE, related_name="uid_mappings")
+    uid = models.CharField(max_length=100, help_text="Unique identifier for the user")
+
+    class Meta:
+        unique_together = ('user', 'uid')  # Ensures uniqueness of the uid for a user
+
+    def __str__(self):
+        return f"{self.user.username} - {self.uid}"
 
 # Document Model
 class Document(models.Model):
