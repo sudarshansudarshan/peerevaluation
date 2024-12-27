@@ -54,7 +54,7 @@
 
     <div class="container-fluid mt--6">
       <div class="row">
-        <div class="col-xl-7">
+        <div class="col-xl-8">
           <div class="card">
             <div class="card-header border-0">
               <div class="row align-items-center">
@@ -102,7 +102,7 @@
                                 <input type="number" class="form-control border rounded px-2 py-1" id="max_marks" name="max_marks" minValue="0">
                               </td>
                               <td class="px-4 py-2">
-                                <button type="submit" class="btn btn-sm btn-success">Save</button>
+                                <button type="submit" class="btn btn-sm btn-success"><i class="fas fa-save"></i> Save</button>
                               </td>
                             </form>
                           {% else %}
@@ -111,11 +111,14 @@
                             <td class="px-4 py-2">{{ batch.exams.number_of_questions }}</td>
                             <td class="px-4 py-2">{{ batch.exams.max_scores }}</td>
                             <td class="px-4 py-2">
-                              <form method="DELETE" action="/examination/">
-                                {% csrf_token %}
-                                <input type="hidden" class="form-control border rounded px-2 py-1" id="exam_id" name="exam_id" value="{{ batch.exams.id }}">
-                                <button type="submit" class="btn btn-sm btn-danger">Delete</button>
-                              </form>
+                              <div class="d-flex">
+                                <button class="btn btn-sm btn-danger mr-2" onclick="deleteExamination({{ batch.exams.id }})"><i class="fas fa-trash"></i></button>
+                                <form id="csvForm" method="POST" action="{% url 'download_csv' %}">
+                                  {% csrf_token %}
+                                  <input type="hidden" class="form-control border rounded px-2 py-1" id="exam_id" name="exam_id" value="{{ batch.exams.id }}">
+                                  <button type="submit" class="btn btn-sm btn-primary"><i class="fa fa-download"></i></button>
+                                </form>
+                              </div>
                             </td>
                           {% endif %}
                         
@@ -130,13 +133,37 @@
       </div>
     </div>
 
-
-      {% include "includes/footer.html" %}
+    {% include "includes/footer.html" %}
 
 {% endblock content %}
 
 <!-- Specific JS goes HERE --> 
 {% block javascripts %}
+
+    <script>
+      function deleteExamination(exam_id) {
+        const csrfToken = "{{ csrf_token }}"; // CSRF token from Django context
+        const url = "{% url 'examination' %}"; // Correctly resolved URL
+        fetch(url, {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrfToken,
+          },
+          body: JSON.stringify({ exam_id: exam_id })
+        })
+        .then(response => {
+          if (response.ok) {
+            location.reload();
+          } else {
+            console.error('Failed to delete the examination.');
+          }
+        })
+        .catch(error => {
+          console.error('Error:', error);
+        });
+      };
+    </script>
 
   <script src="/static/assets/vendor/chart.js/dist/Chart.min.js"></script>
   <script src="/static/assets/vendor/chart.js/dist/Chart.extension.js"></script>

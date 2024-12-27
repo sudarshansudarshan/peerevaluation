@@ -22,40 +22,8 @@
                 </ol>
               </nav>
             </div>
-            <div class="col-lg-6 col-5 text-right">
-              <!-- Button to trigger modal -->
-              <button data-toggle="modal" data-target="#csvModal" class="btn btn-sm btn-neutral">Download CSV</button>
-            </div>
           </div>
           <!-- Card stats (same as before) -->
-        </div>
-      </div>
-    </div>
-
-    <!-- Modal for CSV download -->
-    <div class="modal fade" id="csvModal" tabindex="-1" aria-labelledby="csvModalLabel" aria-hidden="true">
-      <div class="modal-dialog">
-        <div class="modal-content">
-          <div class="modal-header">
-            <h5 class="modal-title" id="csvModalLabel">Select Course and Batch</h5>
-            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-              <span aria-hidden="true">&times;</span>
-            </button>
-          </div>
-          <div class="modal-body">
-            <form id="csvForm" method="POST" action="{% url 'download_csv' %}">
-              {% csrf_token %}
-              <div class="form-group">
-                <label for="batchSelect">Select Batch</label>
-                <select class="form-control" id="batchSelect" name="batch">
-                  {% for batch in batches %}
-                    <option value="{{ batch.batch_id }}">{{ batch.course_name }} | {{ batch.course_id }}</option>
-                  {% endfor %}
-                </select>
-              </div>
-              <button type="submit" class="btn btn-primary">Download CSV</button>
-            </form>
-          </div>
         </div>
       </div>
     </div>
@@ -68,8 +36,8 @@
             <div class="card-header border-0 d-flex justify-content-between">
               <h3 class="mb-0">Batches</h3>
             </div>
-            <div class="table-responsive">
-              <table class="table align-items-center table-flush">
+            <div class="table-responsive" style="max-height: 350px; overflow-y: auto;">
+              <table class="table align-items-center table-flush" style="min-height: 302px;">
                 <thead class="thead-light">
                   <tr>
                     <th scope="col">Batch Name</th>
@@ -77,7 +45,7 @@
                     <th scope="col">Strength</th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody style="min-height: 100px;">
                   {% if batches %}
                     {% for batch in batches %}
                     <tr>
@@ -88,7 +56,7 @@
                     {% endfor %}
                   {% else %}
                     <tr>
-                      <td colspan="3">No batches available</td>
+                      <td colspan="3" class="text-center">No batches available</td>
                     </tr>
                   {% endif %}
                 </tbody>
@@ -105,7 +73,7 @@
                 </div>
               </div>
             </div>
-            <div class="table-responsive">
+            <div class="table-responsive" style="max-height: 350px; overflow-y: auto;">
               <!-- Students table -->
               <table class="table align-items-center table-flush">
                 <thead class="thead-light">
@@ -146,7 +114,7 @@
               <h3 class="mb-0">Teaching Assistant</h3>
               <button class="btn btn-sm btn-primary" data-toggle="modal" data-target="#addTeachingAssistantModal">Enroll TA</button>
             </div>
-            <div class="table-responsive">
+            <div class="table-responsive" style="max-height: 350px; overflow-y: auto;">
               <!-- Students table -->
               <table class="table align-items-center table-flush">
                 <thead class="thead-light">

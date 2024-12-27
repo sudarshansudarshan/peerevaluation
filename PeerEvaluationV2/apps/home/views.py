@@ -9,7 +9,7 @@ from django.http import HttpResponse, HttpResponseRedirect
 from django.template import loader
 from django.urls import reverse
 from django.shortcuts import get_object_or_404, redirect
-from .models import Course, Batch, StudentEnrollment, Exam, Document, Statistics, Incentivization, TeachingAssistantAssociation
+from .models import Course, Batch, StudentEnrollment, Exam, Document, Statistics, Incentivization, TeachingAssistantAssociation, UIDMapping
 from django.contrib.auth.decorators import user_passes_test
 from django.shortcuts import render, redirect
 from django.contrib import messages
@@ -146,7 +146,8 @@ def index(request):
                 'is_enrolled': batch.id in enrolled_courses,
                 'is_accepted': batch.id in StudentEnrollment.objects.filter(student=request.user, approval_status=True).values_list('batch', flat=True)
             })
-        context = {'segment': 'index', 'courses': batches_list, 'is_ta': len(tas) > 0}
+        exams = Exam.objects.filter(batch__in=batches).order_by('date')
+        context = {'segment': 'index', 'courses': batches_list, 'is_ta': len(tas) > 0, 'exams': exams}
         html_template = loader.get_template('home/student/index.html')
         return HttpResponse(html_template.render(context, request))
 
@@ -320,57 +321,28 @@ def batch(request):
 # Generate UID for each student and Download the CSV file
 def download_csv(request):
     if request.method == 'POST':
-        try:
-            # Get the selected batch
-            batch_id = request.POST.get('batch')
-            batch = Batch.objects.get(batch_id=batch_id)
+        print("Download CSV")
+        # Get the selected batch
+        exam_id = request.POST.get('exam_id')
+        exam = Exam.objects.get(id=exam_id)
+        batch = exam.batch
 
-            # Fetch students enrolled in the selected batch
-            students = StudentEnrollment.objects.filter(batch=batch)
+        # Fetch students enrolled in the selected batch
+        students = UIDMapping.objects.filter(exam=exam)
 
-            # Prepare CSV response
-            response = HttpResponse(content_type='text/csv')
-            response['Content-Disposition'] = f'attachment; filename="{batch.batch_id}_students.csv"'
+        # Prepare CSV response
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = f'attachment; filename="{batch.batch_id}_students.csv"'
 
-            writer = csv.writer(response)
-            writer.writerow(['Student Username', 'Peer Evaluation Number'])
+        writer = csv.writer(response)
+        writer.writerow(['Student Username', 'Peer Evaluation Number'])
 
-            # Write student data if available, otherwise just the headers
-            if students.exists():
-                generated_numbers = set()  # Track unique peer evaluation numbers
+        # Write student data if available, otherwise just the headers
+        if students.exists():
+            for student in students:
+                writer.writerow([student.user.username, student.uid])
 
-                for enrollment in students:
-                    student = enrollment.student
-                    course = enrollment.course
-                    random_number = random.randint(1000, 9999)
-
-                    # Ensure unique random number
-                    while random_number in generated_numbers:
-                        random_number = random.randint(1000, 9999)
-                    enrollment.uid = random_number
-                    enrollment.save()
-
-                    generated_numbers.add(random_number)
-                    writer.writerow([student.username, random_number])
-
-                    # Generate a unique UID for the student mapping
-                    # unique_uid = f"{random.randint(100000, 999999)}-{batch.batch_id}"
-
-                    # Append data to the student_mapping table
-                    # student_mapping.objects.create_or_update(
-                    #     student=student,
-                    #     batch=batch,
-                    #     uid=unique_uid
-                    # )
-
-            return response
-
-        except Batch.DoesNotExist:
-            messages.error(request, 'Batch not found.')
-            return redirect('dashboard')  # Replace with the appropriate redirect
-        except Exception as e:
-            messages.error(request, f'An error occurred: {str(e)}')
-            return redirect('home')  # Replace with the appropriate redirect
+        return response
 
     # If method is not POST, show the dashboard or an error
     messages.error(request, 'Invalid request method.')
@@ -524,12 +496,17 @@ def examination(request):
                                                             'max_scores': max_marks,
                                                             'completed': False,
                                                         })
-            if new_exam[1]:  # If a new exam was created
+            if new_exam[1]:
                 print("Updated exam")
                 messages.success(request, 'Exam updated successfully!')
             else:
                 print("Created exam")
                 messages.success(request, 'Exam created successfully!')
+            students_in_batch = StudentEnrollment.objects.filter(batch_id=batch_id)
+            for student in students_in_batch:
+                UIDMapping.objects.update_or_create(user=student.student,
+                                                    exam=new_exam[0],
+                                                    defaults={'uid': random.randint(1000, 9999)})
         except Exception as e:
             print(e)
             messages.error(request, f'An error occurred: {str(e)}')
@@ -539,15 +516,21 @@ def examination(request):
     elif request.method == 'DELETE':
         if request.user.is_staff:
             data = request.body.decode('utf-8')
-            exam_id = int(json.loads(data)['exam_id'])
-            exam = Exam.objects.get(id=exam_id)
-            print(exam)
-            try:
-                exam.delete()
-                messages.success(request, 'Exam deleted successfully!')
-            except Exception as e:
-                messages.error(request, f'An error occurred: {str(e)}')
-            return redirect('home')
+            if data:
+                try:
+                    exam_id = json.loads(data)['exam_id']
+                    exam = Exam.objects.get(id=exam_id)
+                    exam.delete()
+                    messages.success(request, 'Exam deleted successfully!')
+                except json.JSONDecodeError:
+                    messages.error(request, 'Invalid JSON data.')
+                except Exam.DoesNotExist:
+                    messages.error(request, 'Exam not found.')
+                except Exception as e:
+                    messages.error(request, f'An error occurred: {str(e)}')
+            else:
+                messages.error(request, 'No data provided.')
+            return redirect('examination')
     else:
         messages.error(request, 'Invalid request method.')
-        return redirect('home')
+        return 

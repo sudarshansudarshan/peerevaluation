@@ -109,7 +109,7 @@
     <div class="container-fluid mt--6">
       <div class="row">
         <div class="col-xl-8">
-          <div class="card">
+          <div class="card" style="height: 400px;">
             <div class="card-header border-0">
               <div class="row align-items-center">
                 <div class="col">
@@ -117,7 +117,7 @@
                 </div>
               </div>
             </div>
-            <div class="table-responsive">
+            <div class="table-responsive" style="max-height: 350px; overflow-y: auto;">
               <!-- Projects table -->
               <table class="table align-items-center table-flush">
                 <thead class="thead-light">
@@ -170,19 +170,17 @@
           </div>
         </div>
         <div class="col-xl-4">
-          <div class="card">
+          <div class="card" style="height: 400px;">
             <div class="card-header border-0">
               <div class="row align-items-center">
                 <div class="col">
                   <h3 class="mb-0">Upload evaluation</h3>
                   <div class="form-group">
                   <label for="todaysTopic">Evaluation for</label>
-                  <select class="form-control" id="todaysTopic">
-                    <option>Introduction to Python</option>
-                    <option>Introduction to Django</option>
-                    <option>Introduction to Flask</option>
-                    <option>Introduction to FastAPI</option>
-                    <option>Introduction to Django REST Framework</option>
+                  <select class="form-control" id="exam">
+                    {% for exam in exams %}
+                      <option value="{{ exam.id }}">{{ exam.batch }}</option>
+                    {% endfor %}
                   </select>
 
                   <label for="evaluationfile">Upload your evaluation</label>
