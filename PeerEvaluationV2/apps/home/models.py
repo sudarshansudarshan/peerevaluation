@@ -1,5 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import User
+from datetime import datetime, timedelta
 
 # Course Model
 class Course(models.Model):
@@ -50,19 +51,18 @@ class UIDMapping(models.Model):
     def __str__(self):
         return f"{self.user.username} - {self.uid}"
 
-# Document Model
-class Document(models.Model):
-    batch = models.ForeignKey(Batch, on_delete=models.CASCADE, related_name="documents")
-    link = models.URLField(help_text="URL of document")
-    avg_score = models.FloatField(null=True, blank=True)
 
 # Peer Evaluation
 class PeerEvaluation(models.Model):
-    exam = models.ForeignKey(Exam, on_delete=models.CASCADE, related_name="peer_evaluations")
-    document = models.ForeignKey(Document, on_delete=models.CASCADE, related_name="peer_evaluations", null=True, blank=True)
     evaluator = models.ForeignKey(User, on_delete=models.CASCADE, related_name="evaluations_made")
+    evaluated_on = models.DateTimeField(auto_now_add=True)
+    deadline = models.DateTimeField(default=datetime.now() + timedelta(days=7))
+    uid = models.IntegerField(help_text="Unique identifier for the user")
+    student = models.ForeignKey(User, on_delete=models.CASCADE, related_name="peer_evaluations")
+    exam = models.ForeignKey(Exam, on_delete=models.CASCADE, related_name="peer_evaluations")
+    document = models.FileField(upload_to='documents/')
     feedback = models.TextField(help_text="Feedback for the evaluation")
-    score = models.IntegerField()
+    score = models.TextField(help_text="Score for the evaluation")
 
 
 # Statistics Model

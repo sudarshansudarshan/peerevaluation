@@ -33,13 +33,20 @@
           </li>
           {% endif %}
           {% endif %}
-          {% if user.is_staff %}
+          {% if user.is_teacher %}
           <li class="nav-item">
             <a class="nav-link {% if 'enrollment' in segment %} active {% endif %}" href="/examination/">
               <i class="ni ni-bullet-list-67 text-default"></i>
               <span class="nav-link-text">Exam Scheduling</span>
             </a>
           </li>
+          {% endif %}
+          {% if user.is_student %}
+          <li class="nav-item">
+            <a class="nav-link {% if 'peer' in segment %} active {% endif %}" href="/peer_eval/">
+              <i class="ni ni-bullet-list-67 text-default"></i>
+              <span class="nav-link-text">Evaluation</span>
+            </a>
           {% endif %}
           <li class="nav-item">
             <a class="nav-link" href="{% url 'logout' %}">

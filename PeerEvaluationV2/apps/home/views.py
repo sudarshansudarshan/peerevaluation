@@ -9,7 +9,7 @@ from django.http import HttpResponse, HttpResponseRedirect
 from django.template import loader
 from django.urls import reverse
 from django.shortcuts import get_object_or_404, redirect
-from .models import Course, Batch, StudentEnrollment, Exam, Document, Statistics, Incentivization, TeachingAssistantAssociation, UIDMapping
+from .models import Course, Batch, StudentEnrollment, Exam, Statistics, Incentivization, TeachingAssistantAssociation, UIDMapping
 from django.contrib.auth.decorators import user_passes_test
 from django.shortcuts import render, redirect
 from django.contrib import messages
@@ -19,10 +19,15 @@ from django.db import IntegrityError
 import random
 import csv
 import json
-from datetime import datetime
+from datetime import datetime, timedelta
+from django.db.models import ExpressionWrapper, F, DateTimeField
+from django.utils import timezone
+import pytz
+from .ocr import *
 
-def is_superuser(user):
-    return user.is_superuser
+def is_superuser(self):
+    return self.is_superuser
+User.add_to_class('is_superuser', is_superuser)
 
 
 # Overwrite User table from django to add method is_student
@@ -35,6 +40,11 @@ User.add_to_class('is_student', is_student)
 def is_staff(self):
     return self.is_staff
 User.add_to_class('is_staff', is_staff)
+
+
+def is_teacher(self):
+    return self.is_staff and not self.is_superuser
+User.add_to_class('is_teacher', is_teacher)
 
 
 
@@ -146,8 +156,24 @@ def index(request):
                 'is_enrolled': batch.id in enrolled_courses,
                 'is_accepted': batch.id in StudentEnrollment.objects.filter(student=request.user, approval_status=True).values_list('batch', flat=True)
             })
-        exams = Exam.objects.filter(batch__in=batches).order_by('date')
-        context = {'segment': 'index', 'courses': batches_list, 'is_ta': len(tas) > 0, 'exams': exams}
+        # Define the India timezone
+        india_timezone = pytz.timezone('Asia/Kolkata')
+
+        # Get the current time in IST
+        current_time = timezone.now().astimezone(india_timezone)
+        exams = Exam.objects.filter(batch__in=batches)
+        active_exams = []
+
+        for exam in exams:
+            if exam.date.tzinfo is None:
+                exam_date = timezone.make_aware(exam.date, timezone=pytz.UTC)
+            else:
+                exam_date = exam.date
+            exam_date = exam_date.astimezone(india_timezone) - timedelta(hours=5, minutes=30)
+            expiration_time = exam_date + timedelta(minutes=exam.duration)
+            if exam_date <= current_time <= expiration_time:
+                active_exams.append(exam)
+        context = {'segment': 'index', 'courses': batches_list, 'is_ta': len(tas) > 0, 'exams': active_exams}
         html_template = loader.get_template('home/student/index.html')
         return HttpResponse(html_template.render(context, request))
 
@@ -534,3 +560,30 @@ def examination(request):
     else:
         messages.error(request, 'Invalid request method.')
         return 
+
+
+@login_required
+def peer_evaluation(request):
+    return render(request, 'home/student/peer_evaluation.html')
+
+
+@login_required
+def upload_evaluation(request):
+    if request.method == "POST":
+        # Ensure the uploaded file is properly retrieved
+        uploaded_file = request.FILES.get("evaluationfile")[0]
+        if uploaded_file:
+            # Check the file type
+            if uploaded_file.content_type == "application/pdf":
+                # Save the file to the "evaluations" directory
+                with open(f"evaluations/{uploaded_file.name}", "wb") as f:
+                    for chunk in uploaded_file.chunks():
+                        number, file = process_uploaded_pdf(uploaded_file)
+                        f.write(file)
+                return render(request, "home/student/peer_evaluation.html", {"success": "File uploaded successfully."})
+            else:
+                return render(request, "home/student/peer_evaluation.html", {"error": "Invalid file type. Please upload a PDF file."})
+        else:
+            return render(request, "home/student/peer_evaluation.html", {"error": "No file was uploaded. Please try again."})
+
+    return render(request, "home/student/peer_evaluation.html")

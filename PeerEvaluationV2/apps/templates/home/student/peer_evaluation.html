@@ -1,0 +1,302 @@
+{% extends 'layouts/base.html' %}
+
+{% block title %} Evaluatation {% endblock title %}
+
+<!-- Specific CSS goes HERE -->
+{% block stylesheets %}
+<style>
+    .overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.8);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+    }
+  
+    .overlay-content {
+      background: #fff;
+      padding: 20px;
+      border-radius: 8px;
+      width: 70%;
+      height: 90%;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+  
+    .content-wrapper {
+      display: flex;
+      width: 100%;
+      height: 100%;
+    }
+  
+    .left-pane {
+      flex: 1;
+      padding: 10px;
+      border-right: 1px solid #ddd;
+      overflow: auto;
+    }
+  
+    .right-pane {
+      flex: 1;
+      padding: 20px;
+      overflow-y: auto;
+    }
+  
+    .overlay-content .close-btn {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+    }
+  
+    iframe {
+      border: none;
+    }
+  
+    .form-group {
+      margin-bottom: 15px;
+    }
+  
+    .form-group label {
+      font-weight: bold;
+    }
+  </style>
+  
+{% endblock stylesheets %}
+
+{% block content %}
+
+    <!-- Header -->
+    <div class="header bg-primary" style="height: 200px; overflow: hidden;">
+        <div class="container-fluid h-100">
+          <div class="header-body h-100">
+            <div class="row align-items-center py-4 h-100">
+              <div class="col-lg-6 col-7 ">
+                <h6 class="h2 text-white d-inline-block mb-0">Student Dashboard</h6>
+                <nav aria-label="breadcrumb" class="d-none d-md-inline-block ml-md-4">
+                  <ol class="breadcrumb breadcrumb-links breadcrumb-dark">
+                    <li class="breadcrumb-item"><a href="#"><i class="fas fa-home"></i></a></li>
+                    <li class="breadcrumb-item"><a href="#">Evaluate</a></li>
+                  </ol>
+                </nav>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    <!-- Page content -->
+    <div class="container-fluid mt--4">
+      <div class="row">
+        <div class="col-xl-6">
+          <div class="card" style="height: 500px; width: 100%;">
+            <div class="card-header border-0">
+              <div class="row align-items-center">
+                <div class="col">
+                  <h3 class="mb-0">Evaluate AnswerScripts</h3>
+                </div>
+              </div>
+            </div>
+            <div class="table-responsive" style="max-height: 350px; overflow-y: auto;">
+              <!-- Projects table -->
+              <table class="table align-items-center table-flush">
+                <thead class="thead-light">
+                  <tr>
+                    <th scope="col">Evaluate</th>
+                    <th scope="col">Check Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                    {% load static %}
+                    <tr>
+                      <td>
+                        <button 
+                          type="button" 
+                          class="btn btn-sm btn-primary" 
+                          onclick="openPDFOverlay('{% static 'pdfs/Arunav.1024.pdf' %}')">
+                          Evaluate
+                        </button>
+                      </td>
+                      <td><span class="badge badge-success">Evaluated</span></td>
+                    </tr>
+                    <tr>
+                      <td>
+                        <button 
+                          type="button" 
+                          class="btn btn-sm btn-primary" 
+                          onclick="openOverlay('Science', 'Batch B')">
+                          Evaluate
+                        </button>
+                      </td>
+                      <td><span class="badge badge-danger">Not Evaluated</span></td>
+                    </tr>
+                  </tbody>  
+              </table>
+              
+              
+              <!-- Overlay for PDF and Evaluation Form -->
+                <div id="pdfOverlay" class="overlay">
+                    <div class="overlay-content">
+                    <button class="btn btn-danger close-btn" onclick="closeOverlay()">Close</button>
+                    <div class="content-wrapper">
+                        <!-- Left: PDF Viewer -->
+                        <div class="left-pane">
+                        <iframe id="pdfFrame" src="" style="width: 100%; height: 100%;" frameborder="0"></iframe>
+                        </div>
+                        <!-- Right: Dummy Evaluation Form -->
+                        <div class="right-pane">
+                        <h4>Evaluation Form</h4>
+                        <form id="evaluationForm">
+                            <div class="form-group">
+                            <label for="evaluationScore">Score</label>
+                            <input type="number" id="evaluationScore" class="form-control" placeholder="Enter Score">
+                            </div>
+                            <div class="form-group">
+                            <label for="evaluationRemarks">Remarks</label>
+                            <textarea id="evaluationRemarks" class="form-control" rows="5" placeholder="Enter Remarks"></textarea>
+                            </div>
+                            <button type="button" class="btn btn-success" onclick="submitEvaluation()">Submit</button>
+                        </form>
+                        </div>
+                    </div>
+                    </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+    
+        <div class="col-xl-6">
+          <div class="card" style="height: 400px; width: 100%;">
+            <div class="card-header border-0">
+              <div class="row align-items-center">
+                <div class="col">
+                  <h3 class="mb-0">Upload evaluation</h3>
+                  <div class="form-group">
+                  <label for="todaysTopic">Evaluation for</label>
+                  <select class="form-control" id="exam">
+                    {% for exam in exams %}
+                      <option value="{{ exam.id }}">{{ exam.batch }}</option>
+                    {% endfor %}
+                  </select>
+
+                  <label for="evaluationfile">Upload your evaluation</label>
+                  <input type="file" class="form-control-file" id="evaluationfile" aria-describedby="evaluationfileHelp">
+                  <small id="evaluationfileHelp" class="form-text text-muted">Only PDF files are allowed</small>
+                  <button type="submit" class="btn btn-sm btn-primary">Submit</button>
+                  
+                </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      {% include "includes/footer.html" %}
+      
+    </div>
+
+{% endblock content %}
+
+<!-- Specific JS goes HERE --> 
+{% block javascripts %}
+
+  <script>
+    const dropArea = document.getElementById('drop-area');
+const fileInput = document.getElementById('file-input');
+const fileInfo = document.getElementById('file-info');
+const submitButton = document.getElementById('submit-button');
+const triggerButton = document.getElementById('trigger-button');
+const headerTitle = document.getElementById('header-title');
+const fileNameElement = document.getElementById('file-name');
+
+// Trigger file input dialog
+function triggerFileInput() {
+  fileInput.click();
+}
+
+// Highlight the drop area on drag events
+['dragenter', 'dragover', 'dragleave', 'drop'].forEach(event => {
+  dropArea.addEventListener(event, (e) => e.preventDefault());
+});
+
+['dragenter', 'dragover'].forEach(event => {
+  dropArea.addEventListener(event, () => dropArea.classList.add('bg-gray-100'));
+});
+
+['dragleave', 'drop'].forEach(event => {
+  dropArea.addEventListener(event, () => dropArea.classList.remove('bg-gray-100'));
+});
+
+// Handle drop event
+dropArea.addEventListener('drop', (e) => {
+  const files = e.dataTransfer.files;
+  if (files.length > 0) {
+    fileInput.files = e.dataTransfer.files;
+    handleFileSelection(fileInput.files[0]);
+  }
+});
+
+// Handle file input change
+fileInput.addEventListener('change', () => {
+  const files = fileInput.files;
+  if (files.length > 0) {
+    handleFileSelection(files[0]);
+  }
+});
+
+// Handle file selection
+function handleFileSelection(file) {
+  if (file.type === 'application/pdf') {
+    fileNameElement.textContent = file.name; // Update file name display
+    fileInfo.classList.remove('hidden'); // Show file info
+    submitButton.classList.remove('hidden'); // Show submit button
+    triggerButton.classList.add('hidden'); // Hide upload button
+    headerTitle.textContent = `File Selected: ${file.name}`; // Update header title
+  } else {
+    alert('Only PDF files are allowed!');
+    fileInput.value = ''; // Clear invalid selection
+    resetForm();
+  }
+}
+
+// Reset form to initial state
+function resetForm() {
+  fileInfo.classList.add('hidden');
+  submitButton.classList.add('hidden');
+  triggerButton.classList.remove('hidden');
+  headerTitle.textContent = 'Upload Files';
+}
+
+  </script>
+  <script>
+    // Open the PDF overlay and load the PDF
+    function openPDFOverlay(pdfUrl) {
+      const pdfFrame = document.getElementById('pdfFrame');
+      pdfFrame.src = pdfUrl; // Set the PDF URL
+      document.getElementById('pdfOverlay').style.display = 'flex'; // Show overlay
+    }
+  
+    // Close the overlay
+    function closeOverlay() {
+      document.getElementById('pdfOverlay').style.display = 'none';
+      const pdfFrame = document.getElementById('pdfFrame');
+      pdfFrame.src = ''; // Clear the iframe source
+    }
+  
+    // Submit the evaluation
+    function submitEvaluation() {
+      const score = document.getElementById('evaluationScore').value;
+      const remarks = document.getElementById('evaluationRemarks').value;
+      alert(`Evaluation submitted:\nScore: ${score}\nRemarks: ${remarks}`);
+      closeOverlay();
+    }
+  </script>
+  <script src="/static/assets/vendor/chart.js/dist/Chart.min.js"></script>
+  <script src="/static/assets/vendor/chart.js/dist/Chart.extension.js"></script>
+
+{% endblock javascripts %}
