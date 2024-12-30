@@ -4,24 +4,45 @@
 
 <!-- Specific CSS goes HERE -->
 {% block stylesheets %}
-<style>
-    .details-row {
-      display: none;
-      overflow: hidden;
-      transition: max-height 0.3s ease-in-out;
+  <style>
+    .upload-area {
+      background-color: #f9f9f9;
+      transition: background-color 0.3s ease;
     }
 
-    .details-row.expanded {
-      display: table-row;
-    }
-
-    .toggle-btn {
+    .upload-area:hover {
+      background-color: #f1f1f1;
       cursor: pointer;
     }
 
-    .student-list {
-      background-color: #f8f9fa;
-      border-radius: 8px;
+    .upload-area i {
+      transition: transform 0.3s ease;
+    }
+
+    .upload-area:hover i {
+      transform: scale(1.2);
+    }
+
+    label.text-primary.font-weight-bold {
+      cursor: pointer;
+      transition: color 0.3s ease;
+    }
+
+    label.text-primary.font-weight-bold:hover {
+      color: #0056b3;
+    }
+
+    .card-header.bg-primary {
+      background: linear-gradient(90deg, #007bff, #0056b3);
+    }
+
+    .card-header h3 {
+      font-size: 1.25rem;
+      letter-spacing: 0.5px;
+    }
+    .upload-area-hover {
+      background-color: #e6f7ff; /* Light blue background when hovering */
+      border-color: #007bff; /* Highlight border color */
     }
   </style>
 {% endblock stylesheets %}
@@ -55,7 +76,7 @@
     <div class="container-fluid mt--6">
       <div class="row">
         <div class="col-xl-8">
-          <div class="card">
+          <div class="card shadow-sm" style="height: 485px;">
             <div class="card-header border-0">
               <div class="row align-items-center">
                 <div class="col">
@@ -63,7 +84,7 @@
                 </div>
               </div>
             </div>
-            <div class="table-responsive">
+            <div class="table-responsive" style="max-height: 350px; overflow-y: auto;">
               <!-- Courses table -->
               <table class="table align-items-center table-flush" id="courses-table">
                 <thead class="thead-light">
@@ -73,6 +94,7 @@
                     <th scope="col">Duration</th>
                     <th scope="col">Max. marks</th>
                     <th scope="col">Questions</th>
+                    <th scope="col">No. of evals.</th>
                     <th scope="col">Action</th>
                   </tr>
                 </thead>
@@ -102,6 +124,9 @@
                                 <input type="number" class="form-control border rounded px-2 py-1" id="max_marks" name="max_marks" minValue="0">
                               </td>
                               <td class="px-4 py-2">
+                                <input type="number" class="form-control border rounded px-2 py-1" id="k" name="k" minValue="0">
+                              </td>
+                              <td class="px-4 py-2">
                                 <button type="submit" class="btn btn-sm btn-success"><i class="fas fa-save"></i> Save</button>
                               </td>
                             </form>
@@ -110,13 +135,14 @@
                             <td class="px-4 py-2">{{ batch.exams.duration }} mins</td>
                             <td class="px-4 py-2">{{ batch.exams.number_of_questions }}</td>
                             <td class="px-4 py-2">{{ batch.exams.max_scores }}</td>
+                            <td class="px-4 py-2">{{ batch.exams.k }}</td>
                             <td class="px-4 py-2">
                               <div class="d-flex">
                                 <button class="btn btn-sm btn-danger mr-2" onclick="deleteExamination({{ batch.exams.id }})"><i class="fas fa-trash"></i></button>
                                 <form id="csvForm" method="POST" action="{% url 'download_csv' %}">
                                   {% csrf_token %}
                                   <input type="hidden" class="form-control border rounded px-2 py-1" id="exam_id" name="exam_id" value="{{ batch.exams.id }}">
-                                  <button type="submit" class="btn btn-sm btn-primary"><i class="fa fa-download"></i></button>
+                                  <button type="submit" class="btn btn-sm btn-primary"><i class="fa fa-file-pdf"></i> PDFs</button>
                                 </form>
                               </div>
                             </td>
@@ -127,6 +153,65 @@
                   {% endif %}
                 </tbody>
               </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Upload Evaluation -->
+        <div class="col-xl-4 col-lg-6 mb-4">
+          <div class="card shadow-sm" style="height: 485px;">
+            <div class="card-header border-0">
+              <div class="row align-items-center">
+                <div class="col">
+                  <h3 class="mb-0">Upload Evaluation</h3>
+                </div>
+              </div>
+            </div>
+            <div class="card-body">
+              {% if exams|length != 0 %}
+              <form class="form-horizontal" method="POST" action="{% url 'upload_evaluation' %}" enctype="multipart/form-data">
+                {% csrf_token %}
+                
+                <!-- Evaluation Selector -->
+                <div class="form-group">
+                  <label for="exam" class="form-label font-weight-bold">Evaluation for</label>
+                  <select id="exam_id" name="exam_id" class="form-control custom-select shadow-sm">
+                    {% for exam in exams %}
+                      <option value="{{ exam.id }}">{{ exam.batch }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+
+                <!-- File Upload Section -->
+                <div class="form-group">
+                  <label class="form-label font-weight-bold">Upload your evaluations</label>
+                  <div class="border border-secondary border-dashed text-center py-4 rounded upload-area" id="upload-area">
+                    <i class="fas fa-file-pdf text-primary mb-2" style="font-size: 3rem;"></i>
+                    <div class="d-flex justify-content-center align-items-center">
+                      <label for="evaluationfiles" class="text-primary font-weight-bold cursor-pointer">
+                        <span>Upload files</span>
+                        <input id="evaluationfile" name="evaluationfile" type="file" class="sr-only" accept=".pdf" {% if user.is_teacher %}multiple{% endif %}>
+                      </label>
+                      <p class="ml-1 mb-0">or drag and drop</p>
+                    </div>
+                    <p class="small text-muted mb-0">Only PDF files are allowed (Max size per file: 5MB)</p>
+                  </div>
+                </div>
+
+                <!-- Submit Button -->
+                <div class="text-right">
+                  <button type="submit" class="btn btn-sm btn-primary shadow">
+                    <i class="fas fa-cloud-upload-alt mr-1"></i>Submit
+                  </button>
+                </div>
+              </form>
+              {% else %}
+              <!-- No Evaluations Placeholder -->
+              <div class="text-center py-5">
+                <i class="fas fa-clipboard-list text-muted mb-3" style="font-size: 3rem;"></i>
+                <h4 class="text-secondary">No evaluations available</h4>
+              </div>
+              {% endif %}
             </div>
           </div>
         </div>
@@ -163,7 +248,81 @@
           console.error('Error:', error);
         });
       };
-    </script>
+
+    // Select the upload area, file input, and file name display container
+    const uploadArea = document.querySelector('.upload-area');
+    const fileInput = document.querySelector('#evaluationfile');
+    const fileNameDisplay = document.createElement('div');
+
+    // Style the file name display
+    fileNameDisplay.classList.add('small', 'text-muted', 'mb-0', 'font-weight-bold');
+    fileNameDisplay.textContent = 'No files selected yet.';
+    uploadArea.appendChild(fileNameDisplay);
+
+    // Prevent default behaviors for drag events
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(event => {
+      uploadArea.addEventListener(event, e => e.preventDefault());
+      uploadArea.addEventListener(event, e => e.stopPropagation());
+    });
+
+    // Add styles for drag events
+    ['dragenter', 'dragover'].forEach(event => {
+      uploadArea.addEventListener(event, () => {
+        uploadArea.classList.add('upload-area-hover');
+      });
+    });
+
+    ['dragleave', 'drop'].forEach(event => {
+      uploadArea.addEventListener(event, () => {
+        uploadArea.classList.remove('upload-area-hover');
+      });
+    });
+
+    // Function to update the file display with count only
+    const updateFileDisplay = files => {
+      fileNameDisplay.innerHTML = ''; // Clear previous content
+      if (files.length) {
+        const validFilesCount = Array.from(files).filter(file => file.type === 'application/pdf').length;
+        const invalidFilesCount = files.length - validFilesCount;
+
+        const validFilesInfo = document.createElement('p');
+        validFilesInfo.classList.add('text-success', 'small', 'text-muted', 'mb-0', 'font-weight-bold');
+        validFilesInfo.textContent = `Valid PDF files: ${validFilesCount}`;
+        fileNameDisplay.appendChild(validFilesInfo);
+
+        if (invalidFilesCount > 0) {
+          const invalidFilesInfo = document.createElement('p');
+          invalidFilesInfo.classList.add('text-danger', 'small', 'text-muted', 'mb-0', 'font-weight-bold');
+          invalidFilesInfo.textContent = `Invalid files: ${invalidFilesCount}`;
+          fileNameDisplay.appendChild(invalidFilesInfo);
+        }
+      } else {
+        fileNameDisplay.textContent = 'No files selected yet.';
+        fileNameDisplay.classList.remove('text-danger', 'text-success');
+      }
+    };
+
+    // Handle file drop
+    uploadArea.addEventListener('drop', event => {
+      const files = event.dataTransfer.files; // Get the dropped files
+      if (files.length) {
+        const validFiles = Array.from(files).filter(file => file.type === 'application/pdf');
+        // Update the file input with the dropped files
+        const dataTransfer = new DataTransfer();
+        validFiles.forEach(file => dataTransfer.items.add(file));
+        fileInput.files = dataTransfer.files;
+
+        // Show the file names in the HTML
+        updateFileDisplay(files);
+      }
+    });
+
+    // Handle file input change (if user selects files via the input)
+    fileInput.addEventListener('change', event => {
+      const files = event.target.files;
+      updateFileDisplay(files);
+    });
+  </script>
 
   <script src="/static/assets/vendor/chart.js/dist/Chart.min.js"></script>
   <script src="/static/assets/vendor/chart.js/dist/Chart.extension.js"></script>

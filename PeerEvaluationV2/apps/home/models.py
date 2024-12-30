@@ -35,6 +35,7 @@ class Exam(models.Model):
     number_of_questions = models.IntegerField()
     duration = models.IntegerField(help_text="Duration of the exam in minutes")
     max_scores = models.IntegerField()
+    k = models.IntegerField(help_text="Number of evaluations for student")
     completed = models.BooleanField(default=False, help_text="Indicates whether the exam is completed")
 
     def __str__(self):
@@ -50,6 +51,14 @@ class UIDMapping(models.Model):
 
     def __str__(self):
         return f"{self.user.username} - {self.uid}"
+    
+
+class Documents(models.Model):
+    uid = models.CharField(max_length=100, help_text="Unique identifier for the user")
+    exam = models.ForeignKey(Exam, on_delete=models.CASCADE, related_name="documents")
+    document = models.FileField(upload_to='documents/')
+    uploaded_on = models.DateTimeField(auto_now_add=True)
+    uploaded_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name="documents")
 
 
 # Peer Evaluation
@@ -60,7 +69,7 @@ class PeerEvaluation(models.Model):
     uid = models.IntegerField(help_text="Unique identifier for the user")
     student = models.ForeignKey(User, on_delete=models.CASCADE, related_name="peer_evaluations")
     exam = models.ForeignKey(Exam, on_delete=models.CASCADE, related_name="peer_evaluations")
-    document = models.FileField(upload_to='documents/')
+    document = models.ForeignKey(Documents, on_delete=models.CASCADE, related_name="peer_evaluations")
     feedback = models.TextField(help_text="Feedback for the evaluation")
     score = models.TextField(help_text="Score for the evaluation")
 

@@ -6,45 +6,44 @@
 {% block stylesheets %}
 <style>
   .upload-area {
-  background-color: #f9f9f9;
-  transition: background-color 0.3s ease;
-}
+    background-color: #f9f9f9;
+    transition: background-color 0.3s ease;
+  }
 
-.upload-area:hover {
-  background-color: #f1f1f1;
-  cursor: pointer;
-}
+  .upload-area:hover {
+    background-color: #f1f1f1;
+    cursor: pointer;
+  }
 
-.upload-area i {
-  transition: transform 0.3s ease;
-}
+  .upload-area i {
+    transition: transform 0.3s ease;
+  }
 
-.upload-area:hover i {
-  transform: scale(1.2);
-}
+  .upload-area:hover i {
+    transform: scale(1.2);
+  }
 
-label.text-primary.font-weight-bold {
-  cursor: pointer;
-  transition: color 0.3s ease;
-}
+  label.text-primary.font-weight-bold {
+    cursor: pointer;
+    transition: color 0.3s ease;
+  }
 
-label.text-primary.font-weight-bold:hover {
-  color: #0056b3;
-}
+  label.text-primary.font-weight-bold:hover {
+    color: #0056b3;
+  }
 
-.card-header.bg-primary {
-  background: linear-gradient(90deg, #007bff, #0056b3);
-}
+  .card-header.bg-primary {
+    background: linear-gradient(90deg, #007bff, #0056b3);
+  }
 
-.card-header h3 {
-  font-size: 1.25rem;
-  letter-spacing: 0.5px;
-}
-.upload-area-hover {
-  background-color: #e6f7ff; /* Light blue background when hovering */
-  border-color: #007bff; /* Highlight border color */
-}
-
+  .card-header h3 {
+    font-size: 1.25rem;
+    letter-spacing: 0.5px;
+  }
+  .upload-area-hover {
+    background-color: #e6f7ff; /* Light blue background when hovering */
+    border-color: #007bff; /* Highlight border color */
+  }
 </style>
 {% endblock stylesheets %}
 
@@ -217,7 +216,7 @@ label.text-primary.font-weight-bold:hover {
 
         <!-- Upload Evaluation -->
         <div class="col-xl-4 col-lg-6 mb-4">
-          <div class="card shadow-sm">
+          <div class="card shadow-sm" style="height: 485px;">
             <div class="card-header border-0">
               <div class="row align-items-center">
                 <div class="col">
@@ -233,7 +232,7 @@ label.text-primary.font-weight-bold:hover {
                 <!-- Evaluation Selector -->
                 <div class="form-group">
                   <label for="exam" class="form-label font-weight-bold">Evaluation for</label>
-                  <select id="exam" class="form-control custom-select shadow-sm">
+                  <select id="exam_id" name="exam_id" class="form-control custom-select shadow-sm">
                     {% for exam in exams %}
                       <option value="{{ exam.id }}">{{ exam.batch }}</option>
                     {% endfor %}
@@ -332,79 +331,79 @@ label.text-primary.font-weight-bold:hover {
 {% block javascripts %}
 
   <script>
-  // Select the upload area, file input, and file name display container
-  const uploadArea = document.querySelector('.upload-area');
-  const fileInput = document.querySelector('#evaluationfile');
-  const fileNameDisplay = document.createElement('p');
+    // Select the upload area, file input, and file name display container
+    const uploadArea = document.querySelector('.upload-area');
+    const fileInput = document.querySelector('#evaluationfile');
+    const fileNameDisplay = document.createElement('p');
 
-  // Style the file name display
-  fileNameDisplay.classList.add('small', 'text-muted', 'mb-0', 'font-weight-bold');
-  fileNameDisplay.textContent = 'No file selected yet.';
-  uploadArea.appendChild(fileNameDisplay);
+    // Style the file name display
+    fileNameDisplay.classList.add('small', 'text-muted', 'mb-0', 'font-weight-bold');
+    fileNameDisplay.textContent = 'No file selected yet.';
+    uploadArea.appendChild(fileNameDisplay);
 
-  // Prevent default behaviors for drag events
-  ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(event => {
-    uploadArea.addEventListener(event, e => e.preventDefault());
-    uploadArea.addEventListener(event, e => e.stopPropagation());
-  });
-
-  // Add styles for drag events
-  ['dragenter', 'dragover'].forEach(event => {
-    uploadArea.addEventListener(event, () => {
-      uploadArea.classList.add('upload-area-hover');
+    // Prevent default behaviors for drag events
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(event => {
+      uploadArea.addEventListener(event, e => e.preventDefault());
+      uploadArea.addEventListener(event, e => e.stopPropagation());
     });
-  });
 
-  ['dragleave', 'drop'].forEach(event => {
-    uploadArea.addEventListener(event, () => {
-      uploadArea.classList.remove('upload-area-hover');
+    // Add styles for drag events
+    ['dragenter', 'dragover'].forEach(event => {
+      uploadArea.addEventListener(event, () => {
+        uploadArea.classList.add('upload-area-hover');
+      });
     });
-  });
 
-  // Handle file drop
-  uploadArea.addEventListener('drop', event => {
-    const files = event.dataTransfer.files; // Get the dropped files
-    if (files.length) {
-      const file = files[0];
-      // Validate the file type
-      if (file.type === 'application/pdf') {
-        // Update the file input with the dropped file
-        fileInput.files = files;
-        // Show the file name in the HTML
-        fileNameDisplay.textContent = `Selected File: ${file.name}`;
-        fileNameDisplay.classList.remove('text-danger');
-        fileNameDisplay.classList.add('text-success');
-      } else {
-        // Display error message
-        fileNameDisplay.textContent = 'Error: Only PDF files are allowed.';
-        fileNameDisplay.classList.remove('text-success');
-        fileNameDisplay.classList.add('text-danger');
-      }
-    }
-  });
+    ['dragleave', 'drop'].forEach(event => {
+      uploadArea.addEventListener(event, () => {
+        uploadArea.classList.remove('upload-area-hover');
+      });
+    });
 
-  // Handle file input change (if user selects a file via the input)
-  fileInput.addEventListener('change', event => {
-    const file = event.target.files[0];
-    if (file) {
-      // Validate the file type
-      if (file.type === 'application/pdf') {
-        fileNameDisplay.textContent = `Selected File: ${file.name}`;
-        fileNameDisplay.classList.remove('text-danger');
-        fileNameDisplay.classList.add('text-success');
-      } else {
-        // Display error message and reset input
-        fileInput.value = ''; // Clear the invalid input
-        fileNameDisplay.textContent = 'Error: Only PDF files are allowed.';
-        fileNameDisplay.classList.remove('text-success');
-        fileNameDisplay.classList.add('text-danger');
+    // Handle file drop
+    uploadArea.addEventListener('drop', event => {
+      const files = event.dataTransfer.files; // Get the dropped files
+      if (files.length) {
+        const file = files[0];
+        // Validate the file type
+        if (file.type === 'application/pdf') {
+          // Update the file input with the dropped file
+          fileInput.files = files;
+          // Show the file name in the HTML
+          fileNameDisplay.textContent = `Selected File: ${file.name}`;
+          fileNameDisplay.classList.remove('text-danger');
+          fileNameDisplay.classList.add('text-success');
+        } else {
+          // Display error message
+          fileNameDisplay.textContent = 'Error: Only PDF files are allowed.';
+          fileNameDisplay.classList.remove('text-success');
+          fileNameDisplay.classList.add('text-danger');
+        }
       }
-    } else {
-      fileNameDisplay.textContent = 'No file selected yet.';
-      fileNameDisplay.classList.remove('text-danger', 'text-success');
-    }
-  });
-</script>
+    });
+
+    // Handle file input change (if user selects a file via the input)
+    fileInput.addEventListener('change', event => {
+      const file = event.target.files[0];
+      if (file) {
+        // Validate the file type
+        if (file.type === 'application/pdf') {
+          fileNameDisplay.textContent = `Selected File: ${file.name}`;
+          fileNameDisplay.classList.remove('text-danger');
+          fileNameDisplay.classList.add('text-success');
+        } else {
+          // Display error message and reset input
+          fileInput.value = ''; // Clear the invalid input
+          fileNameDisplay.textContent = 'Error: Only PDF files are allowed.';
+          fileNameDisplay.classList.remove('text-success');
+          fileNameDisplay.classList.add('text-danger');
+        }
+      } else {
+        fileNameDisplay.textContent = 'No file selected yet.';
+        fileNameDisplay.classList.remove('text-danger', 'text-success');
+      }
+    });
+  </script>
 
 
   <script src="/static/assets/vendor/chart.js/dist/Chart.min.js"></script>
