@@ -753,7 +753,8 @@ def questionNumbers(request):
             numQue.total_marks = total_marks
             numQue.k = k
         numQue.save()
-        messages.success(request, 'Number of questions, total marks and number of evaluations (k) updated successfully!')
+        messages.success(request, f'Number of questions: {number} | Total Marks: {total_marks} | Number of evaluations: {k} updated successfully.')
+        messages.info(request, 'Please upload documents to assign peer evaluations.')
         return redirect(f"/{current_user_profile.role}Home/")
     return redirect('/logout/')
 

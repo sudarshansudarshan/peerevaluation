@@ -43,25 +43,24 @@
                 </li> -->
                 <li><button class="menu-item text-gray-700 hover:text-blue-500"
                         data-content="settings">Profile</button></li>
-            </ul>
-            <!-- Messages Section -->
-            <div class="mt-6 space-y-4">
-                {% for message in messages %}
-                <div class="bg-blue-50 border-l-4 border-blue-500 text-blue-700 p-4 rounded-lg">
-                    <div class="flex justify-between items-center">
-                        <p class="text-sm">{{ message }}</p>
-                        <button class="text-blue-500 hover:text-blue-700"
-                            onclick="this.parentElement.parentElement.remove()">×</button>
-                    </div>
-                </div>
-                {% endfor %}
-            </div>
-            
+            </ul>            
         </div>
 
         <!-- Main Content Area (Responsive) -->
         <div class="col-span-3">
             <h1 class="text-2xl font-bold mb-6">Welcome, {{ request.user.username }}</h1>
+
+            <!-- Success/Info Message -->
+            <div id="message-container" class="fixed top-1/5 left-1/2 transform -translate-x-1/2 -translate-y-1/2 space-y-4"></div>
+
+            <!-- Messages Section -->
+            <div class="mt-6 space-y-4">
+                {% for message in messages %}
+                <div id="message-{{ loop.index }}" class="hidden bg-black bg-opacity-50 text-white p-4 rounded-full text-center">
+                    <p class="text-sm">{{ message }}</p>
+                </div>
+                {% endfor %}
+            </div>
 
             <div class="container mx-auto p-6">
 
@@ -146,6 +145,7 @@
                             Download Answer Sheet
                         </a>
                     </div>
+
 
                     <!-- Summary Table -->
                     <div class="mt-6">
@@ -368,6 +368,32 @@
                 }
             });
         }
+
+        function showMessage(messageContent) {
+        // Create a new div for the message
+        const messageDiv = document.createElement('div');
+        messageDiv.classList.add('bg-black', 'bg-opacity-50', 'text-white', 'p-4', 'rounded-full', 'text-center', 'w-max', 'mx-auto');
+        messageDiv.innerHTML = `<p class="text-sm">${messageContent}</p>`;
+        
+        // Append the new message to the container
+        const container = document.getElementById('message-container');
+        container.appendChild(messageDiv);
+        
+        // Show the message
+        messageDiv.classList.remove('hidden');
+        
+        // Hide the message after 5 seconds
+        setTimeout(() => {
+            messageDiv.classList.add('hidden');
+        }, 5000); // Message disappears after 5 seconds
+    }
+
+    // Example of displaying messages from the Django template
+    window.onload = function() {
+        {% for message in messages %}
+            showMessage("{{ message }}");
+        {% endfor %}
+    };
     </script>
 </body>
 

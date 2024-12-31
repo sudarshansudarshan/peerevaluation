@@ -41,7 +41,7 @@
                     <button class="menu-item text-gray-700 hover:text-blue-500" data-content="analytics">Analytics</button>
                 </li>
                 <li>
-                    <button class="menu-item text-gray-700 hover:text-blue-500" data-content="pre-evaluation">Pre Evaluation</button>
+                    <button class="menu-item text-gray-700 hover:text-blue-500" data-content="pre-evaluation">Conduct Evaluation</button>
                 </li>
                 <li>
                     <button class="menu-item text-gray-700 hover:text-blue-500" data-content="upload-data">Upload
@@ -278,8 +278,8 @@
             <div id="pre-evaluation" class="content-section hidden bg-white p-6 rounded-lg shadow-md mb-6">
                 <form method="post" action="/questionNumbers/">
                     {% csrf_token %}
-                    <h2 class="text-xl font-semibold text-gray-800 mb-4">Pre Evaluation</h2>
-                    <p class="text-gray-700 mb-4">This is the content for the Pre Evaluation section.</p>
+                    <h2 class="text-xl font-semibold text-gray-800 mb-4">Conduct Evaluation</h2>
+                    <p class="text-gray-700 mb-4">This is the content for the Conduct Evaluation section.</p>
 
                     <!-- Number of Questions Input -->
                     <div class="mb-4">
@@ -569,6 +569,32 @@
             },
         });
     }
+
+    function showMessage(messageContent) {
+        // Create a new div for the message
+        const messageDiv = document.createElement('div');
+        messageDiv.classList.add('bg-black', 'bg-opacity-50', 'text-white', 'p-4', 'rounded-full', 'text-center', 'w-max', 'mx-auto');
+        messageDiv.innerHTML = `<p class="text-sm">${messageContent}</p>`;
+        
+        // Append the new message to the container
+        const container = document.getElementById('message-container');
+        container.appendChild(messageDiv);
+        
+        // Show the message
+        messageDiv.classList.remove('hidden');
+        
+        // Hide the message after 5 seconds
+        setTimeout(() => {
+            messageDiv.classList.add('hidden');
+        }, 5000); // Message disappears after 5 seconds
+    }
+
+    // Example of displaying messages from the Django template
+    window.onload = function() {
+        {% for message in messages %}
+            showMessage("{{ message }}");
+        {% endfor %}
+    };
     </script>
 </body>
 
