@@ -83,7 +83,7 @@
             <!-- Upload Data Section -->
             <div id="upload-data" class="content-section hidden bg-white p-6 rounded-lg shadow-md mb-6">
                 <h2 class="text-xl font-semibold text-gray-800 mb-4">Upload Data</h2>
-                <p class="text-gray-700 mb-4">You can upload files here:</p>
+                <p class="text-gray-700 mb-4">Here you can upload the specified data to conduct peer evaluation</p>
 
                 <!-- Upload Section for CSV File -->
                 <div class="mb-6">
@@ -93,7 +93,7 @@
                             File:</label>
                         <input type="file" id="csv-upload" name="csv-upload" accept=".csv"
                             class="block w-full p-2 border border-gray-300 rounded-md" required>
-                        <p class="text-sm text-gray-500 mt-2">Please upload a single CSV file.</p>
+                        <p class="text-sm text-gray-500 mt-2">Please upload a single CSV file, containing coloumns of name, email and UID of the students</p>
                         <button id="submit-csv"
                             class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md mt-4">Submit CSV
                             File</button>
@@ -108,7 +108,7 @@
                             Files:</label>
                         <input type="file" id="pdf-upload" name="doc" accept=".pdf" multiple
                             class="block w-full p-2 border border-gray-300 rounded-md doc" required>
-                        <p class="text-sm text-gray-500 mt-2">You can select multiple PDF files to upload.</p>
+                        <p class="text-sm text-gray-500 mt-2">You can select multiple PDF files to upload. The answersheet of students can uploaded in bulk here.</p>
                         <button id="submit-pdf"
                             class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md mt-4">Submit PDF
                             Files</button>
@@ -119,7 +119,7 @@
             <!-- Role Manager Section -->
             <div id="role-manager" class="content-section hidden bg-white p-8 rounded-lg shadow-lg mb-8">
                 <h2 class="text-2xl font-semibold text-gray-800 mb-6">Role Manager</h2>
-                <p class="text-gray-600 mb-6">Manage roles and permissions here.</p>
+                <p class="text-gray-600 mb-6">You can allocate roles to the newly added user as- Teacher, TA, Student or an admin.</p>
 
                 <!-- Form to manage roles -->
                 <form id="role-manager-form" method="POST" action="/change_role/" class="space-y-6">
@@ -172,31 +172,41 @@
                 <form method="post" action="/questionNumbers/">
                     {% csrf_token %}
                     <h2 class="text-xl font-semibold text-gray-800 mb-4">Conduct Evaluation</h2>
-                    <p class="text-gray-700 mb-4">This is the content for the conduct Evaluation section.</p>
 
                     <!-- Number of Questions Input -->
                     <div class="mb-4">
-                        <label for="num-questions" class="block text-gray-700 font-semibold mb-2">Number of
-                            Questions:</label>
+                        <label for="num-questions" class="block text-gray-700 font-semibold mb-2"
+                            title="Enter the total number of questions in the exam.">
+                            Number of Questions:
+                        </label>
                         <input type="number" id="num-questions" name="num-questions"
                             class="border border-gray-300 rounded-lg p-2 w-full"
                             placeholder="Enter the number of questions" required>
+                        <small class="text-gray-500">Specify how many questions are in the exam.</small>
                     </div>
 
+                    <!-- Total Marks Input -->
                     <div class="mb-4">
-                        <label for="total_marks" class="block text-gray-700 font-semibold mb-2">Number of
-                            Total Marks:</label>
+                        <label for="total_marks" class="block text-gray-700 font-semibold mb-2"
+                            title="Enter the total marks for the exam.">
+                            Total Marks:
+                        </label>
                         <input type="number" id="total_marks" name="total_marks"
                             class="border border-gray-300 rounded-lg p-2 w-full"
                             placeholder="Enter total marks" required>
+                        <small class="text-gray-500">Define the overall marks for the exam.</small>
                     </div>
 
+                    <!-- Number of Evaluations Input -->
                     <div class="mb-4">
-                        <label for="k" class="block text-gray-700 font-semibold mb-2">Number of
-                            evaluations (k):</label>
+                        <label for="k" class="block text-gray-700 font-semibold mb-2"
+                            title="Specify how many times each paper will be evaluated. Ensure the value is less than the number of students.">
+                            Number of Evaluations (k):
+                        </label>
                         <input type="number" id="k" name="k"
                             class="border border-gray-300 rounded-lg p-2 w-full"
                             placeholder="Enter number of evaluations" required>
+                        <small class="text-gray-500">Enter the number of evaluations per paper (e.g., k=1 means each paper is checked once).</small>
                     </div>
 
                     <!-- Submit Button -->
@@ -223,7 +233,7 @@
 
             <div id="delete-data" class="content-section hidden bg-white p-6 rounded-lg shadow-md mb-6">
                 <h2 class="text-xl font-semibold text-gray-800 mb-4">Delete Data</h2>
-                <p class="text-gray-700 mb-4">You can manage data deletion tasks here.</p>
+                <p class="text-gray-700 mb-4">This button deletes will the data for the present evaluation . Use this only after the entire evaluation process is complete</p>
                 <form action="/DeleteDocs/" method="POST">
                     {% csrf_token %}
                     <button id="delete-data-btn" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-md">
