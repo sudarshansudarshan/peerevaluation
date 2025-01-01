@@ -4,7 +4,7 @@ from django.http import HttpResponse, HttpResponseRedirect
 from django.template import loader
 from django.urls import reverse
 from django.shortcuts import get_object_or_404, redirect
-from .models import Course, Batch, StudentEnrollment, Exam, Statistics, Incentivization, TeachingAssistantAssociation, UIDMapping, Documents
+from .models import Course, Batch, StudentEnrollment, Exam, Statistics, Incentivization, TeachingAssistantAssociation, UIDMapping, Documents, PeerEvaluation
 from django.contrib.auth.decorators import user_passes_test
 from django.shortcuts import render, redirect
 from django.contrib import messages
@@ -33,6 +33,88 @@ import tempfile
 from PyPDF2 import PdfMerger
 import os
 from io import BytesIO
+import networkx as nx
+import math
+import google.generativeai as genai
+
+
+genai.configure(api_key="AIzaSyBrat_wDHdrOGboCJfT-mYhyD_dpqipsbM")
+
+def geminiGenerate(prompt):
+    model = genai.GenerativeModel('gemini-1.5-pro')
+    response = model.generate_content(prompt)
+    return response.text
+
+
+def parse_llama_json(text):
+    # Extract JSON part from the generated text
+    start_idx = text.find('{')
+    end_idx = text.rfind('}') + 1
+
+    if start_idx == -1 or end_idx == -1:
+        raise ValueError("No valid JSON found in the text")
+
+    json_part = text[start_idx:end_idx]
+
+    # Parse the extracted JSON
+    try:
+        parsed_data = json.loads(json_part)
+        return parsed_data
+    except json.JSONDecodeError as e:
+        raise ValueError(f"Failed to parse JSON: {e}")
+
+
+def evaluate_answers(answer1, answer2, topic):
+    prompt = f"""
+    The topic of discussion was: """ + topic + """. I want to evaluate the following student answers:
+    
+    **Task:** As an AI Assistant, assess the answers provided based on their originality, quality, and relevance to the topic. Also, evaluate the percentage of AI-generated content in the answers. Provide the output in **JSON format** with the following structure:
+    
+    **Evaluation Criteria:**
+    1. **Score (0 to 10):** Reflects the quality, depth, and relevance of the answer.
+    2. **AI Plagiarism Score (0 to 1):** Indicates the likelihood of the content being AI-generated or plagiarized from online sources.
+
+    **Expected JSON Response Format:**
+    ```json
+    {
+        "question 1": {
+            "score": <quality_score_between_0_to_10>,
+            "ai": <ai_plagiarism_score_between_0_to_10>,
+            "feedback": "<optional_feedback_message>"
+        },
+        "question 2": {
+            "score": <quality_score_between_0_to_10>,
+            "ai": <ai_plagiarism_score_between_0_to_10>
+            "feedback": "<optional_feedback_message>"
+        }
+    }
+    ```
+    
+    **Student Answers:**
+    - Question 1: """ + answer1 + """
+    - Question 2: """ + answer2 + """
+
+    Ensure the response strictly follows the JSON format and provides clear scores for each answer.
+    """
+
+    scores = parse_llama_json(geminiGenerate(prompt))
+
+    # Calculate aggregate score (penalizing AI plagiarism)
+    aggregate_score = (
+        (scores['question 1']['score'] * (1 - scores['question 1']['ai'])) +
+        (scores['question 2']['score'] * (1 - scores['question 2']['ai']))
+    )/2
+
+    # Return the aggregate results
+    return {
+        "aggregate_score": round(aggregate_score, 2),
+        "answers": " ".join([answer1, answer2]),
+        "feedback": " ".join([scores['question 1']['feedback'], scores['question 2']['feedback']]),
+        "ai_scores": [scores['question 1']['ai'], scores['question 2']['ai']],
+        "scores": [scores['question 1']['score'], scores['question 2']['score']]
+    }
+
+
 
 def is_superuser(self):
     return self.is_superuser
@@ -94,6 +176,138 @@ def convert_pdf_to_image_and_decode_qr(pdf_bytes):
         raise
 
 
+# Generate UID
+def generate_string():
+
+    MAX_LEN = 12
+
+    DIGITS = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']
+
+    LOCASE_CHARACTERS = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 
+                        'i', 'j', 'k', 'm', 'n', 'o', 'p', 'q',
+                        'r', 's', 't', 'u', 'v', 'w', 'x', 'y',
+                        'z']
+
+    UPCASE_CHARACTERS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 
+                        'I', 'J', 'K', 'M', 'N', 'O', 'P', 'Q',
+                        'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y',
+                        'Z']
+
+    COMBINED_LIST = DIGITS + UPCASE_CHARACTERS + LOCASE_CHARACTERS
+
+    rand_digit = random.choice(DIGITS)
+    rand_upper = random.choice(UPCASE_CHARACTERS)
+    rand_lower = random.choice(LOCASE_CHARACTERS)
+
+    temp_pass = rand_digit + rand_upper + rand_lower
+    for x in range(MAX_LEN - 4):
+        temp_pass = temp_pass + random.choice(COMBINED_LIST)
+        temp_pass_list = array.array('u', temp_pass)
+        random.shuffle(temp_pass_list)
+    password = ""
+    for x in temp_pass_list:
+            password = password + x
+
+    return (password)
+
+
+def capacity_from_incentive(incentive, base_k):
+
+    if incentive < 0.1:
+        return base_k
+    elif 0.10 <= incentive <= 0.30:
+        return math.ceil(base_k * 1.2)
+    elif 0.31 <= incentive <= 0.50:
+        return math.ceil(base_k * 1.3)
+    elif 0.51 <= incentive <= 0.70:
+        return math.ceil(base_k * 1.4)
+    elif 0.71 <= incentive <= 0.95:
+        return math.ceil(base_k * 1.45)
+    else:  # 0.96 <= incentive <= 1.0
+        return math.ceil(base_k * 1.5)
+
+
+def assign_papers(peers, papers, k=2, incentives=0, paper_capacity=None, exam=None):
+
+    if len(peers) != len(papers):
+        raise ValueError("Number of peers and papers must match.")
+
+    n = len(peers)
+    if paper_capacity is None:
+        paper_capacity = k
+
+    # Create a directed graph for the assignment problem
+    G = nx.DiGraph()
+    source = "S"
+    sink = "T"
+    G.add_node(source)
+    G.add_node(sink)
+
+    # Peer and paper nodes
+    peer_nodes = [f"{peer.username}_{UIDMapping.objects.get(user=peer).uid}" for peer in peers]
+    paper_nodes = [f"paper_{paper.uid}" for paper in papers]
+    print(peer_nodes)
+    print(paper_nodes)
+
+    # Helper function to get capacity for each peer
+    def get_peer_capacity(idx):
+        if incentives is None:
+            return k
+        inc = incentives[peers[idx]] if isinstance(incentives, dict) else incentives[idx]
+        return capacity_from_incentive(inc, k)
+
+    # Add edges from source to peers
+    for i, peer in enumerate(peer_nodes):
+        cap = get_peer_capacity(i)
+        G.add_edge(source, peer, capacity=cap)
+
+    # Add edges from papers to sink
+    for paper in paper_nodes:
+        G.add_edge(paper, sink, capacity=paper_capacity)
+
+    # Add edges between peers and papers
+    for i, peerID in enumerate(peer_nodes):
+        for j, paperID in enumerate(paper_nodes):
+            peer_num= peerID[-11:]
+            paper_num= paperID[-11:]
+            if peer_num != paper_num:  # Avoid self-assignment
+                G.add_edge(peer_nodes[i], paper_nodes[j], capacity=1)
+
+    # Solve the maximum flow problem
+    flow_value, flow_dict = nx.maximum_flow(G, source, sink)
+
+    if flow_value < paper_capacity * n:
+        raise ValueError("Unable to assign all papers to evaluators with the given constraints.")
+
+    # Create assignments and corresponding PeerEvaluation entries
+    assignments = []
+    for peer_idx, peer_name in enumerate(peer_nodes):
+        out_edges = flow_dict[peer_name]  # Get assigned papers for the peer
+        peer_user = peers[peer_idx]
+        for paper_node, flow in out_edges.items():
+            if flow > 0 and paper_node.startswith("paper_"):
+                paper_obj = paper_node
+
+                assignments.append((peer_user, paper_obj))
+
+                # Add PeerEvaluation entry
+                PeerEvaluation.objects.create(
+                    evaluator=peer_user,
+                    student=UIDMapping.objects.get(exam=exam, uid=paper_obj.split('_')[1]).user,
+                    exam=exam,
+                    document=Documents.objects.get(uid=paper_obj.split('_')[1]),
+                    uid=paper_obj.split('_')[1],
+                    feedback="",  # Default empty feedback
+                    score="",  # Default empty score
+                    evaluated_on=datetime.now(),
+                    deadline=datetime.now() + timedelta(days=7),
+                )
+
+    return assignments
+
+
+
+# NOTE: This function renders dashboard for all the roles
 @login_required(login_url="/login/")
 def index(request):
     # Handle login for Admin
@@ -224,62 +438,6 @@ def index(request):
         return HttpResponse(html_template.render(context, request))
 
 
-def generate_string():
-
-    MAX_LEN = 12
-
-    DIGITS = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']
-
-    LOCASE_CHARACTERS = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 
-                        'i', 'j', 'k', 'm', 'n', 'o', 'p', 'q',
-                        'r', 's', 't', 'u', 'v', 'w', 'x', 'y',
-                        'z']
-
-    UPCASE_CHARACTERS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 
-                        'I', 'J', 'K', 'M', 'N', 'O', 'P', 'Q',
-                        'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y',
-                        'Z']
-
-    COMBINED_LIST = DIGITS + UPCASE_CHARACTERS + LOCASE_CHARACTERS
-
-    rand_digit = random.choice(DIGITS)
-    rand_upper = random.choice(UPCASE_CHARACTERS)
-    rand_lower = random.choice(LOCASE_CHARACTERS)
-
-    temp_pass = rand_digit + rand_upper + rand_lower
-    for x in range(MAX_LEN - 4):
-        temp_pass = temp_pass + random.choice(COMBINED_LIST)
-        temp_pass_list = array.array('u', temp_pass)
-        random.shuffle(temp_pass_list)
-    password = ""
-    for x in temp_pass_list:
-            password = password + x
-
-    return (password)
-
-
-@login_required
-def enroll_course(request):
-    if request.method == 'POST':
-        course_id = request.POST.get('course_id')
-        try:
-            course = Course.objects.get(course_id=course_id)
-            batch = Batch.objects.filter(course=course).first()  # Assuming a batch exists for the course
-            if batch:
-                StudentEnrollment.objects.get_or_create(
-                    student=request.user,
-                    course=course,
-                    batch=batch,
-                    defaults=random.randint(10000, 99999)
-                )
-                messages.success(request, f"Successfully enrolled in {course.name}")
-            else:
-                messages.error(request, "No batch available for this course")
-        except Course.DoesNotExist:
-            messages.error(request, "Course not found")
-    return redirect('student_enrollment')
-
-
 # Invalid URL
 @login_required(login_url="/login/")
 def pages(request):
@@ -352,6 +510,7 @@ def course(request):
             messages.error(request, f'An error occurred: {str(e)}')
 
         return redirect('home')
+
 
     else:
         messages.error(request, 'Invalid request method.')
@@ -520,12 +679,13 @@ def generate_student_pdf(student, exam, n_extra_pages):
 
 @user_passes_test(is_staff)
 def download_answer_sheets(request):
+
     if request.method == 'POST':
         try:
             # Get the exam and number of extra pages
             exam_id = request.POST.get('exam_id')
             n_extra_pages = int(request.POST.get('n_extra_pages', 5))  # Default to 1 extra page
-            
+
             exam = Exam.objects.get(id=exam_id)
             students = UIDMapping.objects.filter(exam=exam)
             
@@ -568,7 +728,7 @@ def download_answer_sheets(request):
             
         except Exception as e:
             messages.error(request, f'Error generating PDFs: {str(e)}')
-            return redirect('home')
+            return redirect('examination')
     
     messages.error(request, 'Invalid request method.')
     return redirect('home')
@@ -586,9 +746,7 @@ def enrollment(request):
             if role == "TA":
                 username = str(json.loads(data)['student_username'])
                 action = json.loads(data)['student_action']
-                print(role, username, action)
                 username = User.objects.get(email=username)
-                print(username, action)
                 studentenrollment = StudentEnrollment.objects.filter(batch_id=batch_id, student__username=username).first()
                 print(studentenrollment)
                 if studentenrollment:
@@ -716,22 +874,22 @@ def examination(request):
             num_que = int(data["num_que"])
             max_marks = int(data["max_marks"])
             k = int(data['k'])
+            students_in_batch = StudentEnrollment.objects.filter(batch_id=batch_id)
             new_exam = Exam.objects.update_or_create(batch_id=batch_id,
+                                                     completed=False,
                                                         defaults={
                                                             'date': exam_date,
                                                             'duration': exam_duration,
                                                             'number_of_questions': num_que,
                                                             'max_scores': max_marks,
                                                             'k': k,
+                                                            'total_students': len(students_in_batch),
                                                             'completed': False,
                                                         })
             if new_exam[1]:
-                print("Updated exam")
                 messages.success(request, 'Exam updated successfully!')
             else:
-                print("Created exam")
                 messages.success(request, 'Exam created successfully!')
-            students_in_batch = StudentEnrollment.objects.filter(batch_id=batch_id)
             for student in students_in_batch:
                 UIDMapping.objects.update_or_create(user=student.student,
                                                     exam=new_exam[0],
@@ -760,14 +918,57 @@ def examination(request):
             else:
                 messages.error(request, 'No data provided.')
             return redirect('examination')
+    
+    
+    elif request.method == 'PUT':
+        if request.user.is_staff:
+            data = request.body.decode('utf-8')
+            if data:
+                try:
+                    exam_id = json.loads(data)['exam_id']
+                    exam = Exam.objects.get(id=exam_id)
+                    exam.completed = True
+                    exam.save()
+                    messages.success(request, 'Exam completed successfully!')
+                except json.JSONDecodeError:
+                    messages.error(request, 'Invalid JSON data.')
+                except Exam.DoesNotExist:
+                    messages.error(request, 'Exam not found.')
+                except Exception as e:
+                    messages.error(request, f'An error occurred: {str(e)}')
+            else:
+                messages.error(request, 'No data provided.')
+            return redirect('examination')
+
+
     else:
         messages.error(request, 'Invalid request method.')
         return 
 
 
-@login_required
+@user_passes_test(is_staff)
 def peer_evaluation(request):
-    return render(request, 'home/student/peer_evaluation.html')
+
+    if request.method == 'POST':
+        exam_id = json.loads(request.body.decode('utf-8'))['exam_id']
+        exam_instance = Exam.objects.get(id=exam_id)
+        student_enrollment = StudentEnrollment.objects.filter(batch = exam_instance.batch)
+        peers = [student.student for student in student_enrollment]
+        papers = list(Documents.objects.filter(exam=exam_instance))
+        k = 2
+        incentives = {peer: 5 for peer in peers}
+        assignments = assign_papers(peers, papers, k=k, incentives=incentives, exam=exam_instance)
+        print(assignments)
+        return redirect('examination')
+
+
+@login_required
+def analytics(request):
+    data = {
+        "students": ["John", "Emma", "Sophia", "Mike", "Sarah"],
+        "marks": [75, 85, 90, 65, 80]
+    }  # Pass any data needed in the template
+    return render(request, 'home/teacher/analytics.html', data)
 
 
 @login_required

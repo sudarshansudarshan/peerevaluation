@@ -3,19 +3,6 @@ import math
 
 
 def capacity_from_incentive(incentive, base_k):
-    """
-    Given a peer's incentive (in [0,1]) and the base K (e.g. 3),
-    return the integer capacity (max #papers they can review).
-
-    Ranges (example):
-      0.10-0.30 -> k * 1.2
-      0.31-0.50 -> k * 1.3
-      0.51-0.70 -> k * 1.4
-      0.71-0.95 -> k * 1.45
-      0.96-1.0  -> k * 1.5
-    Otherwise, if < 0.1, treat them as a normal peer with capacity = k.
-    (You can adjust these cutoffs/behavior as desired.)
-    """
 
     if incentive < 0.1:
         return base_k
@@ -34,7 +21,7 @@ def capacity_from_incentive(incentive, base_k):
 def assign_papers(
         peers, papers,
         k=3,
-        incentives=None,  # list or dict of incentives for each peer, or None
+        incentives=None,
         paper_capacity=None
 ):
     """

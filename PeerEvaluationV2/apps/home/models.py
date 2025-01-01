@@ -25,6 +25,10 @@ class Batch(models.Model):
 
     def __str__(self):
         return f"{self.batch_id} - {self.course.name} ({self.teacher.username})"
+    
+    @property
+    def enrolled_students_count(self):
+        return StudentEnrollment.objects.get(batch=self).count()
 
 
 # Exam Model
@@ -36,10 +40,15 @@ class Exam(models.Model):
     duration = models.IntegerField(help_text="Duration of the exam in minutes")
     max_scores = models.IntegerField()
     k = models.IntegerField(help_text="Number of evaluations for student")
+    total_students = models.IntegerField(help_text="Total number of students in the batch")
     completed = models.BooleanField(default=False, help_text="Indicates whether the exam is completed")
 
     def __str__(self):
         return f"{self.batch.batch_id}"
+    
+    @property
+    def evaluation_received(self):
+        return Documents.objects.filter(exam=self).count()
     
 class UIDMapping(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="uid_mappings")
@@ -66,7 +75,7 @@ class PeerEvaluation(models.Model):
     evaluator = models.ForeignKey(User, on_delete=models.CASCADE, related_name="evaluations_made")
     evaluated_on = models.DateTimeField(auto_now_add=True)
     deadline = models.DateTimeField(default=datetime.now() + timedelta(days=7))
-    uid = models.IntegerField(help_text="Unique identifier for the user")
+    uid = models.CharField(max_length=100, help_text="Unique identifier for the user")
     student = models.ForeignKey(User, on_delete=models.CASCADE, related_name="peer_evaluations")
     exam = models.ForeignKey(Exam, on_delete=models.CASCADE, related_name="peer_evaluations")
     document = models.ForeignKey(Documents, on_delete=models.CASCADE, related_name="peer_evaluations")
@@ -125,3 +134,29 @@ class TeachingAssistantAssociation(models.Model):
     def is_ta(user, batch):
         return TeachingAssistantAssociation.objects.filter(teaching_assistant=user, batch=batch).exists()
 
+
+class CourseTopic(models.Model):
+    id = models.AutoField(primary_key=True)
+    course = models.ForeignKey(Course, on_delete=models.CASCADE)
+    batch = models.ForeignKey(Batch, on_delete=models.CASCADE)
+    topic = models.CharField(max_length=255)
+    date = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.topic
+
+
+class LLMEvaluation(models.Model):
+    id = models.AutoField(primary_key=True)
+    Topic = models.ForeignKey(CourseTopic, on_delete=models.CASCADE)
+    student = models.ForeignKey(User, on_delete=models.CASCADE)
+    answer = models.TextField()
+    feedback = models.TextField()
+    score = models.TextField()
+    ai = models.TextField()
+    aggregate = models.IntegerField()
+    date = models.DateTimeField(auto_now_add=True)
+
+
+    def __str__(self):
+        return f'LLM Evaluation for {self.student.username}'

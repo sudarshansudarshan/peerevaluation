@@ -14,5 +14,6 @@ fpdf
 pdf2image
 qrcode
 pyzbar
-tempfile
+sudo
+PyPDF2
 # sudo apt install zbar-tools

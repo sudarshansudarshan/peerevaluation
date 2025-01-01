@@ -44,9 +44,67 @@
               </nav>
             </div>
             <div class="col-lg-6 col-5 text-right">
-              <a href="#" class="btn btn-sm btn-neutral">New</a>
-              <a href="#" class="btn btn-sm btn-neutral">Filters</a>
+              <button type="button" class="btn btn-sm btn-neutral" data-toggle="modal" data-target="#courseAssociationModal">
+                Topic
+              </button>
             </div>
+
+          <!-- Modal -->
+          <div class="modal fade" id="courseAssociationModal" tabindex="-1" role="dialog" aria-labelledby="courseAssociationModalLabel" aria-hidden="true">
+            <div class="modal-dialog" role="document">
+              <div class="modal-content">
+                <div class="modal-header">
+                  <h5 class="modal-title" id="courseAssociationModalLabel">Associate Course</h5>
+                  <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                  </button>
+                </div>
+                <div class="modal-body">
+                  <form id="courseAssociationForm">
+                    <div class="form-group">
+                      <label for="courseSelect">Select Course</label>
+                      <select class="form-control" id="courseSelect" name="course">
+                        {% for course in courses %}
+                        <option value="{{ course.id }}">{{ course.name }}</option>
+                        {% endfor %}
+                      </select>
+                    </div>
+                    <div class="form-group">
+                      <label for="batchSelect">Select Batch</label>
+                      <select class="form-control" id="batchSelect" name="batch">
+                        {% for batch in batches %}
+                        <option value="{{ batch.id }}">{{ batch.name }}</option>
+                        {% endfor %}
+                      </select>
+                    </div>
+                    <div class="form-group">
+                      <label for="topic">Topic</label>
+                      <input type="text" class="form-control" id="topic" name="topic" required>
+                    </div>
+                  </form>
+                </div>
+                <div class="modal-footer">
+                  <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                  <button type="button" class="btn btn-primary" id="saveAssociationBtn">Save changes</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <script>
+            document.getElementById('saveAssociationBtn').addEventListener('click', () => {
+              const form = document.getElementById('courseAssociationForm');
+              const courseId = form.course.value;
+              const batchId = form.batch.value;
+
+              // Perform the association logic here
+              console.log('Course ID:', courseId);
+              console.log('Batch ID:', batchId);
+
+              // Close the modal
+              $('#courseAssociationModal').modal('hide');
+            });
+          </script>
           </div>
         </div>
       </div>
