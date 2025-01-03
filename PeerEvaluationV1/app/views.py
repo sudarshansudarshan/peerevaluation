@@ -1,4 +1,4 @@
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 from django.shortcuts import render
 from django.shortcuts import render, redirect
 from django.contrib import messages
@@ -937,11 +937,11 @@ def studentEval(request, doc_id, eval_id):
 
     # Prepare data for rendering the template
     context = {
-        'document_url': document.file.url,  # Assuming the 'file' field stores the document file
+        'document_url': str(document.file.url.split('/')[-1]),
         'document_title': document.title,
         'document_description': document.description,
         'number_of_questions': [i + 1 for i in range(num_questions)],
-        'total_marks': round(total_marks/num_questions)
+        'total_marks': round(total_marks / num_questions)
     }
 
     # Handle POST request for submitting the evaluation
@@ -1007,6 +1007,20 @@ def forgetPassword(request):
             messages.error(request, 'User not found.')
         return redirect('/login/')
     return render(request, 'changePassword.html')
+
+
+# Write a URL for fetching the document from rot folder of an application
+
+def fetch_document(request, file_name):
+    file_obj = documents.objects.filter(file__icontains=file_name).first()
+    if file_obj:
+        file_path = file_obj.file.path
+        with open(file_path, 'rb') as file:
+            # Prepare the response with the file content
+            response = HttpResponse(file.read(), content_type='application/pdf')
+            response['Content-Disposition'] = f'inline; filename={file_name}'
+            return response
+        
 
 
 

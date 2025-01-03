@@ -13,13 +13,13 @@
     <div class="h-full w-full mx-auto p-6 flex flex-col md:flex-row space-y-6 md:space-y-0 md:space-x-6">
         <!-- PDF Viewer -->
         <div class="flex-1 bg-white rounded-lg shadow-lg overflow-hidden">
-            <embed src="{{ document_url }}" width="100%" height="100%" class="border-none" type="application/pdf" />
+            <embed src="/doc/{{ document_url }}" width="100%" height="100%" class="border-none" type="application/pdf" />
         </div>
 
         <!-- Form Section -->
         <div class="flex-1 bg-white rounded-lg shadow-lg p-6 flex flex-col justify-between">
             <h2 class="text-2xl font-semibold text-gray-800 mb-6">
-                <a href="{{ document_url }}" target="_blank" class="text-indigo-600 hover:underline">Evaluation</a>
+                <a href="/doc/{{ document_url }}" target="_blank" class="text-indigo-600 hover:underline">Evaluation</a>
                 Form
             </h2>
             <span class="block text-sm font-medium text-gray-700">Please rate the assignment based on the following
