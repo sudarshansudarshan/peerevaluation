@@ -4,7 +4,7 @@ from django.http import HttpResponse, HttpResponseRedirect
 from django.template import loader
 from django.urls import reverse
 from django.shortcuts import get_object_or_404, redirect
-from .models import Course, Batch, StudentEnrollment, Exam, Statistics, Incentivization, TeachingAssistantAssociation, UIDMapping, Documents, PeerEvaluation
+from .models import *
 from django.contrib.auth.decorators import user_passes_test
 from django.shortcuts import render, redirect
 from django.contrib import messages
@@ -36,9 +36,11 @@ from io import BytesIO
 import networkx as nx
 import math
 import google.generativeai as genai
+import time
 
 
 genai.configure(api_key="AIzaSyBrat_wDHdrOGboCJfT-mYhyD_dpqipsbM")
+
 
 def geminiGenerate(prompt):
     model = genai.GenerativeModel('gemini-1.5-pro')
@@ -211,105 +213,102 @@ def generate_string():
     return (password)
 
 
-def capacity_from_incentive(incentive, base_k):
+def assign_evaluations(students, papers, trusted_evaluators, k):
+    """
+    Assigns papers to students for evaluation based on constraints:
+    - Each paper is evaluated k times.
+    - Trusted evaluators can evaluate more papers proportionally to their trust level.
+    - Avoid duplicate evaluations of the same paper by the same student.
+    
+    Parameters:
+    - students: List of student IDs.
+    - papers: List of paper IDs.
+    - trusted_evaluators: Dictionary with student IDs as keys and trust levels (0 to 1) as values.
+    - k: Number of times each paper must be evaluated.
+    
+    Returns:
+    - pairs: Dictionary mapping each student to their assigned papers.
+    - paper_count: Dictionary mapping each paper to its evaluation count.
+    """
+    # Initialize evaluation counts and pairs
+    evaluation_count = {student: 0 for student in students}
+    paper_count = {paper: 0 for paper in papers}
+    pairs = {student: [] for student in students}
 
-    if incentive < 0.1:
-        return base_k
-    elif 0.10 <= incentive <= 0.30:
-        return math.ceil(base_k * 1.2)
-    elif 0.31 <= incentive <= 0.50:
-        return math.ceil(base_k * 1.3)
-    elif 0.51 <= incentive <= 0.70:
-        return math.ceil(base_k * 1.4)
-    elif 0.71 <= incentive <= 0.95:
-        return math.ceil(base_k * 1.45)
-    else:  # 0.96 <= incentive <= 1.0
-        return math.ceil(base_k * 1.5)
+    # Calculate maximum evaluations for each student
+    max_evaluations = {
+        student: int(1.5 * k * level) for student, level in trusted_evaluators.items()
+    }
+    default_max = k  # Default max evaluations for non-trusted evaluators
+    for student in students:
+        if student not in max_evaluations:
+            max_evaluations[student] = default_max
 
+    # Prepare list of evaluations (each paper appears k times)
+    remaining_evaluations = papers * k
+    random.shuffle(remaining_evaluations)  # Shuffle for fairness
+    
+    # Assign evaluations with fallback mechanism
+    for evaluation in remaining_evaluations:
+        # Find valid evaluators
+        possible_evaluators = [
+            student for student in students
+            if evaluation_count[student] < max_evaluations[student]
+            and evaluation not in pairs[student]
+        ]
 
-def assign_papers(peers, papers, k=2, incentives=0, paper_capacity=None, exam=None):
+        if not possible_evaluators:
+            # Fallback to trusted evaluators who can exceed their limit slightly
+            possible_evaluators = [
+                student for student in trusted_evaluators.keys()
+                if evaluation not in pairs[student]
+            ]
 
-    if len(peers) != len(papers):
-        raise ValueError("Number of peers and papers must match.")
+        if not possible_evaluators:
+            raise ValueError(f"No possible evaluators for {evaluation} under the constraints.")
 
-    n = len(peers)
-    if paper_capacity is None:
-        paper_capacity = k
+        # Assign the evaluation to a random valid evaluator
+        evaluator = random.choice(possible_evaluators)
+        pairs[evaluator].append(evaluation)
+        evaluation_count[evaluator] += 1
+        paper_count[evaluation] += 1
 
-    # Create a directed graph for the assignment problem
-    G = nx.DiGraph()
-    source = "S"
-    sink = "T"
-    G.add_node(source)
-    G.add_node(sink)
+    # Final pass to ensure all papers are evaluated exactly k times
+    for paper in papers:
+        while paper_count[paper] < k:
+            # Find any evaluator who can take the paper
+            possible_evaluators = [
+                student for student in students
+                if paper not in pairs[student]
+            ]
+            if not possible_evaluators:
+                raise ValueError(f"Final reassignment failed for {paper}.")
 
-    # Peer and paper nodes
-    peer_nodes = [f"{peer.username}_{UIDMapping.objects.get(user=peer).uid}" for peer in peers]
-    paper_nodes = [f"paper_{paper.uid}" for paper in papers]
-    print(peer_nodes)
-    print(paper_nodes)
-
-    # Helper function to get capacity for each peer
-    def get_peer_capacity(idx):
-        if incentives is None:
-            return k
-        inc = incentives[peers[idx]] if isinstance(incentives, dict) else incentives[idx]
-        return capacity_from_incentive(inc, k)
-
-    # Add edges from source to peers
-    for i, peer in enumerate(peer_nodes):
-        cap = get_peer_capacity(i)
-        G.add_edge(source, peer, capacity=cap)
-
-    # Add edges from papers to sink
-    for paper in paper_nodes:
-        G.add_edge(paper, sink, capacity=paper_capacity)
-
-    # Add edges between peers and papers
-    for i, peerID in enumerate(peer_nodes):
-        for j, paperID in enumerate(paper_nodes):
-            peer_num= peerID[-11:]
-            paper_num= paperID[-11:]
-            if peer_num != paper_num:  # Avoid self-assignment
-                G.add_edge(peer_nodes[i], paper_nodes[j], capacity=1)
-
-    # Solve the maximum flow problem
-    flow_value, flow_dict = nx.maximum_flow(G, source, sink)
-
-    if flow_value < paper_capacity * n:
-        raise ValueError("Unable to assign all papers to evaluators with the given constraints.")
-
-    # Create assignments and corresponding PeerEvaluation entries
-    assignments = []
-    for peer_idx, peer_name in enumerate(peer_nodes):
-        out_edges = flow_dict[peer_name]  # Get assigned papers for the peer
-        peer_user = peers[peer_idx]
-        for paper_node, flow in out_edges.items():
-            if flow > 0 and paper_node.startswith("paper_"):
-                paper_obj = paper_node
-
-                assignments.append((peer_user, paper_obj))
-
-                # Add PeerEvaluation entry
-                PeerEvaluation.objects.create(
-                    evaluator=peer_user,
-                    student=UIDMapping.objects.get(exam=exam, uid=paper_obj.split('_')[1]).user,
-                    exam=exam,
-                    document=Documents.objects.get(uid=paper_obj.split('_')[1]),
-                    uid=paper_obj.split('_')[1],
-                    feedback="",  # Default empty feedback
-                    score="",  # Default empty score
-                    evaluated_on=datetime.now(),
-                    deadline=datetime.now() + timedelta(days=7),
-                )
-
-    return assignments
-
+            # Assign the paper to a valid evaluator
+            evaluator = random.choice(possible_evaluators)
+            pairs[evaluator].append(paper)
+            evaluation_count[evaluator] += 1
+            paper_count[paper] += 1
+            
+    for student in pairs.keys():
+        for paper in pairs[student]:
+            print(paper.uid)
+            new_eval = PeerEvaluation(
+                document = paper,
+                evaluator = student,
+                exam = paper.exam,
+                uid = paper.uid,
+                student = UIDMapping.objects.get(uid=paper.uid).user,
+                ticket=0,
+            )
+            new_eval.save()
+    return pairs, paper_count
 
 
 # NOTE: This function renders dashboard for all the roles
 @login_required(login_url="/login/")
 def index(request):
+
     # Handle login for Admin
     if request.user.is_superuser:
         courses = Course.objects.all()
@@ -394,6 +393,7 @@ def index(request):
     elif not request.user.is_staff or not request.user.is_superuser: # Student role
 
         enrolled_courses = StudentEnrollment.objects.filter(student=request.user).values_list('batch', flat=True)
+        pending_evaluations = PeerEvaluation.objects.filter(evaluator=request.user, score="")
         batches = Batch.objects.all()
         tas = [{
             'batch': ta.batch.batch_id,
@@ -432,8 +432,17 @@ def index(request):
             exam_date = exam_date.astimezone(india_timezone) - timedelta(hours=5, minutes=30)
             expiration_time = exam_date + timedelta(minutes=exam.duration)
             if exam_date <= current_time <= expiration_time:
+                exam.expiration_date = expiration_time
                 active_exams.append(exam)
-        context = {'segment': 'index', 'courses': batches_list, 'is_ta': len(tas) > 0, 'exams': active_exams}
+
+        counts = {
+            "courses_enrolled": enrolled_courses.count(),
+            "pending_evaluations": pending_evaluations.count(),
+            "tas": len(tas),
+            "active_exams": len(active_exams)  # Number of active exams in the current time window.
+        }
+        context = {'segment': 'index', 'courses': batches_list, 'counts': counts,
+                   'is_ta': len(tas) > 0, 'exams': active_exams}
         html_template = loader.get_template('home/student/index.html')
         return HttpResponse(html_template.render(context, request))
 
@@ -581,7 +590,6 @@ def batch(request):
         return redirect('home')
 
 
-
 def generate_student_pdf(student, exam, n_extra_pages):
     """Helper function to generate PDF for a single student"""
     pdf_files = []
@@ -727,6 +735,7 @@ def download_answer_sheets(request):
             return response
             
         except Exception as e:
+            print(e)
             messages.error(request, f'Error generating PDFs: {str(e)}')
             return redirect('examination')
     
@@ -814,6 +823,7 @@ def ta_hub(request):
         batches = Batch.objects.filter(teacher=request.user)
         tas = [{
             'batch': ta.batch,
+            'batch_id': ta.batch.id,
             'course': ta.batch.course.name,
             'start_date': ta.batch.course.start_date,
             'instructor': f"{ta.batch.teacher.first_name} {ta.batch.teacher.last_name}",
@@ -849,7 +859,7 @@ def ta_hub(request):
     return redirect('home')
 
 
-@login_required
+@user_passes_test(is_staff)
 def examination(request):
 
     if request.method == 'GET':
@@ -857,12 +867,24 @@ def examination(request):
             batches = Batch.objects.filter(teacher=request.user)
             batch_data = []
             exams_list = []
+            chart_data = {
+                'labels': sorted([2, 4, 5, 2, 3, 5]),
+                'values': [65, 59, 80, 81, 56, 55]
+            }
+            
+            context = {
+                'chart_data': json.dumps(chart_data)
+            }
             for batch in batches:
                 exams = Exam.objects.filter(batch=batch, completed=False).first()
                 if exams: exams_list.append(exams)
                 batch_data.append({'batch': batch, 'exams': exams})
 
-            return render(request, 'home/teacher/examination.html', {'batch_data': batch_data, 'exams': exams_list})
+            return render(request, 'home/teacher/examination.html',  {
+                'batch_data': batch_data,
+                'exams': exams_list,
+                'context':context,
+            })
 
 
     elif request.method == 'POST':
@@ -946,20 +968,95 @@ def examination(request):
         return 
 
 
-@user_passes_test(is_staff)
+@login_required
 def peer_evaluation(request):
 
+    if request.method == 'GET':
+        peerevaluations = PeerEvaluation.objects.filter(evaluator=request.user)
+        results = PeerEvaluation.objects.filter(student=request.user)
+        final_results = {}
+        for result in results:
+            course = result.exam.batch.course.name
+            batch_id = result.exam.batch.batch_id
+            exam_id = result.exam.id
+            max_scores = result.exam.max_scores
+            score = sum(eval(result.score))
+
+            if exam_id not in final_results:
+                final_results[exam_id] = {
+                    'course': course,
+                    'batch_id': batch_id,
+                    'date': result.exam.date.strftime('%d/%m/%Y'),
+                    'total_score': 0,
+                    'count': 0,
+                    'max_scores': max_scores,
+                    'evaluations': []
+                }
+
+            final_results[exam_id]['total_score'] += score
+            final_results[exam_id]['count'] += 1
+            final_results[exam_id]['evaluations'].append(result)
+
+        for exam_id, data in final_results.items():
+            data['score'] = data['total_score'] / data['count'] if data['count'] != 0 else 0
+
+        final_results = [final_results[i] for i in final_results.keys()]
+
+        return render(request, 'home/student/peer_evaluation.html', {'evaluations': peerevaluations,
+                                                                     'is_ta': TeachingAssistantAssociation.objects.filter(teaching_assistant=request.user) != None,
+                                                                     'results': final_results})
+
     if request.method == 'POST':
-        exam_id = json.loads(request.body.decode('utf-8'))['exam_id']
-        exam_instance = Exam.objects.get(id=exam_id)
-        student_enrollment = StudentEnrollment.objects.filter(batch = exam_instance.batch)
-        peers = [student.student for student in student_enrollment]
-        papers = list(Documents.objects.filter(exam=exam_instance))
-        k = 2
-        incentives = {peer: 5 for peer in peers}
-        assignments = assign_papers(peers, papers, k=k, incentives=incentives, exam=exam_instance)
-        print(assignments)
-        return redirect('examination')
+        if request.user.is_staff:
+            exam_id = json.loads(request.body.decode('utf-8'))['exam_id']
+            exam_instance = Exam.objects.get(id=exam_id)
+            student_enrollment = StudentEnrollment.objects.filter(batch = exam_instance.batch)
+            peers = [student.student for student in student_enrollment]
+            papers = list(Documents.objects.filter(exam=exam_instance))
+            k = 2
+            incentives = {}
+            success = False
+
+            while not success:
+                try:
+                    # Attempt to assign evaluations
+                    assign_evaluations(peers, papers, incentives, k)
+                    success = True  # Exit loop if successful
+                except Exception as e:
+                    # Log the exception and retry
+                    print(f"Error: {e}. Retrying...")
+                    time.sleep(1)
+                    
+            return redirect('examination')
+
+    else:
+        return redirect('home')
+
+
+@login_required
+def student_eval(request):
+
+    if request.method == "POST":
+        try:
+            form_data = request.POST
+            document_id = int(form_data.get('current_evaluation_id'))
+            evaluation = PeerEvaluation.objects.get(id=document_id)
+
+            if evaluation.score and request.user.is_student:
+                return redirect('peer_eval')
+            
+            number_of_questions = evaluation.exam.number_of_questions
+            # Parse evaluations and feedback from the form data
+            evaluations = [int(form_data.get(f'question-{i}', 0)) for i in range(1, number_of_questions + 1)]
+            feedback = [form_data.get(f'feedback-{i}', '').strip() for i in range(1, number_of_questions + 1)]
+            evaluation.feedback = feedback
+            evaluation.score = str(evaluations)
+            evaluation.ticket = 0
+            evaluation.save()
+            return redirect('peer_eval')
+        except Exception as e:
+            print(f"An error occurred: {str(e)}")
+            return redirect('peer_eval')
 
 
 @login_required
@@ -973,12 +1070,13 @@ def analytics(request):
 
 @login_required
 def upload_evaluation(request):
+
     if request.method == "POST":
-        uploaded_files = request.FILES.getlist("evaluationfile")  # Allow multiple files
+        uploaded_files = request.FILES.getlist("evaluationfile")
         exam_id = request.POST.get("exam_id")
 
         if not uploaded_files:
-            return redirect('home')
+            return redirect('examination')
 
         try:
             # Fetch the exam object
@@ -1016,7 +1114,7 @@ def upload_evaluation(request):
                         uploaded_by=request.user
                     )
                     document.save()
-                    with open(f"documents/{final_filename}", "wb") as f:
+                    with open(f"apps/static/documents/{final_filename}", "wb") as f:
                         f.write(pdf_content)
                 return redirect('home')
 
@@ -1029,7 +1127,7 @@ def upload_evaluation(request):
                     pdf_content = uploaded_file.read()
                     qr_content = convert_pdf_to_image_and_decode_qr(pdf_content)
                     if not qr_content:
-                        continue  # Skip files without QR content
+                        continue
                     
                     final_filename = f"{qr_content}.pdf"
 
@@ -1046,7 +1144,7 @@ def upload_evaluation(request):
                             'uploaded_by': request.user
                         }
                     )
-                    with open(f"documents/{final_filename}", "wb") as f:
+                    with open(f"apps/static/documents/{final_filename}", "wb") as f:
                         f.write(pdf_content)
                 return redirect('examination')
 
@@ -1055,3 +1153,22 @@ def upload_evaluation(request):
                           {"error": f"An error occurred while processing the files: {str(e)}"})
 
     return render(request, "home/student/peer_evaluation.html")
+
+
+@login_required
+def topic(request):
+    if request.method == "POST":
+        data = request.POST
+        topic_name = data.get("topic_name")
+        topic_description = data.get("topic_description")
+
+        if topic_name and topic_description:
+            topic = CourseTopic.objects.create(
+                name=topic_name,
+                description=topic_description,
+                created_by=request.user
+            )
+            topic.save()
+            return redirect('home')
+
+    return render(request, "home/teacher/topic.html")

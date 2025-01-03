@@ -70,78 +70,135 @@
           </div>
           <!-- Card stats -->
           <div class="row">
-            <div class="col-xl-3 col-md-6">
-              <div class="card card-stats">
-                <!-- Card body -->
-                <div class="card-body">
-                  <div class="row">
-                    <div class="col">
-                      <h5 class="card-title text-uppercase text-muted mb-0">Total Students</h5>
-                      <span class="h2 font-weight-bold mb-0">350,897</span>
-                    </div>
-                    <div class="col-auto">
-                      <div class="icon icon-shape bg-gradient-red text-white rounded-circle shadow">
-                        <i class="ni ni-active-40"></i>
+            {% if is_ta %}
+              <div class="col-xl-3 col-md-6">
+                <div class="card card-stats">
+                  <!-- Card body -->
+                  <div class="card-body">
+                    <div class="row">
+                      <div class="col">
+                        <h5 class="card-title text-uppercase text-muted mb-0">Courses Enrolled</h5>
+                        <span class="h2 font-weight-bold mb-0">{{ counts.courses_enrolled }}</span>
+                      </div>
+                      <div class="col-auto">
+                        <div class="icon icon-shape bg-gradient-red text-white rounded-circle shadow">
+                          <i class="ni ni-active-40"></i>
+                        </div>
                       </div>
                     </div>
                   </div>
                 </div>
               </div>
-            </div>
-            <div class="col-xl-3 col-md-6">
-              <div class="card card-stats">
-                <!-- Card body -->
-                <div class="card-body">
-                  <div class="row">
-                    <div class="col">
-                      <h5 class="card-title text-uppercase text-muted mb-0">Total batches</h5>
-                      <span class="h2 font-weight-bold mb-0">2,356</span>
-                    </div>
-                    <div class="col-auto">
-                      <div class="icon icon-shape bg-gradient-orange text-white rounded-circle shadow">
-                        <i class="ni ni-chart-pie-35"></i>
+              <div class="col-xl-3 col-md-6">
+                <div class="card card-stats">
+                  <!-- Card body -->
+                  <div class="card-body">
+                    <div class="row">
+                      <div class="col">
+                        <h5 class="card-title text-uppercase text-muted mb-0">Pending evaluations</h5>
+                        <span class="h2 font-weight-bold mb-0">{{ counts.pending_evaluations }}</span>
+                      </div>
+                      <div class="col-auto">
+                        <div class="icon icon-shape bg-gradient-orange text-white rounded-circle shadow">
+                          <i class="ni ni-chart-pie-35"></i>
+                        </div>
                       </div>
                     </div>
                   </div>
                 </div>
               </div>
-            </div>
-            <div class="col-xl-3 col-md-6">
-              <div class="card card-stats">
-                <!-- Card body -->
-                <div class="card-body">
-                  <div class="row">
-                    <div class="col">
-                      <h5 class="card-title text-uppercase text-muted mb-0">Total Courses</h5>
-                      <span class="h2 font-weight-bold mb-0">924</span>
-                    </div>
-                    <div class="col-auto">
-                      <div class="icon icon-shape bg-gradient-green text-white rounded-circle shadow">
-                        <i class="ni ni-money-coins"></i>
+              <div class="col-xl-3 col-md-6">
+                <div class="card card-stats">
+                  <!-- Card body -->
+                  <div class="card-body">
+                    <div class="row">
+                      <div class="col">
+                        <h5 class="card-title text-uppercase text-muted mb-0">Your batches</h5>
+                        <span class="h2 font-weight-bold mb-0">{{ counts.tas }}</span>
+                      </div>
+                      <div class="col-auto">
+                        <div class="icon icon-shape bg-gradient-green text-white rounded-circle shadow">
+                          <i class="ni ni-money-coins"></i>
+                        </div>
                       </div>
                     </div>
                   </div>
                 </div>
               </div>
-            </div>
-            <div class="col-xl-3 col-md-6">
-              <div class="card card-stats">
-                <!-- Card body -->
-                <div class="card-body">
-                  <div class="row">
-                    <div class="col">
-                      <h5 class="card-title text-uppercase text-muted mb-0">Total batches</h5>
-                      <span class="h2 font-weight-bold mb-0">49,65%</span>
-                    </div>
-                    <div class="col-auto">
-                      <div class="icon icon-shape bg-gradient-info text-white rounded-circle shadow">
-                        <i class="ni ni-chart-bar-32"></i>
+              <div class="col-xl-3 col-md-6">
+                <div class="card card-stats">
+                  <!-- Card body -->
+                  <div class="card-body">
+                    <div class="row">
+                      <div class="col">
+                        <h5 class="card-title text-uppercase text-muted mb-0">Active exams</h5>
+                        <span class="h2 font-weight-bold mb-0">{{ counts.active_exams }}</span>
+                      </div>
+                      <div class="col-auto">
+                        <div class="icon icon-shape bg-gradient-purple text-white rounded-circle shadow">
+                          <i class="ni ni-hat-3"></i>
+                        </div>
                       </div>
                     </div>
                   </div>
                 </div>
               </div>
-            </div>
+            {% else %}
+              <div class="col-xl-4 col-md-6">
+                <div class="card card-stats">
+                  <!-- Card body -->
+                  <div class="card-body">
+                    <div class="row">
+                      <div class="col">
+                        <h5 class="card-title text-uppercase text-muted mb-0">Courses Enrolled</h5>
+                        <span class="h2 font-weight-bold mb-0">{{ counts.courses_enrolled }}</span>
+                      </div>
+                      <div class="col-auto">
+                        <div class="icon icon-shape bg-gradient-red text-white rounded-circle shadow">
+                          <i class="ni ni-active-40"></i>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="col-xl-4 col-md-6">
+                <div class="card card-stats">
+                  <!-- Card body -->
+                  <div class="card-body">
+                    <div class="row">
+                      <div class="col">
+                        <h5 class="card-title text-uppercase text-muted mb-0">Pending evaluations</h5>
+                        <span class="h2 font-weight-bold mb-0">{{ counts.pending_evaluations }}</span>
+                      </div>
+                      <div class="col-auto">
+                        <div class="icon icon-shape bg-gradient-orange text-white rounded-circle shadow">
+                          <i class="ni ni-chart-pie-35"></i>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="col-xl-4 col-md-6">
+                <div class="card card-stats">
+                  <!-- Card body -->
+                  <div class="card-body">
+                    <div class="row">
+                      <div class="col">
+                        <h5 class="card-title text-uppercase text-muted mb-0">Active exams</h5>
+                        <span class="h2 font-weight-bold mb-0">{{ counts.active_exams }}</span>
+                      </div>
+                      <div class="col-auto">
+                        <div class="icon icon-shape bg-gradient-purple text-white rounded-circle shadow">
+                          <i class="ni ni-hat-3"></i>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            {% endif %}
           </div>
         </div>
       </div>
@@ -152,7 +209,7 @@
       <div class="row">
 
         <!-- Course enrollment -->
-        <div class="col-xl-8">
+        <div class="col-xl-8 col-lg-6 mb-4">
           <div class="card" style="height: 485px;">
           <div class="card-header border-0">
             <div class="row align-items-center">
@@ -164,42 +221,42 @@
           <div class="table-responsive" style="max-height: 350px; overflow-y: auto;">
             <!-- Projects table -->
             <table class="table align-items-center table-flush">
-            <thead class="thead-light">
+              <thead class="thead-light">
               <tr>
-              <th scope="col">Course Name</th>
-              <th scope="col">Description</th>
-              <th scope="col">Batch</th>
-              <th scope="col">Start Date</th>
-              <th scope="col">End Date</th>
-              <th scope="col">Actions</th>
+              <th scope="col" class="sticky-column px-2">Course Name</th>
+              <th scope="col" class="px-2">Description</th>
+              <th scope="col" class="px-2">Batch</th>
+              <th scope="col" class="px-2">Start Date</th>
+              <th scope="col" class="px-2">End Date</th>
+              <th scope="col" class="px-2">Actions</th>
               </tr>
-            </thead>
-            <tbody>
+              </thead>
+              <tbody>
               {% for course in courses %}
               <tr>
-              <td>{{ course.name }}</td>
-              <td>{{ course.description }}</td>
-              <td>{{ course.batch }}</td>
-              <td>{{ course.start_date|date:"M d, Y" }}</td>
-              <td>{{ course.end_date|date:"M d, Y" }}</td>
-              <td>
-                {% if course.is_enrolled %}
-                {% if not course.is_accepted %}
-                  <form method="POST" action="{% url 'enrollment' %}">
-                  {% csrf_token %}
-                  <input type="hidden" name="batch_id" value="{{ course.batchID }}">
-                  <button type="submit" class="btn btn-sm btn-danger"><i class="fa fa-times"></i> Un-Enroll</button>
-                  </form>
-                {% else %}
-                  <button class="btn btn-sm btn-success"><i class="fa fa-check-circle"></i> Accepted</button>
-                {% endif %}
-                {% else %}
-                <form method="POST" action="{% url 'enrollment' %}">
-                  {% csrf_token %}
-                  <input type="hidden" name="batch_id" value="{{ course.batchID }}">
-                  <button type="submit" class="btn btn-sm btn-primary"><i class="fa fa-check"></i> Enroll</button>
-                </form>
-                {% endif %}
+              <td class="sticky-column px-2 font-weight-bold" title="{{ course.name }}">{{ course.name|truncatechars:30 }}</td>
+              <td class="px-2" title="{{ course.description }}">{{ course.description|truncatechars:30 }}</td>
+              <td class="px-2 text-center">{{ course.batch }}</td>
+              <td class="px-2 text-center">{{ course.start_date|date:"M d, Y" }}</td>
+              <td class="px-2 text-center">{{ course.end_date|date:"M d, Y" }}</td>
+              <td class="px-2 text-center">
+              {% if course.is_enrolled %}
+              {% if not course.is_accepted %}
+              <form method="POST" action="{% url 'enrollment' %}">
+              {% csrf_token %}
+              <input type="hidden" name="batch_id" value="{{ course.batchID }}">
+              <button type="submit" class="btn btn-sm btn-danger w-100"><i class="fa fa-times"></i> Un-Enroll</button>
+              </form>
+              {% else %}
+              <button class="btn btn-sm btn-success w-100"><i class="fa fa-check-circle"></i> Accepted</button>
+              {% endif %}
+              {% else %}
+              <form method="POST" action="{% url 'enrollment' %}">
+              {% csrf_token %}
+              <input type="hidden" name="batch_id" value="{{ course.batchID }}">
+              <button type="submit" class="btn btn-sm btn-primary w-100"><i class="fa fa-check"></i> Enroll</button>
+              </form>
+              {% endif %}
               </td>
               </tr>
               {% endfor %}
@@ -208,7 +265,7 @@
               <td colspan="6" class="text-center">No pending enrollments</td>
               </tr>
               {% endif %}
-            </tbody>
+              </tbody>
             </table>
           </div>
           </div>
@@ -234,7 +291,7 @@
                   <label for="exam" class="form-label font-weight-bold">Evaluation for</label>
                   <select id="exam_id" name="exam_id" class="form-control custom-select shadow-sm">
                     {% for exam in exams %}
-                      <option value="{{ exam.id }}">{{ exam.batch }}</option>
+                      <option value="{{ exam.id }}">{{ exam.batch.course }} ({{ exam.batch.batch_id }}) : Deadline: {{ exam.expiration_date }}</option>
                     {% endfor %}
                   </select>
                 </div>

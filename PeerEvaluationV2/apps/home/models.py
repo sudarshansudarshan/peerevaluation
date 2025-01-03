@@ -50,6 +50,10 @@ class Exam(models.Model):
     def evaluation_received(self):
         return Documents.objects.filter(exam=self).count()
     
+    @property
+    def marks_per_question(self):
+        return round(self.max_scores / self.number_of_questions)
+    
 class UIDMapping(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="uid_mappings")
     exam = models.ForeignKey(Exam, on_delete=models.CASCADE, related_name="uid_mappings")
@@ -65,7 +69,7 @@ class UIDMapping(models.Model):
 class Documents(models.Model):
     uid = models.CharField(max_length=100, help_text="Unique identifier for the user")
     exam = models.ForeignKey(Exam, on_delete=models.CASCADE, related_name="documents")
-    document = models.FileField(upload_to='documents/')
+    document = models.FileField(upload_to='apps/static/documents/')
     uploaded_on = models.DateTimeField(auto_now_add=True)
     uploaded_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name="documents")
 
@@ -80,7 +84,15 @@ class PeerEvaluation(models.Model):
     exam = models.ForeignKey(Exam, on_delete=models.CASCADE, related_name="peer_evaluations")
     document = models.ForeignKey(Documents, on_delete=models.CASCADE, related_name="peer_evaluations")
     feedback = models.TextField(help_text="Feedback for the evaluation")
+    ticket = models.IntegerField(help_text="Ticket for the evaluation")
     score = models.TextField(help_text="Score for the evaluation")
+
+    @property
+    def get_score(self):
+        if self.score != "":
+            return eval(self.score)
+        else:
+            return [0 for _ in range(self.exam.number_of_questions)]
 
 
 # Statistics Model
@@ -147,7 +159,6 @@ class CourseTopic(models.Model):
 
 
 class LLMEvaluation(models.Model):
-    id = models.AutoField(primary_key=True)
     Topic = models.ForeignKey(CourseTopic, on_delete=models.CASCADE)
     student = models.ForeignKey(User, on_delete=models.CASCADE)
     answer = models.TextField()

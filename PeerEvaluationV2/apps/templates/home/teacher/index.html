@@ -3,7 +3,48 @@
 {% block title %} Dashboard {% endblock title %}
 
 <!-- Specific CSS goes HERE -->
-{% block stylesheets %}{% endblock stylesheets %}
+{% block stylesheets %}
+<style>
+  .tooltip-trigger {
+  position: relative;
+}
+
+.tooltip-trigger:hover::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: 100%; /* Position above the button */
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: #333;
+  color: #fff;
+  padding: 5px 10px;
+  border-radius: 4px;
+  font-size: 12px;
+  white-space: nowrap;
+  z-index: 1000;
+  opacity: 1;
+  visibility: visible;
+}
+
+.tooltip-trigger:hover::before {
+  content: '';
+  position: absolute;
+  bottom: 95%;
+  left: 50%;
+  transform: translateX(-50%);
+  border-width: 5px;
+  border-style: solid;
+  border-color: transparent transparent #333 transparent;
+  z-index: 1000;
+}
+
+.tooltip-trigger::after, .tooltip-trigger::before {
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.2s ease-in-out;
+}
+</style>
+{% endblock stylesheets %}
 
 {% block content %}
 
@@ -33,11 +74,18 @@
       <div class="row">
         <div class="col-xl-5">
           <div class="card">
-            <div class="card-header border-0 d-flex justify-content-between">
-              <h3 class="mb-0">Batches</h3>
+            <div class="card-header border-0">
+              <div class="row align-items-center">
+                <div class="col">
+                  <h3 class="mb-0">Batches</h3>
+                  <p class="mb-0 small">
+                    All the batches with number of students enrolled.
+                  </p>
+                </div>
+              </div>
             </div>
             <div class="table-responsive" style="max-height: 350px; overflow-y: auto;">
-              <table class="table align-items-center table-flush" style="min-height: 302px;">
+              <table class="table align-items-center table-flush">
                 <thead class="thead-light">
                   <tr>
                     <th scope="col">Batch Name</th>
@@ -47,17 +95,17 @@
                 </thead>
                 <tbody style="min-height: 100px;">
                   {% if batches %}
-                    {% for batch in batches %}
-                    <tr>
-                      <td>{{ batch.batch_id }}</td>
-                      <td>{{ batch.course_name }}</td>
-                      <td>{{ batch.strength }}</td>
-                    </tr>
-                    {% endfor %}
+                  {% for batch in batches %}
+                  <tr>
+                    <td>{{ batch.batch_id }}</td>
+                    <td>{{ batch.course_name }}</td>
+                    <td>{{ batch.strength }}</td>
+                  </tr>
+                  {% endfor %}
                   {% else %}
-                    <tr>
-                      <td colspan="3" class="text-center">No batches available</td>
-                    </tr>
+                  <tr>
+                    <td colspan="3" class="text-center">No batches available</td>
+                  </tr>
                   {% endif %}
                 </tbody>
               </table>
@@ -70,6 +118,9 @@
               <div class="row align-items-center">
                 <div class="col">
                   <h3 class="mb-0">Enrolled Students</h3>
+                  <p class="mb-0 small">
+                    Details of all the enrolled students.
+                  </p>
                 </div>
               </div>
             </div>
@@ -109,11 +160,16 @@
 
       <div class="row">
         <div class="col-xl-12">
-          <div class="card">
+          <div class="card"><br>
+            <p class="mb-0 small">&nbsp
+              &nbsp &nbsp&nbsp Details of Enrolled TAs
+            </p>
             <div class="card-header border-0 d-flex justify-content-between">
-              <h3 class="mb-0">Teaching Assistant</h3>
-              <button class="btn btn-sm btn-primary" data-toggle="modal" data-target="#addTeachingAssistantModal">Enroll TA</button>
+              <h3 class="mb-0">Teaching Assistant <small class="text-muted">(Total TAs: {{ tas|length }})</small></h3>
+              <button class="btn btn-sm btn-primary tooltip-trigger" data-tooltip="Click to add a Teaching assistant" data-toggle="modal" data-target="#addTeachingAssistantModal">Enroll TA</button>
             </div>
+            <div>
+              
             <div class="table-responsive" style="max-height: 350px; overflow-y: auto;">
               <!-- Students table -->
               <table class="table align-items-center table-flush">
@@ -136,9 +192,9 @@
                     <td>{{ student.course_id }}</td>
                   </tr>
                   {% endfor %}
-                  {% if students|length == 0 %}
+                  {% if tas|length == 0 %}
                   <tr>
-                    <td colspan="5" class="text-center">No students enrolled</td>
+                    <td colspan="5" class="text-center">No TAs</td>
                   </tr>
                   {% endif %}
                 </tbody>
@@ -196,4 +252,20 @@
 {% block javascripts %}
   <script src="/static/assets/vendor/chart.js/dist/Chart.min.js"></script>
   <script src="/static/assets/vendor/chart.js/dist/Chart.extension.js"></script>
+  <script>
+    $(document).ready(function () {
+      // Initialize tooltip on the button
+      $('#blueTooltipBtn').tooltip({
+        // Here we override the default tooltip template with our custom class "my-blue-tooltip"
+        template: `
+          <div class="tooltip my-blue-tooltip" role="tooltip">
+            <div class="arrow"></div>
+            <div class="tooltip-inner"></div>
+          </div>
+        `
+      });
+    });
+  </script>
+  
+  
 {% endblock javascripts %}

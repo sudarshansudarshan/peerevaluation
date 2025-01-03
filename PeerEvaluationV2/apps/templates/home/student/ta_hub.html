@@ -23,6 +23,53 @@
       background-color: #f8f9fa;
       border-radius: 8px;
     }
+
+    .topic-input {
+      display: flex;
+      align-items: center;
+    }
+
+    .topic-input input {
+      margin-right: 5px;
+    }
+    .tooltip-trigger {
+      position: relative;
+    }
+
+    .tooltip-trigger:hover::after {
+      content: attr(data-tooltip);
+      position: absolute;
+      bottom: 100%; /* Position above the button */
+      left: 50%;
+      transform: translateX(-50%);
+      background-color: #333;
+      color: #fff;
+      padding: 5px 10px;
+      border-radius: 4px;
+      font-size: 12px;
+      white-space: nowrap;
+      z-index: 1000;
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .tooltip-trigger:hover::before {
+      content: '';
+      position: absolute;
+      bottom: 95%;
+      left: 50%;
+      transform: translateX(-50%);
+      border-width: 5px;
+      border-style: solid;
+      border-color: transparent transparent #333 transparent;
+      z-index: 1000;
+    }
+
+    .tooltip-trigger::after, .tooltip-trigger::before {
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.2s ease-in-out;
+    }
   </style>
 {% endblock stylesheets %}
 
@@ -43,68 +90,6 @@
                 </ol>
               </nav>
             </div>
-            <div class="col-lg-6 col-5 text-right">
-              <button type="button" class="btn btn-sm btn-neutral" data-toggle="modal" data-target="#courseAssociationModal">
-                Topic
-              </button>
-            </div>
-
-          <!-- Modal -->
-          <div class="modal fade" id="courseAssociationModal" tabindex="-1" role="dialog" aria-labelledby="courseAssociationModalLabel" aria-hidden="true">
-            <div class="modal-dialog" role="document">
-              <div class="modal-content">
-                <div class="modal-header">
-                  <h5 class="modal-title" id="courseAssociationModalLabel">Associate Course</h5>
-                  <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                  </button>
-                </div>
-                <div class="modal-body">
-                  <form id="courseAssociationForm">
-                    <div class="form-group">
-                      <label for="courseSelect">Select Course</label>
-                      <select class="form-control" id="courseSelect" name="course">
-                        {% for course in courses %}
-                        <option value="{{ course.id }}">{{ course.name }}</option>
-                        {% endfor %}
-                      </select>
-                    </div>
-                    <div class="form-group">
-                      <label for="batchSelect">Select Batch</label>
-                      <select class="form-control" id="batchSelect" name="batch">
-                        {% for batch in batches %}
-                        <option value="{{ batch.id }}">{{ batch.name }}</option>
-                        {% endfor %}
-                      </select>
-                    </div>
-                    <div class="form-group">
-                      <label for="topic">Topic</label>
-                      <input type="text" class="form-control" id="topic" name="topic" required>
-                    </div>
-                  </form>
-                </div>
-                <div class="modal-footer">
-                  <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-                  <button type="button" class="btn btn-primary" id="saveAssociationBtn">Save changes</button>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <script>
-            document.getElementById('saveAssociationBtn').addEventListener('click', () => {
-              const form = document.getElementById('courseAssociationForm');
-              const courseId = form.course.value;
-              const batchId = form.batch.value;
-
-              // Perform the association logic here
-              console.log('Course ID:', courseId);
-              console.log('Batch ID:', batchId);
-
-              // Close the modal
-              $('#courseAssociationModal').modal('hide');
-            });
-          </script>
           </div>
         </div>
       </div>
@@ -112,7 +97,7 @@
 
     <div class="container-fluid mt--6">
       <div class="row">
-        <div class="col-xl-8">
+        <div class="col-xl-12">
           <div class="card">
             <div class="card-header border-0">
               <div class="row align-items-center">
@@ -123,74 +108,60 @@
             </div>
             <div class="table-responsive">
               <!-- Courses table -->
-              <table class="table align-items-center table-flush" id="courses-table">
+              <table class="table align-items-center table-flush">
                 <thead class="thead-light">
                   <tr>
                     <th scope="col"></th>
+                    <th scope="col">Date</th>
                     <th scope="col">Course</th>
-                    <th scope="col">Batch Name</th>
-                    <th scope="col">Start Date</th>
-                    <th scope="col">Instructor</th>
-                    <th scope="col">Instructor Email</th>
+                    <th scope="col">Batch</th>
+                    <th scope="col">Score</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {% for a in ta %}
-                  <tr class="course-row">
-                    <td>
-                      <button class="btn btn-sm btn-neutral toggle-btn">→</button>
-                    </td>
-                    <td>{{ a.course }}</td>
-                    <td id={{ a.batch.id }}>{{ a.batch.batch_id }}</td>
-                    <td>{{ a.start_date|date:"M d, Y" }}</td>
-                    <td>{{ a.instructor }}</td>
-                    <td>
-                      <a href="mailto:{{ a.instructor_email }}">{{ a.instructor_email }}</a>
-                    </td>
-                  </tr>
-                  <tr class="details-row" style="display: none;">
-                    <td colspan="6">
-                      <div class="student-list">
-                        <!-- Title for the encapsulated table -->
+                  {% load static %}
+                  {% for eval in results %}
+                    <tr>
+                      <td>
+                        <!-- Button to toggle collapse -->
+                        <button type="button" class="btn btn-sm btn-primary" data-toggle="collapse" data-target="#details-{{ forloop.counter }}">
+                          >
+                        </button>
+                      </td>
+                      <td>{{ eval.date }}</td>
+                      <td>{{ eval.course }}</td>
+                      <td>{{ eval.batch_id }}</td>
+                      <td><b>{{ eval.score }}</b>/{{ eval.max_scores }}</td>
+                    </tr>
+                    <!-- Collapsible row -->
+                    <tr id="details-{{ forloop.counter }}" class="collapse">
+                      <td colspan="5">
+                        <!-- Inner table or detailed information -->
                         <table class="table">
-                          <thead colspan="3">
+                          <thead>
                             <tr>
-                              <th colspan="3" class="text-center">Student Enrollment Requests for <strong>{{ a.course }}</strong></th>
-                            </tr>
-                          </thead>
-                          <thead class="thead-light">
-                            <tr>
-                              <th scope="col">Student Name</th>
-                              <th scope="col">Student Email</th>
-                              <th scope="col">Action</th>
+                              <th scope="col">Detail 1</th>
+                              <th scope="col">Detail 2</th>
+                              <th scope="col">Detail 3</th>
                             </tr>
                           </thead>
                           <tbody>
-                            {% for student in a.students %}
-                            <tr>
-                              <td>{{ student.name }}</td>
-                              <td>{{ student.email }}</td>
-                              <td>
-                                <button class="btn btn-success btn-sm accept-btn">✔</button>
-                                <button class="btn btn-danger btn-sm reject-btn">✘</button>
-                              </td>
-                            </tr>
+                            {% for detail in eval.details %}
+                              <tr>
+                                <td>{{ detail.detail1 }}</td>
+                                <td>{{ detail.detail2 }}</td>
+                                <td>{{ detail.detail3 }}</td>
+                              </tr>
                             {% endfor %}
-                            {% if a.students|length == 0 %}
-                            <tr>
-                              <td colspan="3" class="text-center">No students available</td>
-                            </tr>
-                            {% endif %}
                           </tbody>
                         </table>
-                      </div>
-                    </td>
-                  </tr>
+                      </td>
+                    </tr>
                   {% endfor %}
-                  {% if ta|length == 0 %}
-                  <tr>
-                    <td colspan="6" class="text-center">No courses available</td>
-                  </tr>
+                  {% if results|length == 0 %}
+                    <tr>
+                      <td colspan="6" class="text-center">No pending enrollments</td>
+                    </tr>
                   {% endif %}
                 </tbody>
               </table>
@@ -216,89 +187,92 @@
 
   // Toggle row functionality
   const toggleButtons = document.querySelectorAll('.toggle-btn');
-  toggleButtons.forEach((button, index) => {
-    button.addEventListener('click', () => {
-      const detailsRow = document.querySelectorAll('.details-row')[index];
+    toggleButtons.forEach((button, index) => {
+      button.addEventListener('click', () => {
+        const detailsRow = document.querySelectorAll('.details-row')[index];
 
-      // Close the currently expanded row, if any
-      if (currentlyExpandedRow && currentlyExpandedRow !== detailsRow) {
-        currentlyExpandedRow.style.display = 'none';
-        const toggleButton = currentlyExpandedRow.previousElementSibling.querySelector('.toggle-btn');
-        toggleButton.textContent = '→';
-      }
+        // Close the currently expanded row, if any
+        if (currentlyExpandedRow && currentlyExpandedRow !== detailsRow) {
+          currentlyExpandedRow.style.display = 'none';
+          const toggleButton = currentlyExpandedRow.previousElementSibling.querySelector('.toggle-btn');
+          toggleButton.textContent = '→';
+        }
 
-      // Toggle the clicked row
-      if (detailsRow.style.display === 'none') {
-        detailsRow.style.display = 'table-row';
-        button.textContent = '↓';
-        currentlyExpandedRow = detailsRow;
-      } else {
-        detailsRow.style.display = 'none';
-        button.textContent = '→';
-        currentlyExpandedRow = null;
-      }
+        // Toggle the clicked row
+        if (detailsRow.style.display === 'none') {
+          detailsRow.style.display = 'table-row';
+          button.textContent = '↓';
+          currentlyExpandedRow = detailsRow;
+        } else {
+          detailsRow.style.display = 'none';
+          button.textContent = '→';
+          currentlyExpandedRow = null;
+        }
+      });
     });
-  });
 
-  // Accept and reject button functionality
-  document.addEventListener('click', (event) => {
-    if (event.target.classList.contains('accept-btn') || event.target.classList.contains('reject-btn')) {
-      const detailsRow = event.target.closest('.details-row');
-      const courseRow = detailsRow.previousElementSibling; // The row before the details-row
-      if (!courseRow) {
-        console.error("Unable to find the corresponding course row.");
-        return;
-      }
+  
+    // Accept and reject button functionality
+  
+    document.addEventListener('click', (event) => {
+        if (event.target.classList.contains('accept-btn') || event.target.classList.contains('reject-btn')) {
+          const detailsRow = event.target.closest('.details-row');
+          const courseRow = detailsRow.previousElementSibling; // The row before the details-row
+          if (!courseRow) {
+            console.error("Unable to find the corresponding course row.");
+            return;
+          }
 
-      const batchId = courseRow.querySelector('td:nth-child(3)').id;
-      const studentRow = event.target.closest('tr');
-      const studentEmail = studentRow.querySelector('td:nth-child(2)').textContent.trim();
+          const batchId = courseRow.querySelector('td:nth-child(3)').id;
+          const studentRow = event.target.closest('tr');
+          const studentEmail = studentRow.querySelector('td:nth-child(2)').textContent.trim();
 
-      // Determine action (accept or reject)
-      const studentAction = event.target.classList.contains('accept-btn') ? "1" : "0";
+          // Determine action (accept or reject)
+          const studentAction = event.target.classList.contains('accept-btn') ? "1" : "0";
 
-      // Call the function for enrollment handling
-      confirmEnrollment(batchId, studentEmail, studentAction);
-      console.log(batchId, studentEmail, studentAction);
-    }
-  });
-});
+          // Call the function for enrollment handling
+          confirmEnrollment(batchId, studentEmail, studentAction);
+          console.log(batchId, studentEmail, studentAction);
+        }
+      });
+    });
 
-// Function to handle enrollment confirmation or rejection
-function confirmEnrollment(batchId, studentUsername, studentAction = "0", role="TA") {
-  const csrfToken = "{{ csrf_token }}";
-  const url = "{% url 'enrollment' %}";
+  // Function to handle enrollment confirmation or rejection
+  function confirmEnrollment(batchId, studentUsername, studentAction = "0", role="TA") {
+    const csrfToken = "{{ csrf_token }}";
+    const url = "{% url 'enrollment' %}";
 
-  fetch(url, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-CSRFToken': csrfToken,
-    },
-    body: JSON.stringify({
-      role: "TA",
-      batch_id: batchId,
-      student_username: studentUsername,
-      student_action: studentAction,
-    }),
-  })
-    .then((response) => {
-      if (response.ok) {
-        alert(
-          studentAction === "1"
-            ? "Student enrollment approved!"
-            : "Student enrollment rejected!"
-        );
-        window.location.reload();
-      } else {
-        alert("Failed to update enrollment status.");
-      }
+    fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': csrfToken,
+      },
+      body: JSON.stringify({
+        role: "TA",
+        batch_id: batchId,
+        student_username: studentUsername,
+        student_action: studentAction,
+      }),
     })
-    .catch((error) => {
-      console.error("Error:", error);
-      alert("An error occurred while processing the enrollment.");
-    });
-}
+      .then((response) => {
+        if (response.ok) {
+          alert(
+            studentAction === "1"
+              ? "Student enrollment approved!"
+              : "Student enrollment rejected!"
+          );
+          window.location.reload();
+        } else {
+          alert("Failed to update enrollment status.");
+        }
+      })
+      .catch((error) => {
+        console.error("Error:", error);
+        alert("An error occurred while processing the enrollment.");
+      });
+  }
+
 </script>
 
   <script src="/static/assets/vendor/chart.js/dist/Chart.min.js"></script>

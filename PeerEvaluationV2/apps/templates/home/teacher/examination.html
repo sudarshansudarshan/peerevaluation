@@ -44,17 +44,44 @@
       background-color: #e6f7ff; /* Light blue background when hovering */
       border-color: #007bff; /* Highlight border color */
     }
-    .tooltip {
-        position: absolute;
-        padding: 8px 12px;
-        background-color: #333;
-        color: white;
-        border-radius: 4px;
-        font-size: 14px;
-        box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.2);
-        display: none;
-        z-index: 1000;
-    }
+    .tooltip-trigger {
+  position: relative;
+}
+
+.tooltip-trigger:hover::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: 100%; /* Position above the button */
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: #333;
+  color: #fff;
+  padding: 5px 10px;
+  border-radius: 4px;
+  font-size: 12px;
+  white-space: nowrap;
+  z-index: 1000;
+  opacity: 1;
+  visibility: visible;
+}
+
+.tooltip-trigger:hover::before {
+  content: '';
+  position: absolute;
+  bottom: 95%;
+  left: 50%;
+  transform: translateX(-50%);
+  border-width: 5px;
+  border-style: solid;
+  border-color: transparent transparent #333 transparent;
+  z-index: 1000;
+}
+
+.tooltip-trigger::after, .tooltip-trigger::before {
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.2s ease-in-out;
+}
   </style>
 {% endblock stylesheets %}
 
@@ -92,6 +119,9 @@
               <div class="row align-items-center">
                 <div class="col">
                   <h3 class="mb-0">Upload Evaluation</h3>
+                  <p class="mb-0 small">
+                    To upload evaluation in bulk.
+                  </p>
                 </div>
               </div>
             </div>
@@ -102,12 +132,14 @@
                 
                 <!-- Evaluation Selector -->
                 <div class="form-group">
-                  <label for="exam" class="form-label font-weight-bold">Evaluation for</label>
-                  <select id="exam_id" name="exam_id" class="form-control custom-select shadow-sm">
-                    {% for exam in exams %}
-                      <option value="{{ exam.id }}">{{ exam.batch }}</option>
-                    {% endfor %}
-                  </select>
+                    <label for="exam" class="form-label font-weight-bold">Evaluation for</label>                    
+                    <select id="exam_id" name="exam_id" class="form-control custom-select shadow-sm">
+                      <option selected disabled>Select an exam</option>
+                      {% for exam in exams %}
+                        <option value="{{ exam.id }}">{{ exam.batch }}</option>
+                      {% endfor %}
+                    </select>
+                    <small class="text-muted">Select the exam to upload evaluations</small>
                 </div>
 
                 <!-- File Upload Section -->
@@ -127,9 +159,9 @@
                 </div>
                 <!-- Submit Button -->
                 <div class="text-right">
-                  <button type="submit" class="btn btn-sm btn-primary shadow">
-                    <i class="fas fa-cloud-upload-alt mr-1"></i>Submit
-                  </button>
+                    <button type="submit" class="btn btn-sm btn-primary shadow tooltip-trigger" data-tooltip="Uploading the selected PDFs for evaluations">
+                      <i class="fas fa-cloud-upload-alt mr-1"></i>Submit
+                    </button>
                 </div>
               </form>
               {% else %}
@@ -150,6 +182,7 @@
               <div class="row align-items-center">
                 <div class="col">
                   <h3 class="mb-0">Available Batches</h3>
+                  <small class="text-muted">List of all the batches available for examination (Here an exam can be scheduled)</small>
                 </div>
               </div>
             </div>
@@ -160,11 +193,11 @@
                   <tr>
                     <th scope="col" style="position: sticky; left: 0; z-index: 99;">Course</th>
                     <th scope="col">Exam Date</th>
-                    <th scope="col">Duration</th>
-                    <th scope="col">Max. marks</th>
-                    <th scope="col">Questions</th>
-                    <th scope="col">No. of evaluations</th>
-                    <th scope="col">No. of Students</th>
+                    <th scope="col" title="Duration in minutes allocated for an evaluation">Duration</th>
+                    <th scope="col"title="Maxmum number of marks in an exam (Each question with mark weightage: Max Marks/Number of questions)">Max Marks</th>
+                    <th scope="col" title="Number of questions in an exam">#Questions</th>
+                    <th scope="col" title="Number of stdents evaluating each sheet">#Evaluations</th>
+                    <th scope="col" title="Number of stdents in a batch">#Students</th>
                     <th scope="col">Action</th>
                   </tr>
                 </thead>
@@ -202,7 +235,7 @@
                                 <input type="number" class="form-control border rounded px-2 py-1" minValue="0" value="{{ batch.enrolled_students_count }}" disabled>
                               </td>
                               <td class="px-4 py-2">
-                                <button type="submit" class="btn btn-sm btn-success"><i class="fas fa-save"></i> Save</button>
+                                <button type="submit" class="btn btn-sm btn-success tooltip-trigger" data-tooltip="Save the exam details"><i class="fas fa-save"></i> Save</button>
                               </td>
                             </form>
                           {% else %}
@@ -214,49 +247,58 @@
                             <td class="px-4 py-2">{{ batch.exams.total_students }}</td>
                             <td class="px-4 py-2">
                               <div class="d-flex align-items-center">
+                                <!-- Download Answer Sheet PDFs -->
                                 <form id="csvForm" method="POST" action="{% url 'download_csv' %}" class="mr-2">
                                   {% csrf_token %}
                                   <input type="hidden" name="exam_id" value="{{ batch.exams.id }}">
-                                  <button 
+                                  <button
                                     type="submit" 
                                     class="btn btn-sm btn-primary tooltip-trigger" 
-                                    data-tooltip="Download CSV Report">
+                                    data-tooltip="Download Answer Sheet PDFs">
                                     <i class="fa fa-file-pdf"></i>
                                   </button>
                                 </form>
 
                                 {% if batch.exams.evaluation_received == batch.exams.total_students %}
+                                <!-- Send Documents for Peer Evaluations -->
                                 <button
                                   type="button" 
                                   class="btn btn-sm" 
                                   style="background-color: orange; color: white;" 
                                   class="tooltip-trigger" 
-                                  data-tooltip="Send Evaluation Notification"
+                                  data-tooltip="Send Documents for Peer Evaluations"
                                   onclick="peerEval({{ batch.exams.id }})">
                                   <i class="fas fa-paper-plane"></i>
                                 </button>
-                              {% endif %}
+                                {% endif %}
 
+                                <!-- Declare Examination Cycle as Completed -->
                                 <button 
                                   type="button" 
                                   class="btn btn-sm btn-success mr-2 tooltip-trigger" 
-                                  data-tooltip="Mark as Completed" 
+                                  data-tooltip="Declare Examination Cycle as Completed" 
                                   onclick="markAsCompleted({{ batch.exams.id }})">
                                   <i class="fas fa-check"></i>
                                 </button>
 
+                                <!-- Delete Exam Scheduling -->
                                 <button 
                                   type="button" 
                                   class="btn btn-sm btn-danger mr-2 tooltip-trigger" 
-                                  data-tooltip="Delete Examination" 
+                                  data-tooltip="Delete Exam Scheduling" 
                                   onclick="deleteExamination({{ batch.exams.id }})">
                                   <i class="fas fa-trash"></i>
                                 </button>
+
+                                <!-- View Examination Analytics -->
                                 <button
-                                type="button" 
-                                class="btn btn-sm btn-info mr-2 tooltip-trigger" 
-                                data-toggle="modal" data-target="#addTeachingAssistantModal"
-                                data-tooltip="View Examination Details"><i class="fas fa-eye"></i></button>
+                                  type="button" 
+                                  class="btn btn-sm btn-info mr-2 tooltip-trigger" 
+                                  data-toggle="modal" 
+                                  data-target="#addTeachingAssistantModal"
+                                  data-tooltip="View Examination Analytics">
+                                  <i class="fas fa-eye"></i>
+                                </button>
                                 <div id="tooltip" class="tooltip"></div>
                               </div>
                             </td>
@@ -278,16 +320,20 @@
           {% csrf_token %}
           <div class="modal-content">
             <div class="modal-header">
-              <h5 class="modal-title" id="addTeachingAssistantModalLabel">Analytics</h5>
+              <h5 class="modal-title" id="addTeachingAssistantModalLabel">Analytics: Marks vs No of Students</h5>
               <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                 <span aria-hidden="true">&times;</span>
               </button>
             </div>
+            
+            
+            <div class="card-body">
+              <div style="height: 400px;">
+                  <canvas id="myChart"></canvas>
+              </div>
+          </div>
+      
 
-            <div class="modal-footer">
-              <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-              <button type="submit" class="btn btn-primary">Assign</button>
-            </div>
           </div>
         </form>
       </div>
@@ -452,7 +498,7 @@
     });
 
     function peerEval(examId) {
-      fetch("/peer_eval", {
+      fetch("/peer_eval/", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -475,8 +521,46 @@
         });
     }
   </script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <div class="card-body">
+    <div style="height: 400px;">
+        <canvas id="myChart"></canvas>
+    </div>
+</div>
 
-  <script src="/static/assets/vendor/chart.js/dist/Chart.min.js"></script>
-  <script src="/static/assets/vendor/chart.js/dist/Chart.extension.js"></script>
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        // Parse chart data passed from Django context
+        const chartData = JSON.parse('{{ context.chart_data|safe }}');
 
+        const ctx = document.getElementById('myChart').getContext('2d');
+
+        // Create a new Chart
+        new Chart(ctx, {
+            type: 'line', // Chart type changed to 'line'
+            data: {
+                labels: chartData.labels, // X-axis labels
+                datasets: [{
+                    label: 'Number of Students',
+                    data: chartData.values, // Y-axis values
+                    borderColor: 'rgba(75, 192, 192, 1)', // Line color
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)', // Fill under the line
+                    borderWidth: 2, // Line thickness
+                    tension: 0.4 // Smooth curve for the line
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: {
+                        beginAtZero: true // Ensure Y-axis starts at zero
+                    }
+                }
+            }
+        });
+    });
+</script>
+
+  
+  
 {% endblock javascripts %}
