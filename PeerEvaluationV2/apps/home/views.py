@@ -1046,7 +1046,6 @@ def student_eval(request):
                 return redirect('peer_eval')
             
             number_of_questions = evaluation.exam.number_of_questions
-            # Parse evaluations and feedback from the form data
             evaluations = [int(form_data.get(f'question-{i}', 0)) for i in range(1, number_of_questions + 1)]
             feedback = [form_data.get(f'feedback-{i}', '').strip() for i in range(1, number_of_questions + 1)]
             evaluation.feedback = feedback
@@ -1064,7 +1063,7 @@ def analytics(request):
     data = {
         "students": ["John", "Emma", "Sophia", "Mike", "Sarah"],
         "marks": [75, 85, 90, 65, 80]
-    }  # Pass any data needed in the template
+    }
     return render(request, 'home/teacher/analytics.html', data)
 
 
@@ -1079,7 +1078,6 @@ def upload_evaluation(request):
             return redirect('examination')
 
         try:
-            # Fetch the exam object
             try:
                 exam = Exam.objects.get(id=exam_id)
             except Exam.DoesNotExist:
@@ -1088,13 +1086,12 @@ def upload_evaluation(request):
             # Limit students to one file
             if request.user.is_student():
                 if len(uploaded_files) > 1:
-                    return redirect('home')  # Students cannot upload multiple files
+                    return redirect('home')
                 
-                uploaded_file = uploaded_files[0]  # Get the single file
+                uploaded_file = uploaded_files[0]
                 if uploaded_file.content_type != "application/pdf":
                     return redirect('home')
 
-                # Process the single file for students
                 pdf_content = uploaded_file.read()
                 qr_content = convert_pdf_to_image_and_decode_qr(pdf_content)
                 if not qr_content:
@@ -1121,7 +1118,7 @@ def upload_evaluation(request):
             elif request.user.is_teacher():
                 for uploaded_file in uploaded_files:
                     if uploaded_file.content_type != "application/pdf":
-                        continue  # Skip invalid files
+                        continue
                     
                     # Process each file
                     pdf_content = uploaded_file.read()
@@ -1163,6 +1160,7 @@ def topic(request):
         topic_description = data.get("topic_description")
 
         if topic_name and topic_description:
+            # Topic association and creation
             topic = CourseTopic.objects.create(
                 name=topic_name,
                 description=topic_description,

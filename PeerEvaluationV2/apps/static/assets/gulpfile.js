@@ -29,7 +29,7 @@ const paths = {
 };
 
 // Compile SCSS
-gulp.task('scss', function() {
+gulp.task('scss', function () {
     return gulp.src([paths.src.scss + '/argon.scss'])
         .pipe(wait(500))
         .pipe(sourcemaps.init())
@@ -43,12 +43,12 @@ gulp.task('scss', function() {
 });
 
 // Minify CSS
-gulp.task('minify:css', function() {
+gulp.task('minify:css', function () {
     return gulp.src([
-            paths.src.css + '/argon.css'
-        ])
+        paths.src.css + '/argon.css'
+    ])
         .pipe(cleanCss())
-        .pipe(rename(function(path) {
+        .pipe(rename(function (path) {
             // Updates the object in-place
             path.extname = ".min.css";
         }))
