@@ -28,6 +28,7 @@ urlpatterns = [
     path('send_email/', send_reminder_mail, name='send_reminder_mail'),
     path('raiseTicket/<int:doc_id>', raise_ticket, name='peerEval'),
     path('doc/<str:file_name>', fetch_document, name='fetch_document'),
+    path('export-evaluations/', export_evaluations_to_csv, name='export_evaluations'),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
 # Serve media files if DEBUG is True (development mode)

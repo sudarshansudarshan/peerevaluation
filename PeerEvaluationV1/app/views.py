@@ -922,14 +922,14 @@ def studentEval(request, doc_id, eval_id):
         messages.error(request, 'Permission denied.')
         return redirect('/logout/')
     
-    if user_profile.role != 'Student':
-        pass
-    elif evaluation.evaluated:
-        messages.error(request, 'This document has already been evaluated.')
-        return redirect(f'/{user_profile.role}Home/')
+    # if user_profile.role != 'Student':
+    #     pass
+    # elif evaluation.evaluated:
+    #     messages.error(request, 'This document has already been evaluated.')
+    #     return redirect(f'/{user_profile.role}Home/')
 
     # Fetch the number of questions
-    number_of_questions = numberOfQuestions.objects.filter(id=1).first()
+    number_of_questions = numberOfQuestions.objects.all().last()
     if not number_of_questions:
         messages.error(request, 'Configuration error: Number of questions not set.')
         return redirect('/logout/')
@@ -1112,6 +1112,60 @@ def send_reminder_mail(request):
 
 def home(request):
     return redirect('/login/')
+
+
+import pandas as pd
+from django.http import HttpResponse
+
+
+def export_evaluations_to_csv(request):
+    # Fetch all evaluations, excluding the 'evaluation_date' column
+    evaluations = PeerEvaluation.objects.all().values(
+        'evaluator_id', 'evaluation', 'feedback', 'score', 'document_id', 'evaluated', 'ticket', 'evaluated_by_id'
+    )
+    df_evaluations = pd.DataFrame(evaluations)
+
+    # Handle empty data
+    if df_evaluations.empty:
+        return HttpResponse("No evaluations available.", content_type="text/plain")
+
+    # Aggregate data for Sheet 1
+    df_avg_marks = df_evaluations.groupby(['document_id']).agg({'score': 'mean'}).reset_index()
+    df_avg_marks.rename(columns={'score': 'avg_marks'}, inplace=True)
+
+    # Add student details to the aggregated data
+    student_data = []
+    for _, row in df_avg_marks.iterrows():
+        # Find document and student details
+        doc = documents.objects.get(id=row['document_id'])
+        student = doc.uid
+        user = User.objects.get(id=student.student_id.id)
+
+        # Append student details
+        student_data.append({
+            'Document ID': row['document_id'],
+            'Document Title': doc.title,
+            'Student Name': f"{user.first_name} {user.last_name} ({user.username})",
+            'Average Marks': row['avg_marks']
+        })
+
+    # Convert to DataFrame for Sheet 1
+    df_sheet1 = pd.DataFrame(student_data)
+
+    # Create a Pandas Excel writer using openpyxl as the engine
+    with pd.ExcelWriter('evaluations.xlsx', engine='openpyxl') as writer:
+        # Write each DataFrame to a specific sheet
+        df_sheet1.to_excel(writer, sheet_name='Marks Distribution', index=False)
+        df_evaluations.to_excel(writer, sheet_name='Evaluations', index=False)
+
+    # Read the file and create a response
+    with open('evaluations.xlsx', 'rb') as f:
+        response = HttpResponse(f.read(), content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+        response['Content-Disposition'] = 'attachment; filename=evaluations.xlsx'
+        os.remove('evaluations.xlsx')
+
+    return response
+
 
 
 def logout_user(request):
