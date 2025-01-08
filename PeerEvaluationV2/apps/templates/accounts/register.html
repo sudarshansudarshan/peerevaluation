@@ -116,6 +116,26 @@
                   <div class="form-group mb-3">
                     <div class="input-group input-group-alternative custom-input-group">
                       <div class="input-group-prepend">
+                        <span class="input-group-text custom-input-icon"><i class="ni ni-single-02"></i></span>
+                      </div>
+                      {{ form.first_name }}
+                    </div>
+                    <span class="text-error custom-input-icon">{{ form.first_name.errors }}</span>
+                  </div>
+
+                  <div class="form-group mb-3">
+                    <div class="input-group input-group-alternative custom-input-group">
+                      <div class="input-group-prepend">
+                        <span class="input-group-text custom-input-icon"><i class="ni ni-single-02"></i></span>
+                      </div>
+                      {{ form.last_name }}
+                    </div>
+                    <span class="text-error custom-input-icon">{{ form.last_name.errors }}</span>
+                  </div>
+
+                  <div class="form-group mb-3">
+                    <div class="input-group input-group-alternative custom-input-group">
+                      <div class="input-group-prepend">
                         <span class="input-group-text custom-input-icon"><i class="ni ni-hat-3"></i></span>
                       </div>
                       {{ form.username }}
@@ -181,6 +201,7 @@
           </a>
         </div>
       </div>
+    </div>
 {% endblock content %}
 
 <!-- Specific JS goes HERE -->

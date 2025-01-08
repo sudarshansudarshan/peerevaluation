@@ -26,6 +26,20 @@ class LoginForm(forms.Form):
 
 
 class SignUpForm(UserCreationForm):
+    first_name = forms.CharField(
+        widget=forms.TextInput(
+            attrs={
+                "placeholder": "First Name",
+                "class": "form-control"
+            }
+        ))
+    last_name = forms.CharField(
+        widget=forms.TextInput(
+            attrs={
+                "placeholder": "Last Name",
+                "class": "form-control"
+            }
+        ))
     username = forms.CharField(
         widget=forms.TextInput(
             attrs={
@@ -54,10 +68,16 @@ class SignUpForm(UserCreationForm):
                 "class": "form-control"
             }
         ))
+    is_staff = forms.BooleanField(
+        widget=forms.CheckboxInput(
+            attrs={
+                "class": "form-check-input"
+            }
+        ), required=False)
 
     class Meta:
         model = User
-        fields = ('username', 'email', 'password1', 'password2')
+        fields = ('first_name', 'last_name', 'username', 'email', 'password1', 'password2', 'is_staff')
 
 
 class PasswordResetForm(forms.Form):

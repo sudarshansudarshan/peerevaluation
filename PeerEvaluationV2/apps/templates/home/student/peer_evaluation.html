@@ -5,13 +5,6 @@
 <!-- Specific CSS goes HERE -->
 {% block stylesheets %}
 <style>
-    .details-row {
-      background-color: #f8f9fa; /* Light grey background */
-    }
-
-    .details-row td {
-      border: none; /* Remove border around the collapsible cell */
-    }
 
     .table.mb-0 {
       margin-bottom: 0; /* Remove margin below the table */
@@ -199,79 +192,83 @@
         <!-- Course enrollment -->
         <div class="col-xl-6 col-lg-6 mb-4">
           <div class="card" style="height: 485px;">
-          <div class="card-header border-0">
-            <div class="row align-items-center">
-            <div class="col">
-              <h3 class="mb-0">Scores</h3>
+            <div class="card-header border-0">
+              <div class="row align-items-center">
+                <div class="col">
+                  <h3 class="mb-0">Scores</h3>
+                </div>
+              </div>
             </div>
-            </div>
-          </div>
-          <div class="table-responsive" style="max-height: 350px; overflow-y: auto;">
-            <!-- Projects table -->
-            <table class="table align-items-center table-flush">
-              <thead class="thead-light">
-                <tr>
-                  <th scope="col"></th>
-                  <th scope="col">Date</th>
-                  <th scope="col">Course</th>
-                  <th scope="col">Batch</th>
-                  <th scope="col">Score</th>
-                </tr>
-              </thead>
-              <tbody>
-                {% load static %}
-                {% for eval in results %}
+            <div class="table-responsive" style="max-height: 350px; overflow-y: auto;">
+              <!-- Projects table -->
+              <table class="table align-items-center table-flush" id="scores-table">
+                <thead class="thead-light">
                   <tr>
-                    <td>
-                      <!-- Button to toggle collapse -->
-                      <button type="button" class="btn btn-sm btn-primary" data-toggle="collapse" data-target="#details-{{ forloop.counter }}">
-                        >
-                      </button>
-                    </td>
-                    <td>{{ eval.date }}</td>
-                    <td>{{ eval.course }}</td>
-                    <td>{{ eval.batch_id }}</td>
-                    <td><b>{{ eval.score }}</b>/{{ eval.max_scores }}</td>
+                    <th scope="col"></th>
+                    <th scope="col">Date</th>
+                    <th scope="col">Course</th>
+                    <th scope="col">Batch</th>
+                    <th scope="col">Score</th>
                   </tr>
-                  <!-- Collapsible row -->
-                  <tr id="details-{{ forloop.counter }}" class="collapse bg-light details-row">
-                    <td colspan="5" style="padding: 0;">
-                      <!-- Inner table or detailed information -->
-                      <table class="table mb-0">
-                        <thead class="thead-light">
-                          <tr>
-                            <th scope="col">Score</th>
-                            <th scope="col">Feedback</th>
-                            <th scope="col"></th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {% for detail in eval.evaluations %}
+                </thead>
+                <tbody>
+                  {% load static %}
+                  {% for eval in results %}
+                    <tr class="score-row">
+                      <td>
+                        <!-- Button to toggle collapse -->
+                        <button type="button" class="btn btn-sm btn-primary toggle-btn" data-toggle="collapse" data-target="#details-{{ forloop.counter }}">
+                          &#8658;
+                        </button>
+                      </td>
+                      <td>{{ eval.date }}</td>
+                      <td>{{ eval.course }}</td>
+                      <td>{{ eval.batch_id }}</td>
+                      <td><b>{{ eval.score }}</b>/{{ eval.max_scores }}</td>
+                    </tr>
+                    <!-- Collapsible row for details -->
+                    <tr id="details-{{ forloop.counter }}" class="collapse details-row">
+                      <td colspan="5">
+                      <div class="student-list">
+                        <!-- Title for the encapsulated table -->
+                        <table class="table">
+                          <thead class="thead-light">
                             <tr>
-                              <td>{{ detail.score }}</td>
-                              <td>{{ detail.feedback }}</td>
-                              <td>
-                                <button type="button" class="btn btn-sm btn-danger">
-                                  View
-                                </button>
-                              </td>
+                              <th scope="col">Score</th>
+                              <th scope="col">Feedback</th>
+                              <th scope="col">Total</th>
                             </tr>
-                          {% endfor %}
-                        </tbody>
-                      </table>
+                          </thead>
+                          <tbody>
+                            {% for eval in eval.evaluations %}
+                            <tr>
+                              <td>{{ eval.get_score_string }}</td>
+                              <td>{{ eval.feedback }}</td>
+                              <td>{{ eval.total }}</td>
+                            </tr>
+                            {% endfor %}
+                            {% if eval.evaluations|length == 0 %}
+                            <tr>
+                              <td colspan="3" class="text-center">No students available</td>
+                            </tr>
+                            {% endif %}
+                          </tbody>
+                        </table>
+                      </div>
                     </td>
-                  </tr>
-                {% endfor %}
-                {% if results|length == 0 %}
-                  <tr>
-                    <td colspan="6" class="text-center">No pending enrollments</td>
-                  </tr>
-                {% endif %}
-              </tbody>
-            </table>
-          </div>
+                    </tr>
+                  {% endfor %}
+                  {% if results|length == 0 %}
+                    <tr>
+                      <td colspan="4" class="text-center">No results available</td>
+                    </tr>
+                  {% endif %}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
+
       </div>
     </div>
 

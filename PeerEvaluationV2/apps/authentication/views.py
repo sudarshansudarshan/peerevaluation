@@ -14,6 +14,7 @@ from django.core.mail import send_mail
 import random
 import array
 from django.contrib import messages
+import re
 
 def generate_password(length):
     MAX_LEN = 12
@@ -62,7 +63,14 @@ def login_view(request):
         if form.is_valid():
             username = form.cleaned_data.get("username")
             password = form.cleaned_data.get("password")
-            user = authenticate(username=username, password=password)
+            # Check using regex if the username is email
+            email_regex = re.compile(r"[^@]+@[^@]+\.[^@]+")
+            if email_regex.match(username):
+                user = authenticate(request, username=User.objects.filter(email=username).first().username, password=password)
+            else:
+                user = authenticate(username=username, password=password)
+                
+
             if user is not None:
                 login(request, user)
                 return redirect("/")
@@ -82,20 +90,27 @@ def register_user(request):
         form = SignUpForm(request.POST)
         if form.is_valid():
             form.save()
+            first_name = form.cleaned_data["first_name"]
+            last_name = form.cleaned_data["last_name"]
             username = form.cleaned_data.get("username")
+            email = form.cleaned_data.get("email")
             raw_password = form.cleaned_data.get("password1")
-            user = authenticate(username=username, password=raw_password)
+            is_staff = form.cleaned_data.get("is_staff")
+            user = authenticate(first_name=first_name, last_name=last_name,
+                username=username, password=raw_password, email=email)
+            if is_staff:
+                user = User.objects.get(username=username)
+                user.is_staff = True
+                user.save()
 
             msg = 'User created - please <a href="/login">login</a>.'
             success = True
-
-            # return redirect("/login/")
-
         else:
             msg = 'Form is not valid'
     else:
         form = SignUpForm()
-
+    if request.user.is_authenticated:
+        return redirect('/')
     return render(request, "accounts/register.html", {"form": form, "msg": msg, "success": success})
 
 

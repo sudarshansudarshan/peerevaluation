@@ -11,7 +11,9 @@ from django.contrib import messages
 from .models import Course
 from django.contrib.auth.models import User
 from django.db import IntegrityError
+import zipfile
 import random
+import string
 import array
 import csv
 import json
@@ -24,7 +26,7 @@ from pyzbar.pyzbar import decode
 from PIL import Image
 import io
 import tempfile
-
+from django.db.models import Avg, StdDev
 from django.http import HttpResponse, FileResponse
 from django.contrib.auth.decorators import user_passes_test
 from fpdf import FPDF
@@ -117,6 +119,71 @@ def evaluate_answers(answer1, answer2, topic):
     }
 
 
+import numpy as np
+
+def flag_evaluations_with_high_std(exam_instance, threshold=1.0):
+    """
+    Flags an exam instance if an evaluation's standard deviation is significantly higher 
+    than the average standard deviation of all evaluations.
+
+    Parameters:
+    - exam_instance: The exam instance to analyze.
+    - threshold: Multiplier for standard deviation; if an evaluation's deviation exceeds 
+                 this, it's flagged.
+    """
+
+    # Retrieve all evaluations for the given exam score is not empty string
+    evaluations = PeerEvaluation.objects.filter(exam=exam_instance, score__isnull=False)
+    print(evaluations)
+    if not evaluations.exists():
+        print(f"No evaluations found for exam {exam_instance}.")
+        return
+
+    # Extract scores from evaluations (ensure they are numeric)
+    scores = []
+    for evaluation in evaluations:
+        try:
+            score = float(evaluation.total)  # Replace with the actual field storing evaluation scores
+            scores.append(score)
+        except ValueError:
+            print(f"Invalid score for evaluation ID {evaluation.id}: {evaluation.score}")
+            continue
+
+    # Ensure scores are numeric before proceeding
+    if not scores:
+        print(f"No valid scores found for exam {exam_instance}.")
+        return
+
+    # Calculate standard deviation for all scores
+    scores_array = np.array(scores)
+    global_std = scores_array.std()
+
+    # Determine the threshold for flagging
+    std_threshold = threshold * global_std
+
+    # Check individual evaluations
+    flagged = False
+    for evaluation in evaluations:
+        evaluator_scores = np.array([
+            float(eval.total) for eval in evaluations 
+            if eval.evaluator == evaluation.evaluator
+        ])
+        evaluator_std = evaluator_scores.std()
+
+        if evaluator_std > std_threshold:
+            # Raise ticket (or create flag)
+            flagged = True
+            evaluation.ticket = True  # Assuming 'flags' field exists in PeerEvaluation
+            evaluation.save()
+
+    # Update the exam instance flag if any evaluation was flagged
+    if flagged:
+        exam_instance.flags = True  # Assuming 'flags' field exists in Exam model
+        exam_instance.save()
+
+    print(f"Analysis complete for exam {exam_instance}. Flags updated.")
+
+
 
 def is_superuser(self):
     return self.is_superuser
@@ -138,6 +205,9 @@ User.add_to_class('is_staff', is_staff)
 def is_teacher(self):
     return self.is_staff and not self.is_superuser
 User.add_to_class('is_teacher', is_teacher)
+
+def generate_random_text():
+    return ''.join(random.choices(string.ascii_lowercase, k=10))
 
 
 def convert_pdf_to_image_and_decode_qr(pdf_bytes):
@@ -178,131 +248,93 @@ def convert_pdf_to_image_and_decode_qr(pdf_bytes):
         raise
 
 
-# Generate UID
-def generate_string():
-
-    MAX_LEN = 12
-
-    DIGITS = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']
-
-    LOCASE_CHARACTERS = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 
-                        'i', 'j', 'k', 'm', 'n', 'o', 'p', 'q',
-                        'r', 's', 't', 'u', 'v', 'w', 'x', 'y',
-                        'z']
-
-    UPCASE_CHARACTERS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 
-                        'I', 'J', 'K', 'M', 'N', 'O', 'P', 'Q',
-                        'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y',
-                        'Z']
-
-    COMBINED_LIST = DIGITS + UPCASE_CHARACTERS + LOCASE_CHARACTERS
-
-    rand_digit = random.choice(DIGITS)
-    rand_upper = random.choice(UPCASE_CHARACTERS)
-    rand_lower = random.choice(LOCASE_CHARACTERS)
-
-    temp_pass = rand_digit + rand_upper + rand_lower
-    for x in range(MAX_LEN - 4):
-        temp_pass = temp_pass + random.choice(COMBINED_LIST)
-        temp_pass_list = array.array('u', temp_pass)
-        random.shuffle(temp_pass_list)
-    password = ""
-    for x in temp_pass_list:
-            password = password + x
-
-    return (password)
-
-
 def assign_evaluations(students, papers, trusted_evaluators, k):
     """
-    Assigns papers to students for evaluation based on constraints:
-    - Each paper is evaluated k times.
-    - Trusted evaluators can evaluate more papers proportionally to their trust level.
-    - Avoid duplicate evaluations of the same paper by the same student.
+    Assigns papers to students for peer evaluation, ensuring:
+    1. No student evaluates their own paper.
+    2. Each paper is evaluated exactly k times.
+    3. Trusted evaluators handle more papers based on their trust level.
     
     Parameters:
     - students: List of student IDs.
-    - papers: List of paper IDs.
-    - trusted_evaluators: Dictionary with student IDs as keys and trust levels (0 to 1) as values.
-    - k: Number of times each paper must be evaluated.
-    
+    - papers: List of paper objects with `uid` (owner ID) and `exam` attributes.
+    - trusted_evaluators: Dictionary mapping student IDs to trust levels (0 to 1).
+    - k: Number of evaluations required per paper.
+
     Returns:
-    - pairs: Dictionary mapping each student to their assigned papers.
-    - paper_count: Dictionary mapping each paper to its evaluation count.
+    - assignments: Dictionary mapping students to their assigned papers.
+    - paper_evaluations: Dictionary tracking the number of evaluations per paper.
     """
-    # Initialize evaluation counts and pairs
-    evaluation_count = {student: 0 for student in students}
-    paper_count = {paper: 0 for paper in papers}
-    pairs = {student: [] for student in students}
+    # Initialize data structures
+    assignments = {student: [] for student in students}
+    paper_evaluations = {paper: 0 for paper in papers}
+    student_workload = {student: 0 for student in students}
 
-    # Calculate maximum evaluations for each student
-    max_evaluations = {
-        student: int(1.5 * k * level) for student, level in trusted_evaluators.items()
-    }
-    default_max = k  # Default max evaluations for non-trusted evaluators
-    for student in students:
-        if student not in max_evaluations:
-            max_evaluations[student] = default_max
+    # Calculate the maximum evaluations each student can handle
+    max_evaluations = {student: k for student in students}
+    for student, trust_level in trusted_evaluators.items():
+        max_evaluations[student] += int(k * trust_level)
 
-    # Prepare list of evaluations (each paper appears k times)
-    remaining_evaluations = papers * k
-    random.shuffle(remaining_evaluations)  # Shuffle for fairness
-    
-    # Assign evaluations with fallback mechanism
-    for evaluation in remaining_evaluations:
-        # Find valid evaluators
-        possible_evaluators = [
+    # Create a pool of required evaluations
+    evaluation_pool = []
+    for paper in papers:
+        for _ in range(k):
+            evaluation_pool.append(paper)
+    random.shuffle(evaluation_pool)
+
+    # Assign evaluations while avoiding self-evaluation
+    for paper in evaluation_pool:
+        eligible_evaluators = [
             student for student in students
-            if evaluation_count[student] < max_evaluations[student]
-            and evaluation not in pairs[student]
+            if (student_workload[student] < max_evaluations[student] and
+                paper not in assignments[student] and
+                student != UIDMapping.objects.get(uid=paper.uid).user)
         ]
 
-        if not possible_evaluators:
-            # Fallback to trusted evaluators who can exceed their limit slightly
-            possible_evaluators = [
-                student for student in trusted_evaluators.keys()
-                if evaluation not in pairs[student]
-            ]
+        if not eligible_evaluators:
+            raise ValueError(f"Unable to assign paper {paper.uid} due to constraints.")
 
-        if not possible_evaluators:
-            raise ValueError(f"No possible evaluators for {evaluation} under the constraints.")
+        evaluator = random.choice(eligible_evaluators)
+        assignments[evaluator].append(paper)
+        student_workload[evaluator] += 1
+        paper_evaluations[paper] += 1
 
-        # Assign the evaluation to a random valid evaluator
-        evaluator = random.choice(possible_evaluators)
-        pairs[evaluator].append(evaluation)
-        evaluation_count[evaluator] += 1
-        paper_count[evaluation] += 1
+    # Validation and final correction pass
+    for student, assigned_papers in assignments.items():
+        for paper in assigned_papers:
+            if student == getattr(paper, 'uid', None):  # Check for self-evaluation
+                # Swap the paper with another student
+                for other_student in students:
+                    if (other_student != getattr(paper, 'uid', None) and
+                        paper not in assignments[other_student] and
+                        len(assignments[other_student]) < max_evaluations[other_student]):
+                        # Perform the swap
+                        assignments[student].remove(paper)
+                        assignments[other_student].append(paper)
+                        break
+                else:
+                    raise ValueError(f"Unable to resolve self-evaluation for paper {paper.uid}.")
 
-    # Final pass to ensure all papers are evaluated exactly k times
+    # Verify all papers are evaluated exactly k times
     for paper in papers:
-        while paper_count[paper] < k:
-            # Find any evaluator who can take the paper
-            possible_evaluators = [
-                student for student in students
-                if paper not in pairs[student]
-            ]
-            if not possible_evaluators:
-                raise ValueError(f"Final reassignment failed for {paper}.")
+        if paper_evaluations[paper] != k:
+            raise ValueError(f"Paper {paper.uid} has {paper_evaluations[paper]} evaluations instead of {k}.")
 
-            # Assign the paper to a valid evaluator
-            evaluator = random.choice(possible_evaluators)
-            pairs[evaluator].append(paper)
-            evaluation_count[evaluator] += 1
-            paper_count[paper] += 1
-            
-    for student in pairs.keys():
-        for paper in pairs[student]:
-            print(paper.uid)
+    # Save PeerEvaluation objects
+    for student, assigned_papers in assignments.items():
+        for paper in assigned_papers:
             new_eval = PeerEvaluation(
-                document = paper,
-                evaluator = student,
-                exam = paper.exam,
-                uid = paper.uid,
-                student = UIDMapping.objects.get(uid=paper.uid).user,
-                ticket=0,
+                document=paper,
+                evaluator=student,
+                exam=paper.exam,
+                uid=paper.uid,
+                student=UIDMapping.objects.get(uid=paper.uid).user,
+                ticket=0
             )
             new_eval.save()
-    return pairs, paper_count
+
+    return assignments, paper_evaluations
+
 
 
 # NOTE: This function renders dashboard for all the roles
@@ -421,7 +453,7 @@ def index(request):
 
         # Get the current time in IST
         current_time = timezone.now().astimezone(india_timezone)
-        exams = Exam.objects.filter(batch__in=batches)
+        exams = Exam.objects.filter(batch__in=batches, completed=False)
         active_exams = []
 
         for exam in exams:
@@ -875,9 +907,13 @@ def examination(request):
             context = {
                 'chart_data': json.dumps(chart_data)
             }
+
             for batch in batches:
                 exams = Exam.objects.filter(batch=batch, completed=False).first()
-                if exams: exams_list.append(exams)
+                if exams:
+                    exams.student_count = UIDMapping.objects.filter(exam=exams).count()
+                    exams.evaluations_pending = PeerEvaluation.objects.filter(exam=exams, score="").count()
+                    exams_list.append(exams)
                 batch_data.append({'batch': batch, 'exams': exams})
 
             return render(request, 'home/teacher/examination.html',  {
@@ -915,7 +951,7 @@ def examination(request):
             for student in students_in_batch:
                 UIDMapping.objects.update_or_create(user=student.student,
                                                     exam=new_exam[0],
-                                                    defaults={'uid': generate_string()})
+                                                    defaults={'uid': generate_random_text()})
         except Exception as e:
             print(e)
             messages.error(request, f'An error occurred: {str(e)}')
@@ -980,7 +1016,7 @@ def peer_evaluation(request):
             batch_id = result.exam.batch.batch_id
             exam_id = result.exam.id
             max_scores = result.exam.max_scores
-            score = sum(eval(result.score))
+            score = sum(result.get_score)
 
             if exam_id not in final_results:
                 final_results[exam_id] = {
@@ -1008,26 +1044,41 @@ def peer_evaluation(request):
 
     if request.method == 'POST':
         if request.user.is_staff:
-            exam_id = json.loads(request.body.decode('utf-8'))['exam_id']
+            data = json.loads(request.body.decode('utf-8'))
+            exam_id = data['exam_id']
             exam_instance = Exam.objects.get(id=exam_id)
-            student_enrollment = StudentEnrollment.objects.filter(batch = exam_instance.batch)
-            peers = [student.student for student in student_enrollment]
-            papers = list(Documents.objects.filter(exam=exam_instance))
-            k = 2
-            incentives = {}
-            success = False
+            if (data['flag']) == 0:
+                print("Here")
+                student_enrollment = [uid.user for uid in UIDMapping.objects.filter(exam=exam_instance)]
+                papers = list(Documents.objects.filter(exam=exam_instance))
+                k = 2
+                incentives = {}
+                success = False
+                attempts = 0
+                max_attempts = 10
 
-            while not success:
-                try:
-                    # Attempt to assign evaluations
-                    assign_evaluations(peers, papers, incentives, k)
-                    success = True  # Exit loop if successful
-                except Exception as e:
-                    # Log the exception and retry
-                    print(f"Error: {e}. Retrying...")
-                    time.sleep(1)
-                    
-            return redirect('examination')
+                while not success and attempts < max_attempts:
+                    try:
+                        # Attempt to assign evaluations
+                        assign_evaluations(student_enrollment, papers, incentives, k)
+                        success = True  # Exit loop if successful
+                    except Exception as e:
+                        # Log the exception and retry
+                        print(f"Error: {e}. Retrying... (Attempt {attempts + 1}/{max_attempts})")
+                        attempts += 1
+                        time.sleep(1)
+
+                if not success:
+                    messages.error(request, 'Failed to assign evaluations after multiple attempts.')
+                    return redirect('examination')
+                        
+                exam_instance.evaluations_sent = True
+                exam_instance.save()
+                return redirect('examination')
+            else:
+                # Raise ticket if higher standard deviation as compared to other evaluations
+                flag_evaluations_with_high_std(exam_instance)
+                return redirect('examination')
 
     else:
         return redirect('home')
@@ -1039,6 +1090,7 @@ def student_eval(request):
     if request.method == "POST":
         try:
             form_data = request.POST
+            print(form_data)
             document_id = int(form_data.get('current_evaluation_id'))
             evaluation = PeerEvaluation.objects.get(id=document_id)
 
@@ -1100,7 +1152,8 @@ def upload_evaluation(request):
 
                 uid_mapping = UIDMapping.objects.filter(user=request.user, exam=exam, uid=qr_content).first()
                 if not uid_mapping:
-                    return redirect('home')
+                    print("No UID Mappings found")
+                    return redirect('examination')
 
                 document = Documents.objects.filter(uid=qr_content).first()
                 if not document:

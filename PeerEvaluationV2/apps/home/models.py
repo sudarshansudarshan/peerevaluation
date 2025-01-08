@@ -42,6 +42,8 @@ class Exam(models.Model):
     k = models.IntegerField(help_text="Number of evaluations for student")
     total_students = models.IntegerField(help_text="Total number of students in the batch")
     completed = models.BooleanField(default=False, help_text="Indicates whether the exam is completed")
+    flags = models.BooleanField(help_text="Indicates whether the evaluation is flagged", default=False)
+    evaluations_sent = models.BooleanField(help_text="Indicates whether the evaluations are sent", default=False)
 
     def __str__(self):
         return f"{self.batch.batch_id}"
@@ -93,6 +95,24 @@ class PeerEvaluation(models.Model):
             return eval(self.score)
         else:
             return [0 for _ in range(self.exam.number_of_questions)]
+        
+    @property
+    def get_score_string(self):
+        output = ''
+        if self.score == "":
+            return "Not Evaluated"
+        else:
+            for i in range(self.exam.number_of_questions):
+                output += f"Q{i+1}: {self.get_score[i]} "
+            return output
+        
+    @property
+    def total(self):
+        if self.score != "":
+            return sum(self.get_score)
+        else:
+            return 0
+
 
 
 # Statistics Model

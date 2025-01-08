@@ -133,7 +133,7 @@
                 <!-- Evaluation Selector -->
                 <div class="form-group">
                     <label for="exam" class="form-label font-weight-bold">Evaluation for</label>                    
-                    <select id="exam_id" name="exam_id" class="form-control custom-select shadow-sm">
+                    <select id="exam_id" name="exam_id" class="form-control custom-select shadow-sm" required>
                       <option selected disabled>Select an exam</option>
                       {% for exam in exams %}
                         <option value="{{ exam.id }}">{{ exam.batch }}</option>
@@ -244,7 +244,7 @@
                             <td class="px-4 py-2">{{ batch.exams.number_of_questions }}</td>
                             <td class="px-4 py-2">{{ batch.exams.max_scores }}</td>
                             <td class="px-4 py-2">{{ batch.exams.k }}</td>
-                            <td class="px-4 py-2">{{ batch.exams.total_students }}</td>
+                            <td class="px-4 py-2">{{ batch.exams.student_count }}</td>
                             <td class="px-4 py-2">
                               <div class="d-flex align-items-center">
                                 <!-- Download Answer Sheet PDFs -->
@@ -259,17 +259,32 @@
                                   </button>
                                 </form>
 
-                                {% if batch.exams.evaluation_received == batch.exams.total_students %}
-                                <!-- Send Documents for Peer Evaluations -->
-                                <button
-                                  type="button" 
-                                  class="btn btn-sm" 
-                                  style="background-color: orange; color: white;" 
-                                  class="tooltip-trigger" 
-                                  data-tooltip="Send Documents for Peer Evaluations"
-                                  onclick="peerEval({{ batch.exams.id }})">
-                                  <i class="fas fa-paper-plane"></i>
-                                </button>
+                                {% if batch.exams.student_count == batch.exams.total_students %}
+                                
+                                  {% if not batch.exams.evaluations_sent %}
+                                    <button
+                                      type="button"
+                                      class="btn btn-sm"
+                                      style="background-color: orange; color: white;" 
+                                      class="tooltip-trigger" 
+                                      data-tooltip="Send Documents for Peer Evaluations"
+                                      onclick="peerEval({{ batch.exams.id }}, 0)">
+                                      <i class="fas fa-paper-plane"></i>
+                                    </button>
+                                  {% endif %}
+
+                                  {% if batch.exams.evaluations_sent and not batch.exams.flags %}
+                                    <button
+                                      type="button"
+                                      class="btn btn-sm" 
+                                      style="background-color: orange; color: white;" 
+                                      class="tooltip-trigger"
+                                      data-tooltip="Send Documents for Peer Evaluations"
+                                      onclick="peerEval({{ batch.exams.id }}, 1)">
+                                      <i class="fas fa-flag"></i>
+                                    </button>
+                                  {% endif %}
+
                                 {% endif %}
 
                                 <!-- Declare Examination Cycle as Completed -->
@@ -497,21 +512,24 @@
       });
     });
 
-    function peerEval(examId) {
+    function peerEval(examId, flag) {
       fetch("/peer_eval/", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           "X-CSRFToken": "{{ csrf_token }}"
         },
-        body: JSON.stringify({ exam_id: examId })
+        body: JSON.stringify({
+          exam_id: examId,
+          flag: flag // 1 if flag is 0
+        })
       })
         .then(response => {
           console.log(examId);
           if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
           }
-          return response.json();
+          location.reload();
         })
         .then(data => {
           console.log(data);
