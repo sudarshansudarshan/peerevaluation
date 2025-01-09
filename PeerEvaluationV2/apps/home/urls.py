@@ -17,7 +17,6 @@ urlpatterns = [
     path('student_eval', views.student_eval, name='student_eval'),
     path('peer_eval/', views.peer_evaluation, name='peer_eval'), # Send students for peer evaluation
     path('upload-evaluation/', views.upload_evaluation, name="upload_evaluation"),
-    path('analytics/', views.analytics, name="analytics"),
     # path('associateTopic/', associateTopic),
     # path('evaluateAnswers/', evaluateAnswers),
     re_path(r'^.*\.*', views.pages, name='pages'),

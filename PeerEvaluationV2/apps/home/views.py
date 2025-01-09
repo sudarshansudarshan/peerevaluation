@@ -121,7 +121,7 @@ def evaluate_answers(answer1, answer2, topic):
 
 import numpy as np
 
-def flag_evaluations_with_high_std(exam_instance, threshold=1.0):
+def flag_evaluations_with_high_std(exam_instance, request, threshold=1.0):
     """
     Flags an exam instance if an evaluation's standard deviation is significantly higher 
     than the average standard deviation of all evaluations.
@@ -134,7 +134,6 @@ def flag_evaluations_with_high_std(exam_instance, threshold=1.0):
 
     # Retrieve all evaluations for the given exam score is not empty string
     evaluations = PeerEvaluation.objects.filter(exam=exam_instance, score__isnull=False)
-    print(evaluations)
     if not evaluations.exists():
         print(f"No evaluations found for exam {exam_instance}.")
         return
@@ -171,18 +170,31 @@ def flag_evaluations_with_high_std(exam_instance, threshold=1.0):
         evaluator_std = evaluator_scores.std()
 
         if evaluator_std > std_threshold:
-            # Raise ticket (or create flag)
             flagged = True
-            evaluation.ticket = True  # Assuming 'flags' field exists in PeerEvaluation
+            evaluation.ticket = True
             evaluation.save()
-
-    # Update the exam instance flag if any evaluation was flagged
-    if flagged:
-        exam_instance.flags = True  # Assuming 'flags' field exists in Exam model
-        exam_instance.save()
-
-    print(f"Analysis complete for exam {exam_instance}. Flags updated.")
-
+        else:
+            incentive = Incentivization.objects.filter(student=evaluation.student, batch=evaluation.exam.batch).first()
+            total_exams = UIDMapping.objects.filter(exam__batch=evaluation.exam.batch).count()
+            alpha = 0.1
+            exam_count = PeerEvaluation.objects.filter(student=evaluation.student, exam__batch=evaluation.exam.batch).count()
+            print(f"Exam count: {exam_count}")
+            incremental_reward = (1 / (1 + math.exp(-alpha * exam_count))) / total_exams
+            
+            if incentive:
+                incentive.rewards = min(incentive.rewards + incremental_reward, 1.0)
+                incentive.exam_count += 1
+                incentive.save()
+            else:
+                Incentivization.objects.create(
+                    student=evaluation.student,
+                    batch=evaluation.exam.batch,
+                    rewards=min(incremental_reward, 1.0),
+                    exam_count=1
+                )
+    # if flagged:
+    #     exam_instance.flags = True
+    #     exam_instance.save()
 
 
 def is_superuser(self):
@@ -895,31 +907,58 @@ def ta_hub(request):
 def examination(request):
 
     if request.method == 'GET':
+        
         if request.user.is_staff:
             batches = Batch.objects.filter(teacher=request.user)
             batch_data = []
             exams_list = []
-            chart_data = {
-                'labels': sorted([2, 4, 5, 2, 3, 5]),
-                'values': [65, 59, 80, 81, 56, 55]
-            }
-            
-            context = {
-                'chart_data': json.dumps(chart_data)
-            }
 
+            # Assuming exams_list and batch_data are already defined
             for batch in batches:
                 exams = Exam.objects.filter(batch=batch, completed=False).first()
+
                 if exams:
-                    exams.student_count = UIDMapping.objects.filter(exam=exams).count()
-                    exams.evaluations_pending = PeerEvaluation.objects.filter(exam=exams, score="").count()
+                    exams.document_count = Documents.objects.filter(exam=exams).count()
+                    evaluations = PeerEvaluation.objects.filter(exam=exams)
+                    student_scores = {}
+                    
+                    # Adjust student scores by dividing by exams.k
+                    for evaluation in evaluations:
+                        if evaluation.student_id not in student_scores:
+                            student_scores[evaluation.student_id] = 0
+                        student_scores[evaluation.student_id] += evaluation.total / exams.k
+                    
+                    # Define bins based on max marks
+                    max_marks = exams.max_scores / exams.k  # Normalize max marks
+                    bin_count = 10  # Define the number of bins
+                    score_bins = np.linspace(0, max_marks, bin_count + 1)  # Create bins
+
+                    # Initialize scores list for histogram
+                    scores_list = {
+                        'labels': [0 for _ in range(len(score_bins) - 1)],  # Initialize counts for each bin
+                        'values': [f"{int(score_bins[i])}-{int(score_bins[i + 1])}" for i in range(len(score_bins) - 1)],
+                    }
+                    
+                    # Distribute scores into bins
+                    for student_id, score in student_scores.items():
+                        for i in range(len(score_bins) - 1):
+                            if score_bins[i] <= score < score_bins[i + 1]:
+                                scores_list['labels'][i] += 1
+                                break
+
+                    # Prepare chart data for visualization
+                    chart_data = {
+                        'labels': scores_list['values'],
+                        'values': scores_list['labels'],
+                    }
                     exams_list.append(exams)
+                
                 batch_data.append({'batch': batch, 'exams': exams})
 
             return render(request, 'home/teacher/examination.html',  {
                 'batch_data': batch_data,
-                'exams': exams_list,
-                'context':context,
+                'exams': exams_list
+                # 'context':context,
             })
 
 
@@ -1009,7 +1048,7 @@ def peer_evaluation(request):
 
     if request.method == 'GET':
         peerevaluations = PeerEvaluation.objects.filter(evaluator=request.user)
-        results = PeerEvaluation.objects.filter(student=request.user)
+        results = PeerEvaluation.objects.filter(student=request.user, exam__completed=True)
         final_results = {}
         for result in results:
             course = result.exam.batch.course.name
@@ -1077,7 +1116,7 @@ def peer_evaluation(request):
                 return redirect('examination')
             else:
                 # Raise ticket if higher standard deviation as compared to other evaluations
-                flag_evaluations_with_high_std(exam_instance)
+                flag_evaluations_with_high_std(exam_instance, request)
                 return redirect('examination')
 
     else:
@@ -1090,7 +1129,6 @@ def student_eval(request):
     if request.method == "POST":
         try:
             form_data = request.POST
-            print(form_data)
             document_id = int(form_data.get('current_evaluation_id'))
             evaluation = PeerEvaluation.objects.get(id=document_id)
 
@@ -1104,19 +1142,11 @@ def student_eval(request):
             evaluation.score = str(evaluations)
             evaluation.ticket = 0
             evaluation.save()
+            messages.success(request, 'Evaluation submitted successfully!')
             return redirect('peer_eval')
         except Exception as e:
             print(f"An error occurred: {str(e)}")
             return redirect('peer_eval')
-
-
-@login_required
-def analytics(request):
-    data = {
-        "students": ["John", "Emma", "Sophia", "Mike", "Sarah"],
-        "marks": [75, 85, 90, 65, 80]
-    }
-    return render(request, 'home/teacher/analytics.html', data)
 
 
 @login_required
@@ -1171,15 +1201,16 @@ def upload_evaluation(request):
             elif request.user.is_teacher():
                 for uploaded_file in uploaded_files:
                     if uploaded_file.content_type != "application/pdf":
-                        continue
+                        return redirect('examination')
                     
                     # Process each file
                     pdf_content = uploaded_file.read()
                     qr_content = convert_pdf_to_image_and_decode_qr(pdf_content)
                     if not qr_content:
-                        continue
+                        return redirect('examination')
                     
                     final_filename = f"{qr_content}.pdf"
+                    print(final_filename)
 
                     uid_mapping = UIDMapping.objects.filter(exam=exam, uid=qr_content).first()
                     if not uid_mapping:
@@ -1207,6 +1238,7 @@ def upload_evaluation(request):
 
 @login_required
 def topic(request):
+
     if request.method == "POST":
         data = request.POST
         topic_name = data.get("topic_name")

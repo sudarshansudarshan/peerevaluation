@@ -13,6 +13,11 @@ class Course(models.Model):
 
     def __str__(self):
         return self.name
+
+    def save(self, *args, **kwargs):
+        if Course.objects.filter(course_id=self.course_id, start_date__lt=self.end_date, end_date__gt=self.start_date).exists():
+            raise ValueError("A course with the same course_id is already running during the specified dates.")
+        super(Course, self).save(*args, **kwargs)
     
 # Batch Model
 class Batch(models.Model):
@@ -129,7 +134,8 @@ class Statistics(models.Model):
 class Incentivization(models.Model):
     batch = models.ForeignKey(Batch, on_delete=models.CASCADE, related_name="incentives")
     student = models.ForeignKey(User, on_delete=models.CASCADE, related_name="incentives")
-    reward_points = models.IntegerField()
+    rewards = models.FloatField(help_text="Rewards for the student")
+    exam_count = models.IntegerField(help_text="Number of exams attempted by the student", default=0)
 
     class Meta:
         unique_together = ('batch', 'student')  # Ensures no duplicate entries for a student in a batch

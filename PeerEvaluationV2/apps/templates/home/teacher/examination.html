@@ -127,41 +127,42 @@
             </div>
             <div class="card-body">
               {% if exams|length != 0 %}
-              <form class="form-horizontal" method="POST" action="{% url 'upload_evaluation' %}" enctype="multipart/form-data">
+              <form class="form-horizontal" method="POST" action="{% url 'upload_evaluation' %}" enctype="multipart/form-data" onsubmit="return validateForm()">
                 {% csrf_token %}
                 
                 <!-- Evaluation Selector -->
                 <div class="form-group">
-                    <label for="exam" class="form-label font-weight-bold">Evaluation for</label>                    
-                    <select id="exam_id" name="exam_id" class="form-control custom-select shadow-sm" required>
-                      <option selected disabled>Select an exam</option>
-                      {% for exam in exams %}
-                        <option value="{{ exam.id }}">{{ exam.batch }}</option>
-                      {% endfor %}
-                    </select>
-                    <small class="text-muted">Select the exam to upload evaluations</small>
+                  <label for="exam" class="form-label font-weight-bold">Evaluation for</label>                    
+                  <select id="exam_id" name="exam_id" class="form-control custom-select shadow-sm" required>
+                    <option selected disabled>Select an exam</option>
+                    {% for exam in exams %}
+                      <option value="{{ exam.id }}">{{ exam.batch }}</option>
+                    {% endfor %}
+                  </select>
+                  <small class="text-muted">Select the exam to upload evaluations</small>
                 </div>
 
                 <!-- File Upload Section -->
                 <div class="form-group">
-                  <label class="form-label font-weight-bold">Upload your evaluations</label>
+                  <label for="evaluationfile" class="form-label font-weight-bold">Upload your evaluations</label>
                   <div class="border border-secondary border-dashed text-center py-4 rounded upload-area" id="upload-area">
                     <i class="fas fa-file-pdf text-primary mb-2" style="font-size: 3rem;"></i>
                     <div class="d-flex justify-content-center align-items-center">
-                      <label for="evaluationfiles" class="text-primary font-weight-bold cursor-pointer">
+                      <label for="evaluationfile" class="text-primary font-weight-bold cursor-pointer">
                         <span>Upload files</span>
-                        <input id="evaluationfile" name="evaluationfile" type="file" class="sr-only" accept=".pdf" {% if user.is_teacher %}multiple{% endif %}>
+                        <input id="evaluationfile" name="evaluationfile" type="file" accept=".pdf" {% if user.is_teacher %}multiple{% endif %} class="sr-only">
                       </label>
                       <p class="ml-1 mb-0">or drag and drop</p>
                     </div>
                     <p class="small text-muted mb-0">Only PDF files are allowed (Max size per file: 5MB)</p>
                   </div>
                 </div>
+                
                 <!-- Submit Button -->
                 <div class="text-right">
-                    <button type="submit" class="btn btn-sm btn-primary shadow tooltip-trigger" data-tooltip="Uploading the selected PDFs for evaluations">
-                      <i class="fas fa-cloud-upload-alt mr-1"></i>Submit
-                    </button>
+                  <button type="submit" class="btn btn-sm btn-primary shadow tooltip-trigger" data-tooltip="Uploading the selected PDFs for evaluations">
+                    <i class="fas fa-cloud-upload-alt mr-1"></i>Submit
+                  </button>
                 </div>
               </form>
               {% else %}
@@ -258,8 +259,7 @@
                                     <i class="fa fa-file-pdf"></i>
                                   </button>
                                 </form>
-
-                                {% if batch.exams.student_count == batch.exams.total_students %}
+                                {% if batch.exams.document_count == batch.exams.total_students %}
                                 
                                   {% if not batch.exams.evaluations_sent %}
                                     <button
@@ -279,7 +279,7 @@
                                       class="btn btn-sm" 
                                       style="background-color: orange; color: white;" 
                                       class="tooltip-trigger"
-                                      data-tooltip="Send Documents for Peer Evaluations"
+                                      data-tooltip="Flag the Evaluations with issues"
                                       onclick="peerEval({{ batch.exams.id }}, 1)">
                                       <i class="fas fa-flag"></i>
                                     </button>
@@ -311,7 +311,7 @@
                                   class="btn btn-sm btn-info mr-2 tooltip-trigger" 
                                   data-toggle="modal" 
                                   data-target="#addTeachingAssistantModal"
-                                  data-tooltip="View Examination Analytics">
+                                  data-tooltip="View Analytics for the Exam">
                                   <i class="fas fa-eye"></i>
                                 </button>
                                 <div id="tooltip" class="tooltip"></div>
@@ -340,15 +340,11 @@
                 <span aria-hidden="true">&times;</span>
               </button>
             </div>
-            
-            
             <div class="card-body">
               <div style="height: 400px;">
                   <canvas id="myChart"></canvas>
               </div>
-          </div>
-      
-
+            </div>
           </div>
         </form>
       </div>
@@ -547,6 +543,15 @@
 </div>
 
 <script>
+    function validateForm() {
+      var examSelect = document.getElementById('exam_id');
+      if (examSelect.value === '') {
+        alert('Please select an exam before submitting.');
+        return false;
+      }
+      return true;
+
+    }
     document.addEventListener("DOMContentLoaded", function () {
         // Parse chart data passed from Django context
         const chartData = JSON.parse('{{ context.chart_data|safe }}');
