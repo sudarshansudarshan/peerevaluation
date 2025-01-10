@@ -70,6 +70,71 @@
       visibility: hidden;
       transition: opacity 0.2s ease-in-out;
     }
+
+    .table.mb-0 {
+      margin-bottom: 0; /* Remove margin below the table */
+    }
+
+    .overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.8);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+    }
+  
+    .overlay-content {
+      background: #fff;
+      padding: 20px;
+      border-radius: 8px;
+      width: 70%;
+      height: 90%;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+  
+    .content-wrapper {
+      display: flex;
+      width: 100%;
+      height: 100%;
+    }
+  
+    .left-pane {
+      flex: 1;
+      padding: 10px;
+      border-right: 1px solid #ddd;
+      overflow: auto;
+    }
+  
+    .right-pane {
+      flex: 1;
+      padding: 20px;
+      overflow-y: auto;
+    }
+  
+    .overlay-content .close-btn {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+    }
+  
+    iframe {
+      border: none;
+    }
+  
+    .form-group {
+      margin-bottom: 15px;
+    }
+  
+    .form-group label {
+      font-weight: bold;
+    }
   </style>
 {% endblock stylesheets %}
 
@@ -96,10 +161,9 @@
     </div>
 
     <div class="container-fluid mt--6">
-      <div class="container-fluid mt--6">
       <div class="row">
         <div class="col-xl-8">
-          <div class="card">
+          <div class="card" style="height: 485px;">
             <div class="card-header border-0">
               <div class="row align-items-center">
                 <div class="col">
@@ -107,7 +171,7 @@
                 </div>
               </div>
             </div>
-            <div class="table-responsive">
+            <div class="table-responsive" style="max-height: 350px; overflow-y: auto;">
               <!-- Courses table -->
               <table class="table align-items-center table-flush" id="courses-table">
                 <thead class="thead-light">
@@ -183,75 +247,90 @@
             </div>
           </div>
         </div>
-        <div class="col-xl-4">
-          <div class="card">
-            <div class="card-header border-0">
-              <div class="row align-items-center">
-                <div class="col">
-                  <h3 class="mb-0">Available Courses</h3>
-                </div>
-              </div>
+        
+         <!-- Course Evaluation -->
+        <div class="col-xl-4 col-lg-6 mb-4">
+          <div class="card" style="height: 485px;">
+          <div class="card-header border-0">
+            <div class="row align-items-center">
+            <div class="col">
+              <h3 class="mb-0">Evaluate Answer Scripts</h3>
             </div>
-            <div class="table-responsive">
-              <!-- Courses table -->
-              <table class="table align-items-center table-flush">
-                <thead class="thead-light">
+            </div>
+          </div>
+          <div class="table-responsive" style="max-height: 350px; overflow-y: auto;">
+            <!-- Projects table -->
+            <table class="table align-items-center table-flush">
+              <thead class="thead-light">
                   <tr>
-                    <th scope="col"></th>
-                    <th scope="col">Date</th>
                     <th scope="col">Course</th>
                     <th scope="col">Batch</th>
-                    <th scope="col">Score</th>
+                    <th scope="col">Evaluate</th>
                   </tr>
                 </thead>
-                <tbody>
-                  {% load static %}
-                  {% for eval in results %}
-                    <tr>
-                      <td>
-                        <!-- Button to toggle collapse -->
-                        <button type="button" class="btn btn-sm btn-primary" data-toggle="collapse" data-target="#details-{{ forloop.counter }}">
-                          >
+              <tbody>
+              {% load static %}
+              {% for eval in evaluations %}
+                <tr>
+                  <td>{{ eval.exam.batch.course.name }}</td>
+                  <td>{{ eval.exam.batch.batch_id }}</td>
+                  <td>
+                      <button
+                        type="button" 
+                        class="btn btn-sm btn-primary" 
+                          onclick="openPDFOverlay('{% static 'documents/' %}{{ eval.document.document }}', '{{ eval.id }}')">
+                        Evaluate
+                      </button>
+                  </td>
+                </tr>
+                <div id="pdfOverlay" class="overlay">
+                  <div class="overlay-content">
+                    <button class="btn btn-danger close-btn" onclick="closeOverlay()">Close</button>
+                    <div class="content-wrapper">
+                    <!-- Left: PDF Viewer -->
+                    <div class="left-pane">
+                      <iframe id="pdfFrame" src="" style="width: 100%; height: 100%;" frameborder="0"></iframe>
+                    </div>
+                    <!-- Right: Evaluation Form -->
+                    <div class="right-pane">
+                      <h4>Evaluation Form</h4>
+                      <div class="exam-details mb-4">
+                      <p><strong>Course:</strong> {{ eval.exam.batch.course.name }}</p>
+                      <p><strong>Batch:</strong> {{ eval.exam.batch.batch_id }}</p>
+                      <p><strong>Total Questions:</strong> {{ eval.exam.number_of_questions }}</p>
+                      <p><strong>Total Marks:</strong> {{ eval.exam.max_scores }}</p>
+                      </div>
+                      <form id="assessment-form" class="space-y-4 overflow-y-auto max-h-[calc(100vh-200px)]" method="POST" action="{% url 'student_eval' %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="current_evaluation_id" id="current_evaluation_id" value="Hello">
+                        <input type="hidden" name="is_ta_evaluating" id="is_ta_evaluating" value="true">
+                        {% for i in eval.get_score %}
+                          <div class="form-group">
+                            <label for="question-{{ forloop.counter }}">Question: {{ forloop.counter }}</label>
+                            <input type="number" id="question-{{ forloop.counter }}" name="question-{{ forloop.counter }}" min="0" class="form-control d-inline-block w-auto" max="{{ eval.exam.marks_per_question }}" value="0" placeholder="Score" required> /{{ eval.exam.marks_per_question }}
+                            <input type="text" id="feedback-{{ forloop.counter }}" name="feedback-{{ forloop.counter }}" class="form-control mt-2" placeholder="Comment">
+                          </div>
+                        {% endfor %}
+                        <!-- Submit Button -->
+                        <button id="submit-btn" type="submit"
+                          class="btn btn-primary w-100 mt-4">
+                          Submit
                         </button>
-                      </td>
-                      <td>{{ eval.date }}</td>
-                      <td>{{ eval.course }}</td>
-                      <td>{{ eval.batch_id }}</td>
-                      <td><b>{{ eval.score }}</b>/{{ eval.max_scores }}</td>
-                    </tr>
-                    <!-- Collapsible row -->
-                    <tr id="details-{{ forloop.counter }}" class="collapse">
-                      <td colspan="5">
-                        <!-- Inner table or detailed information -->
-                        <table class="table">
-                          <thead>
-                            <tr>
-                              <th scope="col">Detail 1</th>
-                              <th scope="col">Detail 2</th>
-                              <th scope="col">Detail 3</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {% for detail in eval.details %}
-                              <tr>
-                                <td>{{ detail.detail1 }}</td>
-                                <td>{{ detail.detail2 }}</td>
-                                <td>{{ detail.detail3 }}</td>
-                              </tr>
-                            {% endfor %}
-                          </tbody>
-                        </table>
-                      </td>
-                    </tr>
-                  {% endfor %}
-                  {% if results|length == 0 %}
-                    <tr>
-                      <td colspan="6" class="text-center">No pending enrollments</td>
-                    </tr>
-                  {% endif %}
-                </tbody>
-              </table>
-            </div>
+                      </form>
+                    </div>
+                    </div>
+                  </div>
+                </div>
+                
+              {% endfor %}
+              {% if evaluations|length == 0 %}
+              <tr>
+              <td colspan="6" class="text-center">No pending enrollments</td>
+              </tr>
+              {% endif %}
+              </tbody>
+            </table>
+          </div>
           </div>
         </div>
     </div>
@@ -358,6 +437,30 @@
       });
   }
 
+  // Open the PDF overlay and load the PDF
+    function openPDFOverlay(pdfUrl, current_evaluation_id) {
+      const pdfFrame = document.getElementById('pdfFrame');
+      pdfFrame.src = pdfUrl; // Set the PDF URL
+      document.getElementById('pdfOverlay').style.display = 'flex';
+
+      const eval_id = document.getElementById('current_evaluation_id').value;
+      document.getElementById('current_evaluation_id').value = current_evaluation_id;
+    }
+  
+    // Close the overlay
+    function closeOverlay() {
+      document.getElementById('pdfOverlay').style.display = 'none';
+      const pdfFrame = document.getElementById('pdfFrame');
+      pdfFrame.src = ''; // Clear the iframe source
+    }
+  
+    // Submit the evaluation
+    function submitEvaluation() {
+      const score = document.getElementById('evaluationScore').value;
+      const remarks = document.getElementById('evaluationRemarks').value;
+      alert(`Evaluation submitted:\nScore: ${score}\nRemarks: ${remarks}`);
+      closeOverlay();
+    }
 </script>
 
   <script src="/static/assets/vendor/chart.js/dist/Chart.min.js"></script>

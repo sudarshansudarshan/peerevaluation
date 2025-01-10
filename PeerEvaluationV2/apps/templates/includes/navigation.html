@@ -1,22 +1,22 @@
 <nav class="navbar navbar-top navbar-expand navbar-dark bg-primary border-bottom">
   <div class="container-fluid">
     <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <!-- Messages Section -->
+      <div id="message-container" class="fixed top-0 left-1/2 transform -translate-x-1/2 space-y-4"></div>
       <!-- Navbar links -->
-      <ul class="navbar-nav align-items-center  ml-md-auto ">
-
-      </ul>
-      <ul class="navbar-nav align-items-center  ml-auto ml-md-0 ">
+      <ul class="navbar-nav align-items-center ml-md-auto"></ul>
+      <ul class="navbar-nav align-items-center ml-auto ml-md-0">
         <li class="nav-item dropdown">
           <a class="nav-link pr-0" href="#" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
             <div class="media align-items-center">
-              <div class="media-body  ml-2  d-none d-lg-block">
-                <span class="mb-0 text-sm  font-weight-bold">
+              <div class="media-body ml-2 d-none d-lg-block">
+                <span class="mb-0 text-sm font-weight-bold" title="Click here to view more options">
                   {{ request.user.username }}
                 </span>
               </div>
             </div>
           </a>
-          <div class="dropdown-menu  dropdown-menu-right ">
+          <div class="dropdown-menu dropdown-menu-right">
             <div class="dropdown-header noti-title">
               <h6 class="text-overflow m-0">Welcome!</h6>
             </div>
@@ -35,3 +35,70 @@
     </div>
   </div>
 </nav>
+
+<style>
+  #message-container {
+    position: fixed;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1050;
+    pointer-events: none;
+  }
+
+  .message {
+    display: inline-block;
+    background: rgba(0, 0, 0, 0.7);
+    color: white;
+    padding: 10px 20px;
+    border-radius: 25px;
+    font-size: 0.9rem;
+    text-align: center;
+    margin-top: 1rem;
+    opacity: 0;
+    animation: slide-down 4s forwards ease-in-out;
+  }
+
+  @keyframes slide-down {
+    0% {
+      transform: translateY(-100%);
+      opacity: 0;
+    }
+    10% {
+      transform: translateY(0);
+      opacity: 1;
+    }
+    90% {
+      opacity: 1;
+    }
+    100% {
+      transform: translateY(-100%);
+      opacity: 0;
+    }
+  }
+</style>
+
+<script>
+  function showMessage(messageContent) {
+    // Create a new div for the message
+    const messageDiv = document.createElement('div');
+    messageDiv.classList.add('message');
+    messageDiv.textContent = messageContent;
+
+    // Append the new message to the container
+    const container = document.getElementById('message-container');
+    container.appendChild(messageDiv);
+
+    // Remove the message from the DOM after the animation ends
+    setTimeout(() => {
+      container.removeChild(messageDiv);
+    }, 4000); // 4 seconds for animation
+  }
+
+  // Example of displaying messages from the Django template
+  window.onload = function () {
+    {% for message in messages %}
+      showMessage("{{ message }}");
+    {% endfor %}
+  };
+</script>

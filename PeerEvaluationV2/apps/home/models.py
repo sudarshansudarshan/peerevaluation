@@ -141,7 +141,7 @@ class Incentivization(models.Model):
         unique_together = ('batch', 'student')  # Ensures no duplicate entries for a student in a batch
 
     def __str__(self):
-        return f"{self.student.username} - {self.reward_points} points in {self.batch.batch_id}"
+        return f"{self.student.username} - {self.rewards} points in {self.batch.batch_id}"
     
 
     

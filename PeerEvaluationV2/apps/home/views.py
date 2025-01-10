@@ -14,9 +14,11 @@ from django.db import IntegrityError
 import zipfile
 import random
 import string
+import ast
 import array
 import csv
 import json
+import pandas as pd
 from datetime import datetime, timedelta
 from django.db.models import ExpressionWrapper, F, DateTimeField
 from django.utils import timezone
@@ -26,7 +28,7 @@ from pyzbar.pyzbar import decode
 from PIL import Image
 import io
 import tempfile
-from django.db.models import Avg, StdDev
+from django.db.models import Avg, StdDev, Q
 from django.http import HttpResponse, FileResponse
 from django.contrib.auth.decorators import user_passes_test
 from fpdf import FPDF
@@ -174,24 +176,27 @@ def flag_evaluations_with_high_std(exam_instance, request, threshold=1.0):
             evaluation.ticket = True
             evaluation.save()
         else:
-            incentive = Incentivization.objects.filter(student=evaluation.student, batch=evaluation.exam.batch).first()
+            incentive = Incentivization.objects.filter(student=evaluation.evaluator, batch=evaluation.exam.batch).first()
             total_exams = UIDMapping.objects.filter(exam__batch=evaluation.exam.batch).count()
             alpha = 0.1
-            exam_count = PeerEvaluation.objects.filter(student=evaluation.student, exam__batch=evaluation.exam.batch).count()
+            exam_count = PeerEvaluation.objects.filter(student=evaluation.evaluator, exam__batch=evaluation.exam.batch, score__isnull=False).values('exam_id').distinct().count()
             print(f"Exam count: {exam_count}")
             incremental_reward = (1 / (1 + math.exp(-alpha * exam_count))) / total_exams
             
             if incentive:
+                print(incentive)
                 incentive.rewards = min(incentive.rewards + incremental_reward, 1.0)
-                incentive.exam_count += 1
+                incentive.exam_count = exam_count
                 incentive.save()
             else:
+                print(incentive)
                 Incentivization.objects.create(
-                    student=evaluation.student,
+                    student=evaluation.evaluator,
                     batch=evaluation.exam.batch,
                     rewards=min(incremental_reward, 1.0),
                     exam_count=1
                 )
+    
     # if flagged:
     #     exam_instance.flags = True
     #     exam_instance.save()
@@ -217,6 +222,10 @@ User.add_to_class('is_staff', is_staff)
 def is_teacher(self):
     return self.is_staff and not self.is_superuser
 User.add_to_class('is_teacher', is_teacher)
+
+def is_ta(self):
+    return TeachingAssistantAssociation.objects.filter(teaching_assistant=self).exists()
+User.add_to_class('is_ta', is_ta)
 
 def generate_random_text():
     return ''.join(random.choices(string.ascii_lowercase, k=10))
@@ -864,7 +873,9 @@ def ta_hub(request):
 
     # Fetch data for TA hub
     if request.method == 'GET':
-        batches = Batch.objects.filter(teacher=request.user)
+        batches = Batch.objects.filter(ta_associations__teaching_assistant=request.user)
+        peerevaluations = PeerEvaluation.objects.filter(exam__batch__in=batches).filter(Q(score="") | Q(ticket__gt=0))
+
         tas = [{
             'batch': ta.batch,
             'batch_id': ta.batch.id,
@@ -881,7 +892,7 @@ def ta_hub(request):
                 for student in StudentEnrollment.objects.filter(batch=ta.batch.id, approval_status=False).order_by('approval_status')
             ],
         } for ta in TeachingAssistantAssociation.objects.filter(teaching_assistant=request.user)]
-        return render(request, 'home/student/ta_hub.html', {'batches': batches, 'ta': tas, 'is_ta': len(tas) > 0})
+        return render(request, 'home/student/ta_hub.html', {'evaluations': peerevaluations, 'batches': batches, 'ta': tas, 'is_ta': len(tas) > 0})
 
     # Associate Teaching associate with batch
     if request.method == 'POST':
@@ -912,8 +923,8 @@ def examination(request):
             batches = Batch.objects.filter(teacher=request.user)
             batch_data = []
             exams_list = []
+            chart_data_list = {}  # To store histogram and pie chart data for each exam
 
-            # Assuming exams_list and batch_data are already defined
             for batch in batches:
                 exams = Exam.objects.filter(batch=batch, completed=False).first()
 
@@ -921,44 +932,59 @@ def examination(request):
                     exams.document_count = Documents.objects.filter(exam=exams).count()
                     evaluations = PeerEvaluation.objects.filter(exam=exams)
                     student_scores = {}
-                    
+
                     # Adjust student scores by dividing by exams.k
                     for evaluation in evaluations:
                         if evaluation.student_id not in student_scores:
                             student_scores[evaluation.student_id] = 0
                         student_scores[evaluation.student_id] += evaluation.total / exams.k
-                    
-                    # Define bins based on max marks
-                    max_marks = exams.max_scores / exams.k  # Normalize max marks
-                    bin_count = 10  # Define the number of bins
-                    score_bins = np.linspace(0, max_marks, bin_count + 1)  # Create bins
+
+                    # Define bins for score histogram
+                    max_marks = exams.max_scores  # Total maximum marks
+                    bin_count = 10
+                    score_bins = np.linspace(0, max_marks, bin_count + 1)  # Create score bins
+
+                    # Define bins for percentage pie chart
+                    percentage_bins = np.linspace(0, 100, bin_count + 1)  # Percentage bins
 
                     # Initialize scores list for histogram
-                    scores_list = {
-                        'labels': [0 for _ in range(len(score_bins) - 1)],  # Initialize counts for each bin
+                    histogram_data = {
+                        'labels': [0 for _ in range(len(score_bins) - 1)],
                         'values': [f"{int(score_bins[i])}-{int(score_bins[i + 1])}" for i in range(len(score_bins) - 1)],
                     }
-                    
-                    # Distribute scores into bins
+
+                    # Initialize percentage list for pie chart
+                    percentage_data = {
+                        'labels': [0 for _ in range(len(percentage_bins) - 1)],
+                        'values': [f"{int(percentage_bins[i])}%-{int(percentage_bins[i + 1])}%" for i in range(len(percentage_bins) - 1)],
+                    }
+
+                    # Distribute scores into bins for histogram
                     for student_id, score in student_scores.items():
                         for i in range(len(score_bins) - 1):
                             if score_bins[i] <= score < score_bins[i + 1]:
-                                scores_list['labels'][i] += 1
+                                histogram_data['labels'][i] += 1
                                 break
 
-                    # Prepare chart data for visualization
-                    chart_data = {
-                        'labels': scores_list['values'],
-                        'values': scores_list['labels'],
-                    }
-                    exams_list.append(exams)
-                
-                batch_data.append({'batch': batch, 'exams': exams})
+                    # Distribute percentages into bins for pie chart
+                    for student_id, score in student_scores.items():
+                        percentage = (score / max_marks) * 100  # Convert score to percentage
+                        for i in range(len(percentage_bins) - 1):
+                            if percentage_bins[i] <= percentage < percentage_bins[i + 1]:
+                                percentage_data['labels'][i] += 1
+                                break
 
-            return render(request, 'home/teacher/examination.html',  {
+                    # Combine both datasets
+                    exams.graphs = {
+                        'histogram': histogram_data,
+                        'pie_chart': percentage_data,
+                    }
+                    print(exams.graphs)
+
+                batch_data.append({'batch': batch, 'exams': exams})
+            return render(request, 'home/teacher/examination.html', {
                 'batch_data': batch_data,
-                'exams': exams_list
-                # 'context':context,
+                'exams': exams_list,
             })
 
 
@@ -1007,13 +1033,13 @@ def examination(request):
                     exam.delete()
                     messages.success(request, 'Exam deleted successfully!')
                 except json.JSONDecodeError:
-                    messages.error(request, 'Invalid JSON data.')
+                    print(request, 'Invalid JSON data.')
                 except Exam.DoesNotExist:
-                    messages.error(request, 'Exam not found.')
+                    print(request, 'Exam not found.')
                 except Exception as e:
-                    messages.error(request, f'An error occurred: {str(e)}')
+                    print(request, f'An error occurred: {str(e)}')
             else:
-                messages.error(request, 'No data provided.')
+                pass
             return redirect('examination')
     
     
@@ -1115,7 +1141,6 @@ def peer_evaluation(request):
                 exam_instance.save()
                 return redirect('examination')
             else:
-                # Raise ticket if higher standard deviation as compared to other evaluations
                 flag_evaluations_with_high_std(exam_instance, request)
                 return redirect('examination')
 
@@ -1131,19 +1156,38 @@ def student_eval(request):
             form_data = request.POST
             document_id = int(form_data.get('current_evaluation_id'))
             evaluation = PeerEvaluation.objects.get(id=document_id)
-
-            if evaluation.score and request.user.is_student:
-                return redirect('peer_eval')
-            
             number_of_questions = evaluation.exam.number_of_questions
             evaluations = [int(form_data.get(f'question-{i}', 0)) for i in range(1, number_of_questions + 1)]
+            is_ta_evaluating = form_data.get('is_ta_evaluating') == 'true'
+            if request.user.is_ta:
+                incentive = Incentivization.objects.filter(student=evaluation.evaluator, batch=evaluation.exam.batch).first()
+                total_exams = UIDMapping.objects.filter(exam__batch=evaluation.exam.batch).count()
+                alpha = 0.1
+                exam_count = PeerEvaluation.objects.filter(student=evaluation.evaluator, exam__batch=evaluation.exam.batch, score__isnull=False).values('exam_id').distinct().count()
+                reward = (1 if evaluation.score != "" and (eval(evaluation.score) == evaluations) else -1) * (1 / (1 + math.exp(-alpha * exam_count))) / total_exams
+                if evaluation.score != "" and (eval(evaluation.score) == evaluations):
+                    evaluation.evaluator = request.user
+                if incentive:
+                    incentive.rewards = min(incentive.rewards + reward, 1.0)
+                    incentive.exam_count = exam_count
+                else:
+                    incentive = Incentivization(
+                        student=evaluation.evaluator,
+                        batch=evaluation.exam.batch,
+                        rewards=reward,
+                        exam_count=1
+                    )
+                if is_ta_evaluating and not request.user.is_ta:
+                    incentive.rewards = 0
+                incentive.save()
+
             feedback = [form_data.get(f'feedback-{i}', '').strip() for i in range(1, number_of_questions + 1)]
             evaluation.feedback = feedback
             evaluation.score = str(evaluations)
             evaluation.ticket = 0
             evaluation.save()
             messages.success(request, 'Evaluation submitted successfully!')
-            return redirect('peer_eval')
+            return redirect('ta_hub' if request.user.is_ta else 'peer_eval')
         except Exception as e:
             print(f"An error occurred: {str(e)}")
             return redirect('peer_eval')
@@ -1234,6 +1278,91 @@ def upload_evaluation(request):
                           {"error": f"An error occurred while processing the files: {str(e)}"})
 
     return render(request, "home/student/peer_evaluation.html")
+
+
+from django.utils.timezone import is_aware
+
+def export_evaluations_to_csv(request, exam_id):
+    # Fetch all evaluations with the required fields
+    evaluations = PeerEvaluation.objects.filter(exam_id=int(exam_id)).values(
+        'evaluator_id', 'evaluated_on', 'document_id', 'student_id', 
+        'exam_id', 'feedback', 'ticket', 'score'
+    )
+
+    # Convert the queryset to a DataFrame
+    df_evaluations = pd.DataFrame(evaluations)
+
+    # Handle empty data
+    if df_evaluations.empty:
+        return HttpResponse("No evaluations available.", content_type="text/plain")
+
+    # Convert timezone-aware datetimes to timezone-unaware
+    for col in ['evaluated_on', 'deadline']:
+        if col in df_evaluations.columns:
+            df_evaluations[col] = df_evaluations[col].apply(
+                lambda dt: dt.replace(tzinfo=None) if is_aware(dt) else dt
+            )
+
+    # Helper function to safely parse and calculate average scores
+    def calculate_avg_scores(scores):
+        try:
+            # Parse scores into lists of numbers and calculate the average
+            score_lists = [ast.literal_eval(score) for score in scores if isinstance(score, str)]
+            flattened_scores = [item for sublist in score_lists for item in sublist]  # Flatten the list of lists
+            return sum(flattened_scores) / len(flattened_scores) if flattened_scores else 0
+        except (ValueError, SyntaxError):
+            # Return 0 if parsing fails
+            return 0
+
+    # Prepare 'Marks Distribution' sheet
+    df_avg_marks = df_evaluations.groupby(['document_id']).agg({'score': calculate_avg_scores}).reset_index()
+    df_avg_marks.rename(columns={'score': 'avg_marks'}, inplace=True)
+
+    # Add student details using UIDMapping and Documents models
+    student_data = []
+    for _, row in df_avg_marks.iterrows():
+        try:
+            # Get the document details
+            doc = Documents.objects.get(id=row['document_id'])
+            # Get the UIDMapping for the document's UID and exam
+            uid_mapping = UIDMapping.objects.get(uid=doc.uid, exam=doc.exam)
+            # Fetch the corresponding user
+            student = uid_mapping.user
+            student_data.append({
+                'Document ID': row['document_id'],
+                'Student Name': f"{student.first_name} {student.last_name} ({student.username})",
+                'Average Marks': row['avg_marks']
+            })
+        except Documents.DoesNotExist:
+            student_data.append({
+                'Document ID': row['document_id'],
+                'Student Name': 'Unknown',
+                'Average Marks': row['avg_marks']
+            })
+        except UIDMapping.DoesNotExist:
+            student_data.append({
+                'Document ID': row['document_id'],
+                'Student Name': 'UID Mapping Not Found',
+                'Average Marks': row['avg_marks']
+            })
+
+    # Convert to DataFrame for Sheet 1
+    df_sheet1 = pd.DataFrame(student_data)
+
+    # Generate Excel file with the processed data
+    with pd.ExcelWriter('evaluations.xlsx', engine='openpyxl') as writer:
+        # Write 'Marks Distribution' sheet
+        df_sheet1.to_excel(writer, sheet_name='Marks Distribution', index=False)
+        # Write raw evaluations data to another sheet
+        df_evaluations.to_excel(writer, sheet_name='Evaluations', index=False)
+
+    # Read the file and prepare response
+    with open('evaluations.xlsx', 'rb') as f:
+        response = HttpResponse(f.read(), content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+        response['Content-Disposition'] = 'attachment; filename=evaluations.xlsx'
+    os.remove('evaluations.xlsx')
+
+    return response
 
 
 @login_required

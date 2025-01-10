@@ -4,85 +4,60 @@
 
 <!-- Specific CSS goes HERE -->
 {% block stylesheets %}
-  <style>
-    .upload-area {
-      background-color: #f9f9f9;
-      transition: background-color 0.3s ease;
+<style>
+  .upload-area {
+    background-color: #f9f9f9;
+    transition: background-color 0.3s ease, box-shadow 0.3s ease;
+  }
+
+  .upload-area.upload-area-hover {
+    background-color: #e6f7ff;
+    box-shadow: 0 0 10px rgba(0, 123, 255, 0.5);
+  }
+
+  .tooltip-trigger {
+    position: relative;
+  }
+
+  .tooltip-trigger:hover::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: 125%; /* Position above the button */
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: #333;
+    color: #fff;
+    padding: 5px 10px;
+    border-radius: 4px;
+    font-size: 12px;
+    white-space: nowrap;
+    z-index: 1000;
+  }
+
+  .tooltip-trigger:hover::before {
+    content: '';
+    position: absolute;
+    bottom: 120%; /* Adjust for better alignment */
+    left: 50%;
+    transform: translateX(-50%);
+    border-width: 5px;
+    border-style: solid;
+    border-color: transparent transparent #333 transparent;
+  }
+
+  .fade-out {
+    animation: fadeOut 0.5s forwards;
+  }
+
+  @keyframes fadeOut {
+    from {
+      opacity: 1;
     }
-
-    .upload-area:hover {
-      background-color: #f1f1f1;
-      cursor: pointer;
+    to {
+      opacity: 0;
     }
-
-    .upload-area i {
-      transition: transform 0.3s ease;
-    }
-
-    .upload-area:hover i {
-      transform: scale(1.2);
-    }
-
-    label.text-primary.font-weight-bold {
-      cursor: pointer;
-      transition: color 0.3s ease;
-    }
-
-    label.text-primary.font-weight-bold:hover {
-      color: #0056b3;
-    }
-
-    .card-header.bg-primary {
-      background: linear-gradient(90deg, #007bff, #0056b3);
-    }
-
-    .card-header h3 {
-      font-size: 1.25rem;
-      letter-spacing: 0.5px;
-    }
-    .upload-area-hover {
-      background-color: #e6f7ff; /* Light blue background when hovering */
-      border-color: #007bff; /* Highlight border color */
-    }
-    .tooltip-trigger {
-  position: relative;
-}
-
-.tooltip-trigger:hover::after {
-  content: attr(data-tooltip);
-  position: absolute;
-  bottom: 100%; /* Position above the button */
-  left: 50%;
-  transform: translateX(-50%);
-  background-color: #333;
-  color: #fff;
-  padding: 5px 10px;
-  border-radius: 4px;
-  font-size: 12px;
-  white-space: nowrap;
-  z-index: 1000;
-  opacity: 1;
-  visibility: visible;
-}
-
-.tooltip-trigger:hover::before {
-  content: '';
-  position: absolute;
-  bottom: 95%;
-  left: 50%;
-  transform: translateX(-50%);
-  border-width: 5px;
-  border-style: solid;
-  border-color: transparent transparent #333 transparent;
-  z-index: 1000;
-}
-
-.tooltip-trigger::after, .tooltip-trigger::before {
-  opacity: 0;
-  visibility: hidden;
-  transition: opacity 0.2s ease-in-out;
-}
-  </style>
+  }
+</style>
 {% endblock stylesheets %}
 
 {% block content %}
@@ -101,10 +76,6 @@
                   <li class="breadcrumb-item active" aria-current="page">TA Hub</li>
                 </ol>
               </nav>
-            </div>
-            <div class="col-lg-6 col-5 text-right">
-              <a href="#" class="btn btn-sm btn-neutral">New</a>
-              <a href="#" class="btn btn-sm btn-neutral">Filters</a>
             </div>
           </div>
         </div>
@@ -304,14 +275,14 @@
                                   onclick="deleteExamination({{ batch.exams.id }})">
                                   <i class="fas fa-trash"></i>
                                 </button>
-
                                 <!-- View Examination Analytics -->
                                 <button
                                   type="button" 
                                   class="btn btn-sm btn-info mr-2 tooltip-trigger" 
                                   data-toggle="modal" 
                                   data-target="#addTeachingAssistantModal"
-                                  data-tooltip="View Analytics for the Exam">
+                                  data-tooltip="View Analytics for the Exam"
+                                  onclick="storeExamData({{ batch.exams.graphs }})">
                                   <i class="fas fa-eye"></i>
                                 </button>
                                 <div id="tooltip" class="tooltip"></div>
@@ -330,210 +301,204 @@
     </div>
 
     <div class="modal fade" id="addTeachingAssistantModal" tabindex="-1" role="dialog" aria-labelledby="addTeachingAssistantModalLabel" aria-hidden="true">
-      <div class="modal-dialog modal-fullscreen" role="document">
-        <form method="POST" action="{% url 'ta_hub' %}">
-          {% csrf_token %}
-          <div class="modal-content">
-            <div class="modal-header">
-              <h5 class="modal-title" id="addTeachingAssistantModalLabel">Analytics: Marks vs No of Students</h5>
-              <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                <span aria-hidden="true">&times;</span>
-              </button>
+      <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content shadow-lg rounded">
+          <div class="modal-header">
+            <h5 class="modal-title" id="addTeachingAssistantModalLabel">
+              <i class="fas fa-chart-bar mr-2"></i> Analytics
+            </h5>
+            <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
+              <span aria-hidden="true">&times;</span>
+            </button>
+          </div>
+          <div class="modal-body bg-light">
+            <!-- Histogram Chart -->
+            <div class="card mb-4 shadow-sm">
+              <div class="card-header bg-info text-white">
+                <h6 class="mb-0"><i class="fas fa-chart-line mr-2"></i> Score Distribution (Histogram)</h6>
+              </div>
+              <div class="card-body">
+                <div class="chart-container" style="height: 400px;">
+                  <canvas id="histogramChart"></canvas>
+                </div>
+              </div>
             </div>
-            <div class="card-body">
-              <div style="height: 400px;">
-                  <canvas id="myChart"></canvas>
+            <!-- Pie Chart -->
+            <div class="card mb-4 shadow-sm">
+              <div class="card-header bg-success text-white">
+                <h6 class="mb-0"><i class="fas fa-chart-pie mr-2"></i> Percentage Distribution (Pie Chart)</h6>
+              </div>
+              <div class="card-body">
+                <div class="chart-container" style="height: 400px;">
+                  <canvas id="pieChart"></canvas>
+                </div>
               </div>
             </div>
           </div>
-        </form>
+          <div class="modal-footer bg-light d-flex justify-content-between">
+            <small class="text-muted">Data visualization for exam analytics.</small>
+            <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">
+              <i class="fas fa-times mr-1"></i> Close
+            </button>
+          </div>
+        </div>
       </div>
     </div>
 
 
-    {% include "includes/footer.html" %}
+{% include "includes/footer.html" %}
 
 {% endblock content %}
 
 <!-- Specific JS goes HERE --> 
 {% block javascripts %}
 
-    <script>
-      function deleteExamination(exam_id) {
-        const csrfToken = "{{ csrf_token }}"; // CSRF token from Django context
-        const url = "{% url 'examination' %}"; // Correctly resolved URL
-        fetch(url, {
-          method: 'DELETE',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': csrfToken,
-          },
-          body: JSON.stringify({ exam_id: exam_id })
-        })
-        .then(response => {
-          if (response.ok) {
-            location.reload();
-          } else {
-            console.error('Failed to delete the examination.');
-          }
-        })
-        .catch(error => {
-          console.error('Error:', error);
-        });
-      };
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+  // Drag-and-Drop Enhancements
+  const uploadArea = document.querySelector('.upload-area');
+  const fileInput = document.querySelector('#evaluationfile');
+  const fileNameDisplay = document.createElement('div');
+  fileNameDisplay.classList.add('small', 'text-muted', 'mb-0', 'font-weight-bold');
+  fileNameDisplay.textContent = 'No files selected yet.';
+  uploadArea.appendChild(fileNameDisplay);
 
-    // Select the upload area, file input, and file name display container
-    const uploadArea = document.querySelector('.upload-area');
-    const fileInput = document.querySelector('#evaluationfile');
-    const fileNameDisplay = document.createElement('div');
+  let histogramData = null;
+  let pieChartData = null;
 
-    // Style the file name display
-    fileNameDisplay.classList.add('small', 'text-muted', 'mb-0', 'font-weight-bold');
-    fileNameDisplay.textContent = 'No files selected yet.';
-    uploadArea.appendChild(fileNameDisplay);
+  const preventDefaults = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
 
-    // Prevent default behaviors for drag events
-    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(event => {
-      uploadArea.addEventListener(event, e => e.preventDefault());
-      uploadArea.addEventListener(event, e => e.stopPropagation());
-    });
+  const highlight = () => uploadArea.classList.add('upload-area-hover');
+  const unhighlight = () => uploadArea.classList.remove('upload-area-hover');
 
-    // Add styles for drag events
-    ['dragenter', 'dragover'].forEach(event => {
-      uploadArea.addEventListener(event, () => {
-        uploadArea.classList.add('upload-area-hover');
+  ['dragenter', 'dragover'].forEach(event => {
+    uploadArea.addEventListener(event, preventDefaults);
+    uploadArea.addEventListener(event, highlight);
+  });
+
+  ['dragleave', 'drop'].forEach(event => {
+    uploadArea.addEventListener(event, preventDefaults);
+    uploadArea.addEventListener(event, unhighlight);
+  });
+
+  const updateFileDisplay = (files) => {
+    const validFilesCount = [...files].filter(file => file.type === 'application/pdf').length;
+    const invalidFilesCount = files.length - validFilesCount;
+
+    fileNameDisplay.textContent = `Valid PDFs: ${validFilesCount}, Invalid: ${invalidFilesCount}`;
+    fileNameDisplay.style.color = validFilesCount ? 'green' : 'red';
+  };
+
+  uploadArea.addEventListener('drop', (e) => {
+    const files = e.dataTransfer.files;
+    fileInput.files = files;
+    updateFileDisplay(files);
+  });
+
+  fileInput.addEventListener('change', () => updateFileDisplay(fileInput.files));
+
+  // AJAX Helper for Feedback and Refresh
+  const handleAJAX = async (url, method, body, successMessage) => {
+    try {
+      const response = await fetch(url, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': "{{ csrf_token }}",
+        },
+        body: JSON.stringify(body),
       });
-    });
 
-    ['dragleave', 'drop'].forEach(event => {
-      uploadArea.addEventListener(event, () => {
-        uploadArea.classList.remove('upload-area-hover');
-      });
-    });
-
-    // Function to update the file display with count only
-    const updateFileDisplay = files => {
-      fileNameDisplay.innerHTML = ''; // Clear previous content
-      if (files.length) {
-        const validFilesCount = Array.from(files).filter(file => file.type === 'application/pdf').length;
-        const invalidFilesCount = files.length - validFilesCount;
-
-        const validFilesInfo = document.createElement('p');
-        validFilesInfo.classList.add('text-success', 'small', 'text-muted', 'mb-0', 'font-weight-bold');
-        validFilesInfo.textContent = `Valid PDF files: ${validFilesCount}`;
-        fileNameDisplay.appendChild(validFilesInfo);
-
-        if (invalidFilesCount > 0) {
-          const invalidFilesInfo = document.createElement('p');
-          invalidFilesInfo.classList.add('text-danger', 'small', 'text-muted', 'mb-0', 'font-weight-bold');
-          invalidFilesInfo.textContent = `Invalid files: ${invalidFilesCount}`;
-          fileNameDisplay.appendChild(invalidFilesInfo);
-        }
+      if (response.ok) {
+        console.log(successMessage);
+        document.body.classList.add('fade-out');
+        setTimeout(() => location.reload(), 500);
       } else {
-        fileNameDisplay.textContent = 'No files selected yet.';
-        fileNameDisplay.classList.remove('text-danger', 'text-success');
+        console.error(`Error: ${response.status}`);
       }
-    };
+    } catch (error) {
+      console.error('AJAX Error:', error);
+    }
+  };
 
-    // Handle file drop
-    uploadArea.addEventListener('drop', event => {
-      const files = event.dataTransfer.files; // Get the dropped files
-      if (files.length) {
-        const validFiles = Array.from(files).filter(file => file.type === 'application/pdf');
-        // Update the file input with the dropped files
-        const dataTransfer = new DataTransfer();
-        validFiles.forEach(file => dataTransfer.items.add(file));
-        fileInput.files = dataTransfer.files;
+  // Mark Exam as Completed
+  window.markAsCompleted = (examId) => {
+    handleAJAX("/examination/", "PUT", { exam_id: examId, status: "completed" }, "Exam marked as completed.");
+  };
 
-        // Show the file names in the HTML
-        updateFileDisplay(files);
-      }
+  // Delete Examination
+  window.deleteExamination = (examId) => {
+    handleAJAX("/examination/", "DELETE", { exam_id: examId }, "Exam deleted successfully.");
+  };
+
+  // Tooltip Initialization
+  document.querySelectorAll('.tooltip-trigger').forEach((el) => {
+    el.addEventListener('mouseover', () => {
+      el.setAttribute('title', el.dataset.tooltip);
     });
+  });
+});
 
-    // Handle file input change (if user selects files via the input)
-    fileInput.addEventListener('change', event => {
-      const files = event.target.files;
-      updateFileDisplay(files);
-    });
-    function markAsCompleted(examId) {
-      const csrfToken = "{{ csrf_token }}";
-      fetch("/examination/", {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          "X-CSRFToken": csrfToken,
-        },
-        body: JSON.stringify({ exam_id: examId, status: "completed" }),
-      })
-        .then(response => {
-          if (response.ok) {
-            location.reload();
-          } else {
-            console.error("Failed to mark the examination as completed.");
+  function storeExamData(data) {
+      histogramData = data['histogram'];
+      pieChartData = data['pie_chart'];
+      renderCharts();
+  }
+
+  // Function to render both the histogram and pie chart
+function renderCharts() {
+  // Render Histogram
+  if (histogramData) {
+    const histogramCtx = document.getElementById('histogramChart').getContext('2d');
+    new Chart(histogramCtx, {
+      type: 'bar',
+      data: {
+        labels: histogramData['values'],
+        datasets: [{
+          label: 'Number of Students',
+          data: histogramData['labels'],
+          backgroundColor: 'rgba(75, 192, 192, 0.2)',
+          borderColor: 'rgba(75, 192, 192, 1)',
+          borderWidth: 1
+        }]
+      },
+      options: {
+        responsive: true,
+        scales: {
+          y: {
+            beginAtZero: true,
           }
-        })
-        .catch(error => {
-          console.error("Error:", error);
-        });
-    }
-
-    // Function to show tooltip
-    function showTooltip(event) {
-      const tooltip = document.getElementById('tooltip');
-      const triggerElement = event.currentTarget;
-
-      // Get tooltip text from the data attribute
-      const tooltipText = triggerElement.getAttribute('data-tooltip');
-      tooltip.textContent = tooltipText;
-
-      // Position the tooltip near the clicked element
-      const rect = triggerElement.getBoundingClientRect();
-      tooltip.style.top = `${rect.bottom + window.scrollY + 8}px`; // 8px below the element
-      tooltip.style.left = `${rect.left + window.scrollX}px`;
-
-      // Display the tooltip
-      tooltip.style.display = 'block';
-
-      // Hide tooltip after 2 seconds
-      setTimeout(() => {
-        tooltip.style.display = 'none';
-      }, 2000);
-    }
-
-    document.querySelectorAll('.tooltip-trigger').forEach((element) => {
-      element.addEventListener('click', (event) => {
-        if (event.ctrlKey || event.metaKey) {
-          showTooltip(event);
         }
-      });
+      }
     });
+  }
 
-    function peerEval(examId, flag) {
-      fetch("/peer_eval/", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-CSRFToken": "{{ csrf_token }}"
-        },
-        body: JSON.stringify({
-          exam_id: examId,
-          flag: flag // 1 if flag is 0
-        })
-      })
-        .then(response => {
-          console.log(examId);
-          if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-          }
-          location.reload();
-        })
-        .then(data => {
-          console.log(data);
-        })
-        .catch(error => {
-          console.error("Error:", error);
-        });
-    }
+  // Render Pie Chart
+  if (pieChartData) {
+    const pieChartCtx = document.getElementById('pieChart').getContext('2d');
+    new Chart(pieChartCtx, {
+      type: 'pie',
+      data: {
+        labels: pieChartData['values'],
+        datasets: [{
+          data: pieChartData['labels'],
+          backgroundColor: [
+            '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF',
+            '#FF9F40', '#FFCD56', '#4D5360', '#949FB1', '#D4E157'
+          ],
+        }]
+      },
+      options: {
+        responsive: true,
+      }
+    });
+  }
+}
+
+
   </script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <div class="card-body">
@@ -550,8 +515,8 @@
         return false;
       }
       return true;
-
     }
+    
     document.addEventListener("DOMContentLoaded", function () {
         // Parse chart data passed from Django context
         const chartData = JSON.parse('{{ context.chart_data|safe }}');

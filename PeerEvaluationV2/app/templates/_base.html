@@ -23,9 +23,38 @@
     @tailwind base;
     @tailwind components;
     @tailwind utilities;
+
+  .tooltip-inner {
+    background-color: #333 !important;
+    color: #fff !important;
+    font-size: 0.875rem !important;
+  }
+
+  /* Tooltip arrow color */
+  .bs-tooltip-top .arrow::before {
+    border-top-color: #333 !important;
+  }
+
+  /* Adjust card height for better alignment */
+  .card {
+    height: 100%;
+    border-radius: 10px;
+  }
 </style>
 
 <!-- External scripts -->
 <script src="{% static 'js/plugins/perfect-scrollbar.min.js' %}" async></script>
 <script src="{% static 'js/argon-dashboard-tailwind.js' %}" async></script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    $('[data-toggle="tooltip"]').tooltip();
+
+    // Nudge logic
+    const nudgedButtons = document.querySelectorAll('.nudge');
+    nudgedButtons.forEach(button => {
+        button.classList.add('highlight');
+        setTimeout(() => button.classList.remove('highlight'), 6000); // Remove nudge after 6 seconds
+    });
+});
+</script>
 </html>
