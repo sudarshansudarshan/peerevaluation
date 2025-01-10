@@ -282,7 +282,7 @@
                                   data-toggle="modal" 
                                   data-target="#addTeachingAssistantModal"
                                   data-tooltip="View Analytics for the Exam"
-                                  onclick="storeExamData({{ batch.exams.graphs }})">
+                                  onclick="storeExamData({{ batch.exams.graphs }}); setExamIdForExcel({{ batch.exams.id }})">
                                   <i class="fas fa-eye"></i>
                                 </button>
                                 <div id="tooltip" class="tooltip"></div>
@@ -300,50 +300,92 @@
       </div>
     </div>
 
-    <div class="modal fade" id="addTeachingAssistantModal" tabindex="-1" role="dialog" aria-labelledby="addTeachingAssistantModalLabel" aria-hidden="true">
-      <div class="modal-dialog modal-lg" role="document">
-        <div class="modal-content shadow-lg rounded">
-          <div class="modal-header">
-            <h5 class="modal-title" id="addTeachingAssistantModalLabel">
-              <i class="fas fa-chart-bar mr-2"></i> Analytics
-            </h5>
-            <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
-              <span aria-hidden="true">&times;</span>
-            </button>
-          </div>
-          <div class="modal-body bg-light">
-            <!-- Histogram Chart -->
-            <div class="card mb-4 shadow-sm">
-              <div class="card-header bg-info text-white">
-                <h6 class="mb-0"><i class="fas fa-chart-line mr-2"></i> Score Distribution (Histogram)</h6>
+  <div class="modal fade" id="addTeachingAssistantModal" tabindex="-1" role="dialog" aria-labelledby="addTeachingAssistantModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg" role="document">
+      <div class="modal-content shadow-lg rounded">
+        <!-- Modal Header -->
+        <div class="modal-header">
+          <h5 class="modal-title" id="addTeachingAssistantModalLabel">
+            <i class="fas fa-chart-bar mr-2"></i> Analytics
+          </h5>
+          <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+
+        <!-- Modal Body with Tabs -->
+        <div class="modal-body bg-light">
+          <!-- Tabs Navigation -->
+          <ul class="nav nav-tabs" id="analyticsTabs" role="tablist">
+            <li class="nav-item">
+              <a class="nav-link active" id="charts-tab" data-toggle="tab" href="#charts" role="tab" aria-controls="charts" aria-selected="true">
+                <i class="fas fa-chart-line mr-1"></i> Charts
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" id="download-tab" data-toggle="tab" href="#download" role="tab" aria-controls="download" aria-selected="false">
+                <i class="fas fa-file-download mr-1"></i> Download Excel
+              </a>
+            </li>
+          </ul>
+
+          <!-- Tabs Content -->
+          <div class="tab-content" id="analyticsTabsContent">
+            <!-- Charts Tab -->
+            <div class="tab-pane fade show active" id="charts" role="tabpanel" aria-labelledby="charts-tab">
+              <!-- Histogram Chart -->
+              <div class="card mb-4 shadow-sm">
+                <div class="card-header bg-info text-white">
+                  <h6 class="mb-0"><i class="fas fa-chart-line mr-2"></i> Score Distribution (Histogram)</h6>
+                </div>
+                <div class="card-body">
+                  <div class="chart-container" style="height: 400px;">
+                    <canvas id="histogramChart"></canvas>
+                  </div>
+                </div>
               </div>
-              <div class="card-body">
-                <div class="chart-container" style="height: 400px;">
-                  <canvas id="histogramChart"></canvas>
+              <!-- Pie Chart -->
+              <div class="card mb-4 shadow-sm">
+                <div class="card-header bg-success text-white">
+                  <h6 class="mb-0"><i class="fas fa-chart-pie mr-2"></i> Percentage Distribution (Pie Chart)</h6>
+                </div>
+                <div class="card-body">
+                  <div class="chart-container" style="height: 400px;">
+                    <canvas id="pieChart"></canvas>
+                  </div>
                 </div>
               </div>
             </div>
-            <!-- Pie Chart -->
-            <div class="card mb-4 shadow-sm">
-              <div class="card-header bg-success text-white">
-                <h6 class="mb-0"><i class="fas fa-chart-pie mr-2"></i> Percentage Distribution (Pie Chart)</h6>
-              </div>
-              <div class="card-body">
-                <div class="chart-container" style="height: 400px;">
-                  <canvas id="pieChart"></canvas>
+
+            <!-- Download Excel Tab -->
+            <div class="tab-pane fade" id="download" role="tabpanel" aria-labelledby="download-tab">
+              <div class="card mb-4 shadow-sm">
+                <div class="card-header bg-primary text-white">
+                  <h6 class="mb-0"><i class="fas fa-file-download mr-2"></i> Download Data</h6>
+                </div>
+                <div class="card-body text-center">
+                  <p class="text-muted mb-4">Click the button below to download the Excel file for this exam's analytics.</p>
+                  <form method="GET" id="excel-download-form" action="">
+                    <button type="submit" class="btn btn-primary">
+                      <i class="fas fa-download mr-1"></i> Download CSV
+                    </button>
+                  </form>
                 </div>
               </div>
             </div>
           </div>
-          <div class="modal-footer bg-light d-flex justify-content-between">
-            <small class="text-muted">Data visualization for exam analytics.</small>
-            <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">
-              <i class="fas fa-times mr-1"></i> Close
-            </button>
-          </div>
+        </div>
+
+        <!-- Modal Footer -->
+        <div class="modal-footer bg-light d-flex justify-content-between">
+          <small class="text-muted">Data visualization and export for exam analytics.</small>
+          <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">
+            <i class="fas fa-times mr-1"></i> Close
+          </button>
         </div>
       </div>
     </div>
+  </div>
 
 
 {% include "includes/footer.html" %}
@@ -446,6 +488,12 @@
       histogramData = data['histogram'];
       pieChartData = data['pie_chart'];
       renderCharts();
+  }
+
+  function setExamIdForExcel(examId) {
+    const form = document.getElementById('excel-download-form');
+    form.action = "/download_csv/" + examId;
+    console.log(form.action);
   }
 
   // Function to render both the histogram and pie chart
