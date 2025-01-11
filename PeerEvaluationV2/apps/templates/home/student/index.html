@@ -339,35 +339,37 @@
             </div>
           </div>
           <div class="card-body">
-            <form>
-            <!-- Today's Topic -->
-            <div class="form-group">
-              <label for="todaysTopic">Today's Topics</label>
-              <select class="form-control" id="todaysTopic">
-              <option>Introduction to Python</option>
-              <option>Introduction to Django</option>
-              <option>Introduction to Flask</option>
-              <option>Introduction to FastAPI</option>
-              <option>Introduction to Django REST Framework</option>
-              </select>
-            </div>
+            <form class="form-horizontal" method="POST" action="{% url 'llm_answer' %}">
+              {% csrf_token %}
+              <!-- Today's Topic -->
+              <div class="form-group">
+                <label for="todaysTopic">Today's Topics</label>
+                <select class="form-control" id="todaysTopic" name="todaysTopic">
+                    <option>Select topics</option>
+                    {% for topic in topics %}
+                    <option value="{{ topic.id }}" title="{{ topic.description }}">
+                        {{ topic.course.name }} ({{ topic.batch.batch_id }}) | {{ topic.topic }} : : {{ topic.description }}
+                    </option>
+                    {% endfor %}
+                </select>
+              </div>
 
-            <!-- Takeaways from Today's Lecture -->
-            <div class="form-group">
-              <label for="lectureTakeaways">What were your takeaways from today's lecture?</label>
-              <textarea class="form-control" id="lectureTakeaways" rows="3" placeholder="Write your takeaways here..."></textarea>
-            </div>
+              <!-- Takeaways from Today's Lecture -->
+              <div class="form-group">
+                <label for="lectureTakeaways">What were your takeaways from today's lecture?</label>
+                <textarea class="form-control" id="lectureTakeaways" name="lectureTakeaways" rows="3" placeholder="Write your takeaways here..."></textarea>
+              </div>
 
-            <!-- Explore More -->
-            <div class="form-group">
-              <label for="exploreMore">Go explore the internet and find out more about today's topic</label>
-              <textarea class="form-control" id="exploreMore" rows="3" placeholder="Write your findings here..."></textarea>
-            </div>
+              <!-- Explore More -->
+              <div class="form-group">
+                <label for="exploreMore">Go explore the internet and find out more about today's topic</label>
+                <textarea class="form-control" id="exploreMore" name="exploreMore" rows="3" placeholder="Write your findings here..."></textarea>
+              </div>
 
-            <!-- Submit Button -->
-            <div class="text-right">
-              <button type="submit" class="btn btn-sm btn-primary">Submit</button>
-            </div>
+              <!-- Submit Button -->
+              <div class="text-right">
+                <button type="submit" class="btn btn-sm btn-primary">Submit</button>
+              </div>
             </form>
           </div>
           </div>
@@ -456,8 +458,12 @@
         fileNameDisplay.classList.remove('text-danger', 'text-success');
       }
     });
-  </script>
 
+    function updateDescription(description) {
+      alert(description);
+      document.getElementById('topicDescription').value = description; // Update the textContent of the span
+    }
+</script>
 
   <script src="/static/assets/vendor/chart.js/dist/Chart.min.js"></script>
   <script src="/static/assets/vendor/chart.js/dist/Chart.extension.js"></script>

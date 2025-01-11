@@ -164,12 +164,15 @@
       <div class="row">
         <div class="col-xl-8">
           <div class="card" style="height: 485px;">
-            <div class="card-header border-0">
-              <div class="row align-items-center">
-                <div class="col">
-                  <h3 class="mb-0">Available Courses</h3>
-                </div>
+            <div class="card-header border-0 d-flex justify-content-between">
+              <div class="col">
+                <h3 class="mb-0">Available Courses</h3>
+                <p class="mb-0 small">
+                  You're TA for following courses
+                </p>
               </div>
+              <button class="btn btn-sm btn-primary tooltip-trigger" data-tooltip="Click to view topics"
+                      data-toggle="modal" data-target="#addTeachingAssistantModal">Topic</button>
             </div>
             <div class="table-responsive" style="max-height: 350px; overflow-y: auto;">
               <!-- Courses table -->
@@ -251,13 +254,14 @@
          <!-- Course Evaluation -->
         <div class="col-xl-4 col-lg-6 mb-4">
           <div class="card" style="height: 485px;">
-          <div class="card-header border-0">
-            <div class="row align-items-center">
-            <div class="col">
-              <h3 class="mb-0">Evaluate Answer Scripts</h3>
+          <div class="card-header border-0 d-flex justify-content-between">
+              <div class="col">
+                <h3 class="mb-0">Evaluate Answer Scripts</h3>
+                <p class="mb-0 small">
+                  Following are the sheets to be evaluated
+                </p>
+              </div>
             </div>
-            </div>
-          </div>
           <div class="table-responsive" style="max-height: 350px; overflow-y: auto;">
             <!-- Projects table -->
             <table class="table align-items-center table-flush">
@@ -333,6 +337,72 @@
           </div>
           </div>
         </div>
+    </div>
+
+        <!-- Add Course Modal -->
+    <div class="modal fade" id="addTeachingAssistantModal" tabindex="-1" role="dialog" aria-labelledby="addTeachingAssistantModalLabel" aria-hidden="true">
+      <div class="modal-dialog modal-lg" role="document"> <!-- Make modal wider with modal-lg -->
+          <div class="modal-content">
+              <div class="modal-header">
+                  <h5 class="modal-title" id="addTeachingAssistantModalLabel">Manage Topics</h5>
+                  <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                      <span aria-hidden="true">&times;</span>
+                  </button>
+              </div>
+              <div class="modal-body">
+                  <!-- Form for adding a new Teaching Assistant -->
+                  <form method="POST" action="{% url 'associateTopic' %}" class="form-row">
+                    {% csrf_token %}
+                    <div class="col-md-6 mb-3">
+                        <label for="course" class="sr-only">Course</label>
+                        <select name="course" id="course" class="form-control" required>
+                            <option value="" selected disabled>Select Batch</option>
+                            {% for a in ta %}
+                            <option value="{{ a.batch.id }}">{{ a.batch.batch_id }} | {{ a.course }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label for="topic_name" class="sr-only">Topic Name</label>
+                        <input type="text" class="form-control" id="topic_name" name="topic_name" placeholder="Topic name" required>
+                    </div>
+                    <div class="col-md-12 mb-3">
+                        <label for="description" class="sr-only">Description</label>
+                        <textarea class="form-control" id="description" name="description" rows="3" placeholder="Enter description" required></textarea>
+                    </div>
+                    <div class="col-md-2 mb-3">
+                        <button type="submit" class="btn btn-primary btn-block">Add topic</button>
+                    </div>
+                </form>
+
+                  <!-- Table to display existing Teaching Assistants -->
+                  <div class="table-responsive" style="height: 400px; overflow: hidden; border-radius: 10px;">
+                      <table class="table">
+                          <thead>
+                              <tr>
+                                  <th>#</th>
+                                  <th>Date</th>
+                                  <th>Batch ID</th>
+                                  <th>Course ID</th>
+                                  <th>Topic</th>
+                              </tr>
+                          </thead>
+                          <tbody>
+                              {% for topic in topics %}
+                              <tr>
+                                  <td>{{ forloop.counter }}</td>
+                                  <td>{{ topic.date }}</td>
+                                  <td>{{ topic.batch.batch_id }}</td>
+                                  <td>{{ topic.batch.course.name }}</td>
+                                  <td title="{{ topic.description }}">{{ topic.topic }}</td>
+                              </tr>
+                              {% endfor %}
+                          </tbody>
+                      </table>
+                  </div>
+              </div>
+          </div>
+      </div>
     </div>
 
 
@@ -461,8 +531,7 @@
       alert(`Evaluation submitted:\nScore: ${score}\nRemarks: ${remarks}`);
       closeOverlay();
     }
-</script>
-
+  </script>
   <script src="/static/assets/vendor/chart.js/dist/Chart.min.js"></script>
   <script src="/static/assets/vendor/chart.js/dist/Chart.extension.js"></script>
 

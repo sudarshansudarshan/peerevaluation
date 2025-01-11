@@ -3,102 +3,7 @@
 {% block title %} Login {% endblock title %}
 
 <!-- Specific CSS goes HERE -->
-{% block stylesheets %}
-<style>
-    .headline {
-      font-family: 'Poppins', sans-serif; /* Modern and stylish font */
-      font-size: 2rem; /* Larger text size */
-      font-weight: 600; /* Semi-bold for emphasis */
-      color: #ffffff; /* White text for contrast */
-      text-shadow: 2px 2px 5px rgba(0, 0, 255, 0.3); /* Subtle blue glow */
-      letter-spacing: 2px; /* Add spacing between letters for a clean look */
-      text-transform: uppercase; /* Make the text all caps */
-      background: linear-gradient(90deg, #004aad, #007bff); /* Gradient effect */
-      -webkit-background-clip: text; /* Clip gradient to text */
-      -webkit-text-fill-color: transparent; /* Transparent fill for gradient */
-      margin-bottom: 1.5rem; /* Adjust spacing */
-      animation: fadeIn 1s ease-in-out; /* Add fade-in animation */
-    }
-  
-    .headline span strong {
-      color: #f0ad4e; /* Highlight "IN" in yellow */
-      text-shadow: none; /* Remove text-shadow for "IN" */
-      font-weight: 700; /* Extra bold for "IN" */
-    }
-  
-    @keyframes fadeIn {
-      from {
-        opacity: 0;
-        transform: translateY(-10px);
-      }
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
-    }
-
-  /* Card Customization */
-  .custom-card {
-    background-color:rgb(254, 254, 254); /* Blue background */
-    border-radius: 10px;
-    box-shadow: 0px 4px 20px rgba(0, 0, 255, 0.2); /* Blue glow effect */
-    padding: 30px;
-  }
-
-  /* Text Customization */
-  .text-muted {
-    color: #888 !important; /* Lighter gray for contrast */
-  }
-
-  .text-white {
-    color: #fff !important;
-  }
-
-  .text-warning {
-    color: #f0ad4e !important; /* Warning yellow */
-  }
-
-  /* Input Customization */
-  .custom-input-group {
-    background-color: #222; /* Dark input background */
-    border: 1px solid #444; /* Subtle border */
-    border-radius: 8px;
-  }
-
-  .custom-input-icon {
-    background-color: #004aad; /* Blue icon background */
-    color: #fff;
-    border-radius: 8px 0 0 8px;
-  }
-
-  .input-group-text {
-    border: none;
-  }
-
-  /* Button Customization */
-  .custom-btn {
-    background: linear-gradient(90deg, #004aad, #007bff); /* Blue gradient */
-    border: none;
-    color: #fff;
-    font-weight: bold;
-    border-radius: 50px;
-    padding: 10px 30px;
-    transition: all 0.3s ease;
-  }
-
-  .custom-btn:hover {
-    background: linear-gradient(90deg, #007bff, #004aad);
-    transform: translateY(-2px);
-    box-shadow: 0px 4px 15px rgba(0, 0, 255, 0.3); /* Hover effect */
-  }
-
-  /* Checkbox Customization */
-  .custom-checkbox .custom-control-input:checked ~ .custom-control-label::before {
-    background-color: #004aad;
-    border-color: #004aad;
-  }
-</style>
-{% endblock stylesheets %}
+{% block stylesheets %}{% endblock stylesheets %}
 
 {% block content %}
 
@@ -108,56 +13,61 @@
         <div class="col-lg-5 col-md-7">
           <div class="card bg-secondary shadow border-0">
             <div class="card-header bg-transparent pb-5">
-              <div class="headline text-center mt-2 mb-3">
-                <span>Sign IN</span>
+              <div class="text-muted text-center mt-2 mb-3">
+                Sign IN
               </div>
             </div>
-            <div class="card-body px-lg-5 py-lg-5 custom-card">
+            <div class="card-body px-lg-5 py-lg-5">
               <div class="text-center text-muted mb-4">
+
                 {% if msg %}
-                  <p class="text-dark">Add your credentials again</p>
-                  <p class="text-warning">{{ msg }}</p>
+                  <p>{{ msg }}</p>
                 {% else %}
-                  <p class="text-dark">Add your credentials</p>
-                {% endif %}
+                  <p>
+                    Add your credentials
+                  </p>
+                {% endif %}  
+
               </div>
-            
+
               <form method="POST">
+
                 {% csrf_token %}
-            
+
                 <div class="form-group mb-3">
-                  <div class="input-group input-group-alternative custom-input-group">
+                  <div class="input-group input-group-alternative">
                     <div class="input-group-prepend">
-                      <span class="input-group-text custom-input-icon"><i class="ni ni-hat-3"></i></span>
+                      <span class="input-group-text"><i class="ni ni-hat-3"></i></span>
                     </div>
                     {{ form.username }}
                   </div>
                 </div>
                 <div class="form-group">
-                  <div class="input-group input-group-alternative custom-input-group">
+                  <div class="input-group input-group-alternative">
                     <div class="input-group-prepend">
-                      <span class="input-group-text custom-input-icon"><i class="ni ni-lock-circle-open"></i></span>
+                      <span class="input-group-text"><i class="ni ni-lock-circle-open"></i></span>
                     </div>
                     {{ form.password }}
                   </div>
                 </div>
                 <div class="custom-control custom-control-alternative custom-checkbox">
-                  <input class="custom-control-input" id="customCheckLogin" type="checkbox">
-                  <label class="custom-control-label text-white" for="customCheckLogin">
+                  <input class="custom-control-input" id=" customCheckLogin" type="checkbox">
+                  <label class="custom-control-label" for=" customCheckLogin">
                     <span class="text-muted">Remember me</span>
                   </label>
                 </div>
                 <div class="text-center">
-                  <button type="submit" class="btn btn-primary my-4 custom-btn">Sign in</button>
+                  <button type="submit" class="btn btn-primary my-4">Sign in</button>
                 </div>
               </form>
             </div>
+          </div>
           <div class="row mt-3">
             <div class="col-6">
-              <a href="{% url 'register' %}" class="btn btn-light-blue">Register</a>
+              <a href="{% url 'register' %}" class="text-light"><small>Register</small></a>
             </div>
             <div class="col-6 text-right">
-              <a href="{% url 'forgetPassword' %}" class="btn btn-light-blue">Forgot password?</a>
+              <a href="https://appseed.us/support" class="text-light"><small>Get Support</small></a>
             </div>
           </div>
         </div>

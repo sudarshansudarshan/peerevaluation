@@ -73,7 +73,7 @@
     <div class="container-fluid mt--6">
       <div class="row">
         <div class="col-xl-5">
-          <div class="card">
+          <div class="card" style="height: 400px; overflow: hidden; border-radius: 10px;">
             <div class="card-header border-0">
               <div class="row align-items-center">
                 <div class="col">
@@ -113,7 +113,7 @@
           </div>
         </div>
         <div class="col-xl-7">
-          <div class="card">
+          <div class="card" style="height: 400px; overflow: hidden; border-radius: 10px;">
             <div class="card-header border-0">
               <div class="row align-items-center">
                 <div class="col">
@@ -140,7 +140,7 @@
                   {% for student in students %}
                   <tr>
                     <td>{{ student.student_username }}</td>
-                    <td>{{ student.student_email }}</td>
+                    <td><a href="mailto:{{ student.student_email }}">{{ student.student_email }}</a></td>
                     <td>{{ student.batch_id }}</td>
                     <td>{{ student.course_name }}</td>
                     <td>{{ student.course_id }}</td>
@@ -160,12 +160,14 @@
 
       <div class="row">
         <div class="col-xl-12">
-          <div class="card"><br>
-            <p class="mb-0 small">&nbsp
-              &nbsp &nbsp&nbsp Details of Enrolled TAs
-            </p>
+          <div class="card" style="height: 400px; overflow: hidden; border-radius: 10px;">
             <div class="card-header border-0 d-flex justify-content-between">
-              <h3 class="mb-0">Teaching Assistant <small class="text-muted">(Total TAs: {{ tas|length }})</small></h3>
+              <div class="col">
+                <h3 class="mb-0">Teaching Assistant <small class="text-muted">(Total TAs: {{ tas|length }})</small></h3>
+                <p class="mb-0 small">
+                  Details of all the enrolled students.
+                </p>
+              </div>
               <button class="btn btn-sm btn-primary tooltip-trigger" data-tooltip="Click to add a Teaching assistant" data-toggle="modal" data-target="#addTeachingAssistantModal">Enroll TA</button>
             </div>
             <div>
@@ -186,7 +188,7 @@
                   {% for student in tas %}
                   <tr>
                     <td>{{ student.ta_username }}</td>
-                    <td>{{ student.ta_email }}</td>
+                    <td><a href="mailto:{{ student.ta_email }}">{{ student.ta_email }}</a></td>
                     <td>{{ student.batch_id }}</td>
                     <td>{{ student.course_name }}</td>
                     <td>{{ student.course_id }}</td>

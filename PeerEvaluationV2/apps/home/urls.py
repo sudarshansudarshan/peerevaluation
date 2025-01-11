@@ -18,7 +18,7 @@ urlpatterns = [
     path('peer_eval/', views.peer_evaluation, name='peer_eval'), # Send students for peer evaluation
     path('upload-evaluation/', views.upload_evaluation, name="upload_evaluation"),
     path('download_csv/<int:exam_id>', views.export_evaluations_to_csv, name='download_csv'),
-    # path('associateTopic/', associateTopic),
-    # path('evaluateAnswers/', evaluateAnswers),
+    path('associateTopic/', views.topic, name='associateTopic'),
+    path('llm_answer/', views.llm_answer, name='llm_answer'),
     re_path(r'^.*\.*', views.pages, name='pages'),
 ]

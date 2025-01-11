@@ -18,6 +18,7 @@ import ast
 import array
 import csv
 import json
+from django.utils.timezone import is_aware
 import pandas as pd
 from datetime import datetime, timedelta
 from django.db.models import ExpressionWrapper, F, DateTimeField
@@ -43,11 +44,11 @@ import google.generativeai as genai
 import time
 
 
-genai.configure(api_key="AIzaSyBrat_wDHdrOGboCJfT-mYhyD_dpqipsbM")
+genai.configure(api_key="AIzaSyAb4TTvJNOcSeZe4BgwvUrBgUQeAoYvNXI")
 
 
 def geminiGenerate(prompt):
-    model = genai.GenerativeModel('gemini-1.5-pro')
+    model = genai.GenerativeModel('gemini-1.5-flash')
     response = model.generate_content(prompt)
     return response.text
 
@@ -70,9 +71,9 @@ def parse_llama_json(text):
         raise ValueError(f"Failed to parse JSON: {e}")
 
 
-def evaluate_answers(answer1, answer2, topic):
+def evaluate_answers(answer1, answer2, topic, description):
     prompt = f"""
-    The topic of discussion was: """ + topic + """. I want to evaluate the following student answers:
+    The topic of discussion was: """ + topic + ":" + description + """. I want to evaluate the following student answers:
     
     **Task:** As an AI Assistant, assess the answers provided based on their originality, quality, and relevance to the topic. Also, evaluate the percentage of AI-generated content in the answers. Provide the output in **JSON format** with the following structure:
     
@@ -455,6 +456,7 @@ def index(request):
             'ta_email': ta.teaching_assistant.email,
         } for ta in TeachingAssistantAssociation.objects.filter(teaching_assistant=request.user)]
         batches_list = []
+        topics = []
         for batch in batches:
             course = batch.course
             batches_list.append({
@@ -469,22 +471,31 @@ def index(request):
                 'is_enrolled': batch.id in enrolled_courses,
                 'is_accepted': batch.id in StudentEnrollment.objects.filter(student=request.user, approval_status=True).values_list('batch', flat=True)
             })
+            topic = CourseTopic.objects.filter(batch=batch, date=datetime.now().date()).first()
+            if topic:
+                topics.append(topic)
+
         # Define the India timezone
         india_timezone = pytz.timezone('Asia/Kolkata')
 
         # Get the current time in IST
         current_time = timezone.now().astimezone(india_timezone)
+
+        # Assuming all dates stored in the database are UTC and making them aware in the application.
         exams = Exam.objects.filter(batch__in=batches, completed=False)
         active_exams = []
 
         for exam in exams:
-            if exam.date.tzinfo is None:
-                exam_date = timezone.make_aware(exam.date, timezone=pytz.UTC)
-            else:
-                exam_date = exam.date
-            exam_date = exam_date.astimezone(india_timezone) - timedelta(hours=5, minutes=30)
-            expiration_time = exam_date + timedelta(minutes=exam.duration)
-            if exam_date <= current_time <= expiration_time:
+            # Ensure the exam date is timezone aware
+            exam_date = timezone.make_aware(exam.date, timezone=pytz.UTC) if exam.date.tzinfo is None else exam.date
+            
+            # Convert exam date to IST
+            exam_date_ist = exam_date.astimezone(india_timezone)
+            
+            # Calculate the expiration time
+            expiration_time = exam_date_ist + timedelta(minutes=exam.duration)
+            
+            if exam_date_ist <= current_time <= expiration_time:
                 exam.expiration_date = expiration_time
                 active_exams.append(exam)
 
@@ -495,7 +506,7 @@ def index(request):
             "active_exams": len(active_exams)  # Number of active exams in the current time window.
         }
         context = {'segment': 'index', 'courses': batches_list, 'counts': counts,
-                   'is_ta': len(tas) > 0, 'exams': active_exams}
+                   'is_ta': len(tas) > 0, 'exams': active_exams, 'topics': topics}
         html_template = loader.get_template('home/student/index.html')
         return HttpResponse(html_template.render(context, request))
 
@@ -810,20 +821,16 @@ def enrollment(request):
                 action = json.loads(data)['student_action']
                 username = User.objects.get(email=username)
                 studentenrollment = StudentEnrollment.objects.filter(batch_id=batch_id, student__username=username).first()
-                print(studentenrollment)
                 if studentenrollment:
                     if action == "1":
                         studentenrollment.approval_status = True
                         studentenrollment.save()
                         messages.success(request, 'Student approved successfully!')
-                        print("Approved")
                     elif action == "0":
                         studentenrollment.delete()
                         messages.error(request, 'Student rejected successfully!')
-                        print("Rejected")
                 else:
                     messages.error(request, 'Student not found in the selected batch.')
-                    print("Not found")
                 return redirect('home')
         except Exception as e:
             pass
@@ -875,6 +882,7 @@ def ta_hub(request):
     if request.method == 'GET':
         batches = Batch.objects.filter(ta_associations__teaching_assistant=request.user)
         peerevaluations = PeerEvaluation.objects.filter(exam__batch__in=batches).filter(Q(score="") | Q(ticket__gt=0))
+        topics = CourseTopic.objects.filter(batch__in=batches).order_by('-date')[:5]
 
         tas = [{
             'batch': ta.batch,
@@ -892,7 +900,7 @@ def ta_hub(request):
                 for student in StudentEnrollment.objects.filter(batch=ta.batch.id, approval_status=False).order_by('approval_status')
             ],
         } for ta in TeachingAssistantAssociation.objects.filter(teaching_assistant=request.user)]
-        return render(request, 'home/student/ta_hub.html', {'evaluations': peerevaluations, 'batches': batches, 'ta': tas, 'is_ta': len(tas) > 0})
+        return render(request, 'home/student/ta_hub.html', {'evaluations': peerevaluations, 'batches': batches, 'ta': tas, 'is_ta': len(tas) > 0, 'topics': topics})
 
     # Associate Teaching associate with batch
     if request.method == 'POST':
@@ -923,7 +931,7 @@ def examination(request):
             batches = Batch.objects.filter(teacher=request.user)
             batch_data = []
             exams_list = []
-            chart_data_list = {}  # To store histogram and pie chart data for each exam
+            chart_data_list = {}
 
             for batch in batches:
                 exams = Exam.objects.filter(batch=batch, completed=False).first()
@@ -979,9 +987,10 @@ def examination(request):
                         'histogram': histogram_data,
                         'pie_chart': percentage_data,
                     }
-                    print(exams.graphs)
 
+                    exams_list.append(exams)
                 batch_data.append({'batch': batch, 'exams': exams})
+            
             return render(request, 'home/teacher/examination.html', {
                 'batch_data': batch_data,
                 'exams': exams_list,
@@ -1052,20 +1061,19 @@ def examination(request):
                     exam = Exam.objects.get(id=exam_id)
                     exam.completed = True
                     exam.save()
-                    messages.success(request, 'Exam completed successfully!')
                 except json.JSONDecodeError:
-                    messages.error(request, 'Invalid JSON data.')
+                    print(request, 'Invalid JSON data.')
                 except Exam.DoesNotExist:
-                    messages.error(request, 'Exam not found.')
+                    print(request, 'Exam not found.')
                 except Exception as e:
-                    messages.error(request, f'An error occurred: {str(e)}')
+                    print(request, f'An error occurred: {str(e)}')
             else:
-                messages.error(request, 'No data provided.')
+                print(request, 'No data provided.')
             return redirect('examination')
 
 
     else:
-        messages.error(request, 'Invalid request method.')
+        print(request, 'Invalid request method.')
         return 
 
 
@@ -1280,8 +1288,6 @@ def upload_evaluation(request):
     return render(request, "home/student/peer_evaluation.html")
 
 
-from django.utils.timezone import is_aware
-
 def export_evaluations_to_csv(request, exam_id):
     # Fetch all evaluations with the required fields
     evaluations = PeerEvaluation.objects.filter(exam_id=int(exam_id)).values(
@@ -1365,22 +1371,75 @@ def export_evaluations_to_csv(request, exam_id):
     return response
 
 
-@login_required
+@user_passes_test(is_ta)
 def topic(request):
 
     if request.method == "POST":
         data = request.POST
+        batch = Batch.objects.filter(id=data.get("course")).first()
         topic_name = data.get("topic_name")
-        topic_description = data.get("topic_description")
+        topic_description = data.get("description")
+        todays_topic = CourseTopic.objects.filter(course=batch.course, batch=batch, date=datetime.now().date()).first()
 
         if topic_name and topic_description:
-            # Topic association and creation
-            topic = CourseTopic.objects.create(
-                name=topic_name,
-                description=topic_description,
-                created_by=request.user
-            )
-            topic.save()
-            return redirect('home')
+            if todays_topic:
+                todays_topic.topic = topic_name
+                todays_topic.description = topic_description
+                todays_topic.date = datetime.now().date()
+                todays_topic.save()
+                return redirect('ta_hub')
+            else:
+                topic = CourseTopic.objects.create(
+                    course=batch.course,
+                    batch=batch,
+                    topic=topic_name,
+                    description=topic_description
+                )
+                topic.save()
+            return redirect('ta_hub')
 
-    return render(request, "home/teacher/topic.html")
+
+    return redirect('ta_hub')
+
+
+@login_required
+def llm_answer(request):
+
+    if request.method == "POST":
+        data = request.POST
+        topic = data.get('todaysTopic')
+        topic = CourseTopic.objects.filter(id=topic).first()
+        lectureTakeaways = data.get('lectureTakeaways')
+        exploreMore = data.get('exploreMore')
+        llmevaluation = LLMEvaluation.objects.filter(Topic=topic, student=request.user).first()
+
+        if llmevaluation:
+            return redirect('home')
+         
+        if topic and lectureTakeaways and exploreMore:
+            attempts = 0
+            max_attempts = 5
+            success = False
+            while not success and attempts < max_attempts:
+                try:
+                    evaluation = evaluate_answers(topic.topic, lectureTakeaways, exploreMore, topic.description)
+                    LLMEvaluation.objects.create(
+                        answer = evaluation['answers'],
+                        feedback = evaluation['feedback'],
+                        score = evaluation['scores'],
+                        ai = evaluation['ai_scores'],
+                        aggregate = evaluation['aggregate_score'],
+                        date = topic.date,
+                        Topic = topic,
+                        student = request.user
+                    )
+                    success = True
+                except Exception as e:
+                    attempts += 1
+                    if attempts >= max_attempts:
+                        raise e
+            return redirect('home')
+        else:
+            return redirect('home')
+    else:
+        return redirect('home')

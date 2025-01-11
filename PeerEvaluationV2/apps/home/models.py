@@ -178,7 +178,8 @@ class CourseTopic(models.Model):
     course = models.ForeignKey(Course, on_delete=models.CASCADE)
     batch = models.ForeignKey(Batch, on_delete=models.CASCADE)
     topic = models.CharField(max_length=255)
-    date = models.DateTimeField(auto_now_add=True)
+    description = models.TextField()
+    date = models.DateField(default=datetime.now().date)
 
     def __str__(self):
         return self.topic
