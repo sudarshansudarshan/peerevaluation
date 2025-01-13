@@ -11,6 +11,8 @@ from django.contrib import messages
 from .models import Course
 from django.contrib.auth.models import User
 from django.db import IntegrityError
+from django.template.loader import render_to_string
+from django.utils.html import strip_tags
 import zipfile
 import random
 import string
@@ -42,6 +44,7 @@ import networkx as nx
 import math
 import google.generativeai as genai
 import time
+from django.core.mail import send_mail
 
 
 genai.configure(api_key="AIzaSyAb4TTvJNOcSeZe4BgwvUrBgUQeAoYvNXI")
@@ -123,6 +126,7 @@ def evaluate_answers(answer1, answer2, topic, description):
 
 
 import numpy as np
+import threading
 
 def flag_evaluations_with_high_std(exam_instance, request, threshold=1.0):
     """
@@ -269,6 +273,7 @@ def convert_pdf_to_image_and_decode_qr(pdf_bytes):
         print(f"Error processing PDF: {e}")
         raise
 
+    
 
 def assign_evaluations(students, papers, trusted_evaluators, k):
     """
@@ -344,6 +349,23 @@ def assign_evaluations(students, papers, trusted_evaluators, k):
 
     # Save PeerEvaluation objects
     for student, assigned_papers in assignments.items():
+        subject = "Peer Evaluation Request"
+        html_message = render_to_string(
+            "email/send_evaluations.html",
+            {
+                "username": student.first_name,
+                "evaluation_link": "https://pes.iitrpr.ac.in",
+                "number_of_evaluations": len(assigned_papers)
+            },
+        )
+        plain_message = strip_tags(html_message)
+        send_mail(
+            subject=subject,
+            message=plain_message,
+            from_email="no-reply@evaluation-system.com",
+            recipient_list=[student.email],
+            html_message=html_message,
+            fail_silently=False)
         for paper in assigned_papers:
             new_eval = PeerEvaluation(
                 document=paper,
@@ -1059,6 +1081,27 @@ def examination(request):
                 try:
                     exam_id = json.loads(data)['exam_id']
                     exam = Exam.objects.get(id=exam_id)
+                    students = UIDMapping.objects.filter(exam=exam)
+                    for student in students:
+                        subject = "Peer Evaluation Results"
+                        html_message = render_to_string(
+                            "email/results_available.html",
+                            {
+                                "username": student.user.first_name,
+                                "evaluation_link": "https://pes.iitrpr.ac.in",
+                                "date": exam.date.strftime('%d/%m/%Y'),
+                                "course": exam.batch.course.name,
+                                "batch": exam.batch.batch_id
+                            },
+                        )
+                        plain_message = strip_tags(html_message)
+                        send_mail(
+                            subject=subject,
+                            message=plain_message,
+                            from_email="no-reply@evaluation-system.com",
+                            recipient_list=[student.user.email],
+                            html_message=html_message,
+                            fail_silently=False)
                     exam.completed = True
                     exam.save()
                 except json.JSONDecodeError:
@@ -1121,7 +1164,6 @@ def peer_evaluation(request):
             exam_id = data['exam_id']
             exam_instance = Exam.objects.get(id=exam_id)
             if (data['flag']) == 0:
-                print("Here")
                 student_enrollment = [uid.user for uid in UIDMapping.objects.filter(exam=exam_instance)]
                 papers = list(Documents.objects.filter(exam=exam_instance))
                 k = 2
@@ -1130,16 +1172,22 @@ def peer_evaluation(request):
                 attempts = 0
                 max_attempts = 10
 
-                while not success and attempts < max_attempts:
-                    try:
-                        # Attempt to assign evaluations
-                        assign_evaluations(student_enrollment, papers, incentives, k)
-                        success = True  # Exit loop if successful
-                    except Exception as e:
-                        # Log the exception and retry
-                        print(f"Error: {e}. Retrying... (Attempt {attempts + 1}/{max_attempts})")
-                        attempts += 1
-                        time.sleep(1)
+                def assign_task():
+                    nonlocal success, attempts
+                    while not success and attempts < max_attempts:
+                        try:
+                            # Attempt to assign evaluations
+                            assign_evaluations(student_enrollment, papers, incentives, k)
+                            success = True  # Exit loop if successful
+                        except Exception as e:
+                            # Log the exception and retry
+                            print(f"Error: {e}. Retrying... (Attempt {attempts + 1}/{max_attempts})")
+                            attempts += 1
+                            time.sleep(1)
+
+                assign_thread = threading.Thread(target=assign_task)
+                assign_thread.start()
+                assign_thread.join()
 
                 if not success:
                     messages.error(request, 'Failed to assign evaluations after multiple attempts.')
@@ -1215,7 +1263,11 @@ def upload_evaluation(request):
             try:
                 exam = Exam.objects.get(id=exam_id)
             except Exam.DoesNotExist:
-                return redirect('home')
+                if request.user.is_teacher:
+                    messages.error(request, 'Exam not found.')
+                    return redirect('examination')
+                else:
+                    return redirect('home')
 
             # Limit students to one file
             if request.user.is_student():
@@ -1248,6 +1300,7 @@ def upload_evaluation(request):
                     document.save()
                     with open(f"apps/static/documents/{final_filename}", "wb") as f:
                         f.write(pdf_content)
+                messages.success(request, 'Evaluation uploaded successfully!')
                 return redirect('home')
 
             elif request.user.is_teacher():
@@ -1279,6 +1332,7 @@ def upload_evaluation(request):
                     )
                     with open(f"apps/static/documents/{final_filename}", "wb") as f:
                         f.write(pdf_content)
+                messages.success(request, f'{len(uploaded_files)} Evaluations uploaded successfully!')
                 return redirect('examination')
 
         except Exception as e:
@@ -1398,7 +1452,6 @@ def topic(request):
                 topic.save()
             return redirect('ta_hub')
 
-
     return redirect('ta_hub')
 
 
@@ -1441,5 +1494,6 @@ def llm_answer(request):
             return redirect('home')
         else:
             return redirect('home')
+    
     else:
         return redirect('home')

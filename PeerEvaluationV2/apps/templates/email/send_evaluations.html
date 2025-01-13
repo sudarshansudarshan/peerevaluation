@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+        }
+
+        .email-container {
+            max-width: 600px;
+            margin: 40px auto;
+            background-color: #ffffff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        .header {
+            text-align: center;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #d3c1e5;
+        }
+
+        .header h1 {
+            font-size: 28px;
+            color: #5c4a72;
+        }
+
+        .content {
+            line-height: 1.8;
+            color: #5c4a72;
+            padding-top: 20px;
+        }
+
+        .cta-button {
+            display: block;
+            width: max-content;
+            margin: 20px auto;
+            padding: 12px 25px;
+            background-color: #8a5ea2;
+            color: #ffffff;
+            text-decoration: none;
+            border-radius: 5px;
+            font-size: 16px;
+            text-align: center;
+        }
+
+        .cta-button:hover {
+            background-color: #6d3d94;
+        }
+
+        .footer {
+            text-align: center;
+            font-size: 12px;
+            color: #b7a9cf;
+            padding-top: 20px;
+            border-top: 1px solid #d3c1e5;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="email-container">
+        <div class="header">
+            <h1>Peer Evaluation Request</h1>
+        </div>
+        <div class="content">
+            <p>Dear {{ username }},</p>
+            <p>You have been assigned to evaluate the test paper. You have {{ number_of_evaluations }} evaluations pending.</p>
+            <p>Please complete the evaluations as soon as possible on <a href="{{ evaluation_link }}" style="color: #8a5ea2; text-decoration: none;">Evaluate Now</a>.</p>
+            <p>Your feedback is highly valuable and will contribute significantly to the success of the evaluation process.</p>
+            <p>If you have any questions, feel free to contact us.</p>
+            <p>Thank you for your time and effort!</p>
+            <p>With regards,<br>Peer Evaluation Team</p>
+        </div>
+        <a href="{{ evaluation_link }}" class="cta-button">Evaluate Now</a>
+        <div class="footer">
+            <p>Peer Evaluation System</p>
+        </div>
+    </div>
+</body>
+
+</html>

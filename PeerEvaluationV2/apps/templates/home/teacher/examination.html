@@ -103,8 +103,7 @@
               </nav>
             </div>
             <div class="col-lg-6 col-5 text-right">
-              <a href="#" class="btn btn-sm btn-neutral">New</a>
-              <a href="#" class="btn btn-sm btn-neutral">Filters</a>
+              <a href="#" class="btn btn-sm btn-neutral">Exam History</a>
             </div>
           </div>
         </div>
@@ -127,17 +126,17 @@
             </div>
             <div class="card-body">
               {% if exams|length != 0 %}
-              <form class="form-horizontal" method="POST" action="{% url 'upload_evaluation' %}" enctype="multipart/form-data" onsubmit="return validateForm()">
+                <form class="form-horizontal" method="POST" action="{% url 'upload_evaluation' %}" enctype="multipart/form-data" onsubmit="return validateForm()">
                 {% csrf_token %}
                 
                 <!-- Evaluation Selector -->
                 <div class="form-group">
                   <label for="exam" class="form-label font-weight-bold">Evaluation for Exams</label>                    
-                  <select id="exam_id" name="exam_id" class="form-control custom-select shadow-sm" required>
-                    <option selected disabled>Select an exam</option>
-                    {% for exam in exams %}
-                      <option value="{{ exam.id }}">{{ exam.batch }}</option>
-                    {% endfor %}
+                  <select id="exam_id" name="exam_id" class="form-control custom-select shadow-sm" data-tooltip="Select from exams scheduled to upload an evaluation" required>
+                  <option selected disabled>Select an exam</option>
+                  {% for exam in exams %}
+                    <option value="{{ exam.id }}">{{ exam.batch }}</option>
+                  {% endfor %}
                   </select>
                   <small class="text-muted">Select the exam to upload evaluations</small>
                 </div>
@@ -146,25 +145,25 @@
                 <div class="form-group">
                   <label for="evaluationfile" class="form-label font-weight-bold">Upload your evaluations</label>
                   <div class="border border-secondary border-dashed text-center py-4 rounded upload-area" id="upload-area">
-                    <i class="fas fa-file-pdf text-primary mb-2" style="font-size: 3rem;"></i>
-                    <div class="d-flex justify-content-center align-items-center">
-                      <label for="evaluationfile" class="text-primary font-weight-bold cursor-pointer">
-                        <span>Upload files</span>
-                        <input id="evaluationfile" name="evaluationfile" type="file" accept=".pdf" {% if user.is_teacher %}multiple{% endif %} class="sr-only">
-                      </label>
-                      <p class="ml-1 mb-0">or drag and drop</p>
-                    </div>
-                    <p class="small text-muted mb-0">Only PDF files are allowed (Max size per file: 5MB)</p>
+                  <i class="fas fa-file-pdf text-primary mb-2" style="font-size: 3rem;"></i>
+                  <div class="d-flex justify-content-center align-items-center">
+                    <label for="evaluationfile" class="text-primary font-weight-bold cursor-pointer">
+                    <span>Upload files</span>
+                    <input id="evaluationfile" name="evaluationfile" type="file" accept=".pdf" {% if user.is_teacher %}multiple{% endif %} class="sr-only" required>
+                    </label>
+                    <p class="ml-1 mb-0">or drag and drop</p>
+                  </div>
+                  <p class="small text-muted mb-0">Only PDF files are allowed (Max size per file: 5MB)</p>
                   </div>
                 </div>
                 
                 <!-- Submit Button -->
                 <div class="text-right">
                   <button type="submit" class="btn btn-sm btn-primary shadow tooltip-trigger" data-tooltip="Uploading the selected PDFs for evaluations">
-                    <i class="fas fa-cloud-upload-alt mr-1"></i>Submit
+                  <i class="fas fa-cloud-upload-alt mr-1"></i>Submit
                   </button>
                 </div>
-              </form>
+                </form>
               {% else %}
               <!-- No Evaluations Placeholder -->
               <div class="text-center py-5">
@@ -264,9 +263,7 @@
                                   {% if not batch.exams.evaluations_sent %}
                                     <button
                                       type="button"
-                                      class="btn btn-sm"
-                                      style="background-color: orange; color: white;" 
-                                      class="tooltip-trigger" 
+                                      class="btn btn-sm tooltip-trigger btn-warning"
                                       data-tooltip="Send Documents for Peer Evaluations"
                                       onclick="peerEval({{ batch.exams.id }}, 0)">
                                       <i class="fas fa-paper-plane"></i>
@@ -276,15 +273,19 @@
                                   {% if batch.exams.evaluations_sent and not batch.exams.flags %}
                                     <button
                                       type="button"
-                                      class="btn btn-sm" 
-                                      style="background-color: orange; color: white;" 
-                                      class="tooltip-trigger"
+                                      class="btn btn-sm tooltip-trigger btn-warning"
                                       data-tooltip="Flag the Evaluations with issues"
                                       onclick="peerEval({{ batch.exams.id }}, 1)">
                                       <i class="fas fa-flag"></i>
                                     </button>
                                   {% endif %}
-
+                                {% else %}
+                                    <button
+                                    type="button"
+                                    class="btn btn-sm tooltip-trigger btn-warning"
+                                    data-tooltip="Send reminder to students to upload evaluations">
+                                    <i class="fas fa-envelope"></i>
+                                    </button>
                                 {% endif %}
 
                                 <!-- Declare Examination Cycle as Completed -->
@@ -311,7 +312,9 @@
                                   class="btn btn-sm btn-info mr-2 tooltip-trigger" 
                                   data-toggle="modal" 
                                   data-target="#addTeachingAssistantModal"
-                                  data-tooltip="View Analytics for the Exam">
+                                  data-tooltip="View Analytics for the Exam"
+                                  onclick="storeExamData({{ batch.exams.graphs }}); setExamIdForExcel({{ batch.exams.id }})"
+                                  >
                                   <i class="fas fa-eye"></i>
                                 </button>
                                 <div id="tooltip" class="tooltip"></div>
@@ -330,26 +333,91 @@
     </div>
 
     <div class="modal fade" id="addTeachingAssistantModal" tabindex="-1" role="dialog" aria-labelledby="addTeachingAssistantModalLabel" aria-hidden="true">
-      <div class="modal-dialog modal-fullscreen" role="document">
-        <form method="POST" action="{% url 'ta_hub' %}">
-          {% csrf_token %}
-          <div class="modal-content">
-            <div class="modal-header">
-              <h5 class="modal-title" id="addTeachingAssistantModalLabel">Analytics: Marks vs No of Students</h5>
-              <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                <span aria-hidden="true">&times;</span>
-              </button>
+    <div class="modal-dialog modal-lg" role="document">
+      <div class="modal-content shadow-lg rounded">
+        <!-- Modal Header -->
+        <div class="modal-header">
+          <h5 class="modal-title" id="addTeachingAssistantModalLabel">
+            <i class="fas fa-chart-bar mr-2"></i> Analytics
+          </h5>
+          <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+
+        <!-- Modal Body with Tabs -->
+        <div class="modal-body bg-light">
+          <!-- Tabs Navigation -->
+          <ul class="nav nav-tabs" id="analyticsTabs" role="tablist">
+            <li class="nav-item">
+              <a class="nav-link active" id="charts-tab" data-toggle="tab" href="#charts" role="tab" aria-controls="charts" aria-selected="true">
+                <i class="fas fa-chart-line mr-1"></i> Charts
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" id="download-tab" data-toggle="tab" href="#download" role="tab" aria-controls="download" aria-selected="false">
+                <i class="fas fa-file-download mr-1"></i> Download Excel
+              </a>
+            </li>
+          </ul>
+
+          <!-- Tabs Content -->
+          <div class="tab-content" id="analyticsTabsContent">
+            <!-- Charts Tab -->
+            <div class="tab-pane fade show active" id="charts" role="tabpanel" aria-labelledby="charts-tab">
+              <!-- Histogram Chart -->
+              <div class="card mb-4 shadow-sm">
+                <div class="card-header bg-info text-white">
+                  <h6 class="mb-0"><i class="fas fa-chart-line mr-2"></i> Score Distribution (Histogram)</h6>
+                </div>
+                <div class="card-body">
+                  <div class="chart-container" style="height: 400px;">
+                    <canvas id="histogramChart"></canvas>
+                  </div>
+                </div>
+              </div>
+              <!-- Pie Chart -->
+              <div class="card mb-4 shadow-sm">
+                <div class="card-header bg-success text-white">
+                  <h6 class="mb-0"><i class="fas fa-chart-pie mr-2"></i> Percentage Distribution (Pie Chart)</h6>
+                </div>
+                <div class="card-body">
+                  <div class="chart-container" style="height: 400px;">
+                    <canvas id="pieChart"></canvas>
+                  </div>
+                </div>
+              </div>
             </div>
-            <div class="card-body">
-              <div style="height: 400px;">
-                  <canvas id="myChart"></canvas>
+
+            <!-- Download Excel Tab -->
+            <div class="tab-pane fade" id="download" role="tabpanel" aria-labelledby="download-tab">
+              <div class="card mb-4 shadow-sm">
+                <div class="card-header bg-primary text-white">
+                  <h6 class="mb-0"><i class="fas fa-file-download mr-2"></i> Download Data</h6>
+                </div>
+                <div class="card-body text-center">
+                  <p class="text-muted mb-4">Click the button below to download the Excel file for this exam's analytics.</p>
+                  <form method="GET" id="excel-download-form" action="">
+                    <button type="submit" class="btn btn-primary">
+                      <i class="fas fa-download mr-1"></i> Download CSV
+                    </button>
+                  </form>
+                </div>
               </div>
             </div>
           </div>
-        </form>
+        </div>
+
+        <!-- Modal Footer -->
+        <div class="modal-footer bg-light d-flex justify-content-between">
+          <small class="text-muted">Data visualization and export for exam analytics.</small>
+          <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">
+            <i class="fas fa-times mr-1"></i> Close
+          </button>
+        </div>
       </div>
     </div>
-
+  </div>
 
     {% include "includes/footer.html" %}
 
@@ -411,6 +479,12 @@
       });
     });
 
+    function setExamIdForExcel(examId) {
+      const form = document.getElementById('excel-download-form');
+      form.action = "/download_csv/" + examId;
+      console.log(form.action);
+    }
+
     // Function to update the file display with count only
     const updateFileDisplay = files => {
       fileNameDisplay.innerHTML = ''; // Clear previous content
@@ -455,6 +529,7 @@
       const files = event.target.files;
       updateFileDisplay(files);
     });
+
     function markAsCompleted(examId) {
       const csrfToken = "{{ csrf_token }}";
       fetch("/examination/", {
@@ -534,6 +609,63 @@
           console.error("Error:", error);
         });
     }
+
+    function storeExamData(data) {
+      histogramData = data['histogram'];
+      pieChartData = data['pie_chart'];
+      renderCharts();
+      console.log(data);
+    }
+
+    function renderCharts() {
+  // Render Histogram
+  if (histogramData) {
+    const histogramCtx = document.getElementById('histogramChart').getContext('2d');
+    new Chart(histogramCtx, {
+      type: 'bar',
+      data: {
+        labels: histogramData['values'],
+        datasets: [{
+          label: 'Number of Students',
+          data: histogramData['labels'],
+          backgroundColor: 'rgba(75, 192, 192, 0.2)',
+          borderColor: 'rgba(75, 192, 192, 1)',
+          borderWidth: 1
+        }]
+      },
+      options: {
+        responsive: true,
+        scales: {
+          y: {
+            beginAtZero: true,
+          }
+        }
+      }
+    });
+  }
+
+  // Render Pie Chart
+  if (pieChartData) {
+    const pieChartCtx = document.getElementById('pieChart').getContext('2d');
+    new Chart(pieChartCtx, {
+      type: 'pie',
+      data: {
+        labels: pieChartData['values'],
+        datasets: [{
+          data: pieChartData['labels'],
+          backgroundColor: [
+            '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF',
+            '#FF9F40', '#FFCD56', '#4D5360', '#949FB1', '#D4E157'
+          ],
+        }]
+      },
+      options: {
+        responsive: true,
+      }
+    });
+  }
+}
+
   </script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <div class="card-body">

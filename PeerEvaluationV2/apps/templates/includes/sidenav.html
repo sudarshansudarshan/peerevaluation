@@ -17,49 +17,63 @@
       <div class="collapse navbar-collapse" id="sidenav-collapse-main">
         <!-- Nav items -->
         <ul class="navbar-nav">
+          <!-- Dashboard -->
           <li class="nav-item" title="View your dashboard">
-            <a class="nav-link {% if 'index' in segment %} active {% endif %}" href="/">
-              <i class="ni ni-tv-2 text-primary"></i>
-              <span class="nav-link-text">Dashboard</span>
-            </a>
+              <a class="nav-link {% if 'index' in segment %} active {% endif %}" href="/">
+                  <i class="ni ni-tv-2 text-primary"></i>
+                  <span class="nav-link-text">Dashboard</span>
+              </a>
           </li>
+
+          <!-- Profile -->
           <li class="nav-item" title="View your profile">
-            <a class="nav-link {% if 'profile' in segment %} active {% endif %}" href="/profile.html">
-              <i class="ni ni-single-02 text-yellow"></i>
-              <span class="nav-link-text">Profile</span>
-            </a>
+              <a class="nav-link {% if 'profile' in segment %} active {% endif %}" href="/profile.html">
+                  <i class="ni ni-single-02 text-yellow"></i>
+                  <span class="nav-link-text">Profile</span>
+              </a>
           </li>
-          {% if user.is_student %}
-          {% if is_ta %}
+
+          <!-- TA Hub (Conditional) -->
+          {% if user.is_student and is_ta %}
           <li class="nav-item" title="Manage your TA operations">
-            <a class="nav-link {% if 'ta' in segment %} active {% endif %}" href="/ta_hub/">
-              <i class="ni ni-hat-3 text-red"></i>
-              <span class="nav-link-text">TA Hub</span>
-            </a>
+              <a class="nav-link {% if 'ta' in segment %} active {% endif %}" href="/ta_hub/">
+                  <i class="ni ni-hat-3 text-red"></i>
+                  <span class="nav-link-text">TA Hub</span>
+              </a>
           </li>
           {% endif %}
-          {% endif %}
+
+          <!-- Exam Scheduling (Conditional) -->
           {% if user.is_teacher %}
           <li class="nav-item" title="Schedule exam and manage related operations">
-            <a class="nav-link {% if 'examination' in segment %} active {% endif %}" href="/examination/">
-              <i class="ni ni-single-copy-04 text-default"></i>
-              <span class="nav-link-text">Exam Scheduling</span>
-            </a>
+              <a class="nav-link {% if 'examination' in segment %} active {% endif %}" href="/examination/">
+                  <i class="ni ni-single-copy-04 text-default"></i>
+                  <span class="nav-link-text">Exam Scheduling</span>
+              </a>
           </li>
           {% endif %}
+
+          <!-- Peer Evaluation (Conditional) -->
           {% if user.is_student %}
           <li class="nav-item" title="Find evaluation sheets for you and your results">
-            <a class="nav-link {% if 'peer' in segment %} active {% endif %}" href="/peer_eval/">
-              <i class="ni ni-bullet-list-67 text-default"></i>
-              <span class="nav-link-text">Evaluation</span>
-            </a>
-          {% endif %}
-          <li class="nav-item" title="Logout from the system">
-            <a class="nav-link" href="{% url 'logout' %}">
-              <i class="ni ni-user-run text-red"></i>
-              <span class="nav-link-text">Logout</span>
-            </a>
+              <a class="nav-link {% if 'peer' in segment %} active {% endif %}" href="/peer_eval/">
+                  <i class="ni ni-bullet-list-67 text-default"></i>
+                  <span class="nav-link-text">Evaluation</span>
+              </a>
           </li>
+          {% endif %}
+
+          <!-- Logout -->
+            <li class="nav-item" title="Logout from the system">
+              <!-- Logout Form -->
+              <form method="post" action="{% url 'logout' %}" style="display: inline;">
+                {% csrf_token %}
+                <button type="submit" class="nav-link" style="border: none; background: none; padding: 0.5rem 1rem; cursor: pointer;">
+                  <i class="ni ni-user-run text-red"></i>
+                  <span class="nav-link-text">Logout</span>
+                </button>
+              </form>
+            </li>
         </ul>
       </div>
     </div>

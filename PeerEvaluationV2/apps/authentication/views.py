@@ -98,11 +98,27 @@ def register_user(request):
             is_staff = form.cleaned_data.get("is_staff")
             user = authenticate(first_name=first_name, last_name=last_name,
                 username=username, password=raw_password, email=email)
-            if is_staff:
+            if is_staff and request.user.is_superuser():
                 user = User.objects.get(username=username)
                 user.is_staff = True
                 user.save()
-
+            subject = "Welcome to Peer Evaluation"
+            html_message = render_to_string(
+                "email/new_account.html",
+                {
+                    "name": first_name,
+                    "username": username,
+                    "evaluation_link": "https://pes.iitrpr.ac.in",
+                },
+            )
+            plain_message = strip_tags(html_message)
+            send_mail(
+                subject=subject,
+                message=plain_message,
+                from_email="no-reply@evaluation-system.com",
+                recipient_list=[email],
+                html_message=html_message,
+                fail_silently=False)
             msg = 'User created - please <a href="/login">login</a>.'
             success = True
         else:

@@ -1,7 +1,7 @@
-asgiref==3.4.1
+asgiref
 autopep8==1.5.7
 dj-database-url==0.5.0
-Django==3.2.6
+Django==5.1.4
 gunicorn==20.1.0
 pycodestyle==2.7.0
 python-decouple==3.4
@@ -20,4 +20,5 @@ networkx
 PyPDF2
 google.generativeai
 pandas
+openpyxl
 # sudo apt install zbar-tools

@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Professor User Manual</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f5f9ff;
+            color: #333;
+            margin: 0;
+            padding: 0;
+        }
+        header {
+            background-color: #007BFF;
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        nav {
+            background-color: #0056b3;
+            color: white;
+            padding: 10px;
+        }
+        nav a {
+            color: white;
+            text-decoration: none;
+            margin: 0 15px;
+        }
+        section {
+            padding: 20px;
+            max-width: 800px;
+            margin: auto;
+        }
+        h2 {
+            color: #0056b3;
+        }
+        .section-content {
+            background-color: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+        .image-container {
+            text-align: center;
+            margin: 20px 0;
+        }
+        .image-container img {
+            max-width: 100%;
+            height: auto;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        footer {
+            background-color: #007BFF;
+            color: white;
+            text-align: center;
+            padding: 10px;
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Professor User Manual</h1>
+    </header>
+    <section>
+        <h2>For Professors</h2>
+        <div class="section-content">
+            <h3>Registration/Login</h3>
+            <p>Professors do not need to register. They will receive login credentials from the admin. After receiving the credentials, professors can log in as a professor/teacher for the application.</p>
+
+            <h3>Functionalities</h3>
+            <p>The peer evaluation application offers the following functionalities for professors:</p>
+            <ul>
+                <li><strong>Dashboard:</strong> View active batches, enrolled students by batch and course, and manage Teacher Assistants. Hover over buttons for functionality descriptions.</li>
+                <li><strong>Profile:</strong> Access account details and log out of the application.</li>
+                <li><strong>Exam Scheduling:</strong> Schedule exams only if a subject has been allotted by the admin.</li>
+            </ul>
+        </div>
+    </section>
+    <section>
+        <h2>Exam Scheduling</h2>
+        <div class="section-content">
+            <p>The most important aspect of the application:</p>
+            <ul>
+                <li>If no course is allotted by the admin, scheduling is not available.</li>
+                <li>Once a course is allotted, professors can schedule exams by specifying the date, duration, max marks, questions, and evaluation parameters, then clicking Save.</li>
+            </ul>
+            <div class="image-container">
+                <img src="static/assets/img/exam-scheduling.png" alt="Exam Scheduling View">
+                <p><em>Example of Exam Scheduling Interface</em></p>
+            </div>
+        </div>
+    </section>
+    <section>
+        <h2>Uploading Evaluations</h2>
+        <div class="section-content">
+            <p>After scheduling exams, professors can upload answer sheets in bulk using the upload option. Additional functionalities under available batches include:</p>
+            <ul>
+                <li>Download all PDFs of answer sheets.</li>
+                <li>Send papers for peer evaluation after uploading evaluation sheets.</li>
+                <li>Mark evaluations as complete once all tickets are resolved.</li>
+                <li>Delete examination data when no longer needed.</li>
+                <li>View analytics and download results via the analytics button.</li>
+            </ul>
+            <div class="image-container">
+                <img src="static/images/upload-evaluations.png" alt="Uploading Evaluations View">
+                <p><em>Example of Uploading Evaluations Interface</em></p>
+            </div>
+        </div>
+    </section>
+    <footer>
+        <p>&copy; 2025 Peer Evaluation Application | All Rights Reserved</p>
+    </footer>
+</body>
+</html>

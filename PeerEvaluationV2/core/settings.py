@@ -1,7 +1,3 @@
-# -*- encoding: utf-8 -*-
-"""
-Copyright (c) 2019 - present AppSeed.us
-"""
 
 import os
 from decouple import config
@@ -121,12 +117,10 @@ STATICFILES_DIRS = (
     os.path.join(CORE_DIR, 'apps/static'),
 )
 
-# Email configuration for MailHog
 EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
-EMAIL_HOST = "127.0.0.1"  # MailHog host
-EMAIL_PORT = 1025         # Default SMTP port for MailHog
-EMAIL_USE_TLS = False     # No TLS required for MailHog
-EMAIL_USE_SSL = False     # No SSL required for MailHog
-DEFAULT_FROM_EMAIL = "no-reply@example.com"
-#############################################################
-#############################################################
+EMAIL_HOST = "smtp.gmail.com"
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = "aivs-coordinator@iitrpr.ac.in"
+EMAIL_HOST_PASSWORD = "wygr ualf pfsv ksmh"
+DEFAULT_FROM_EMAIL = "aivs-coordinator@iitrpr.ac.in"

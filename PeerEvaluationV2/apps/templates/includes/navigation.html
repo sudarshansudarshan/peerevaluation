@@ -16,20 +16,30 @@
               </div>
             </div>
           </a>
-          <div class="dropdown-menu dropdown-menu-right">
+            <div class="dropdown-menu dropdown-menu-right">
+            <!-- Dropdown Header -->
             <div class="dropdown-header noti-title">
               <h6 class="text-overflow m-0">Welcome!</h6>
             </div>
+
+            <!-- Profile Link -->
             <a href="/profile.html" class="dropdown-item">
               <i class="ni ni-single-02"></i>
               <span>My profile</span>
             </a>
+
+            <!-- Divider -->
             <div class="dropdown-divider"></div>
-            <a href="{% url 'logout' %}" class="dropdown-item">
-              <i class="ni ni-user-run text-red"></i>
-              <span>Logout</span>
-            </a>
-          </div>
+
+            <!-- Logout Form -->
+            <form method="post" action="{% url 'logout' %}" style="display: inline;">
+              {% csrf_token %}
+              <button type="submit" class="dropdown-item" style="border: none; background: none; padding: 0.5rem 1rem; cursor: pointer;">
+                <i class="ni ni-user-run text-red"></i>
+                <span>Logout</span>
+              </button>
+            </form>
+            </div>
         </li>
       </ul>
     </div>
