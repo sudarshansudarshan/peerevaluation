@@ -462,7 +462,7 @@
           const studentEmail = studentRow.querySelector('td:nth-child(2)').textContent.trim();
 
           // Determine action (accept or reject)
-          const studentAction = event.target.classList.contains('accept-btn') ? "1" : "0";
+          const studentAction = event.target.classList.contains('accept-btn') ? 1 : 0;
 
           // Call the function for enrollment handling
           confirmEnrollment(batchId, studentEmail, studentAction);
@@ -472,7 +472,7 @@
     });
 
   // Function to handle enrollment confirmation or rejection
-  function confirmEnrollment(batchId, studentUsername, studentAction = "0", role="TA") {
+  function confirmEnrollment(batchId, studentUsername, studentAction = 0, role="TA") {
     const csrfToken = "{{ csrf_token }}";
     const url = "{% url 'enrollment' %}";
 
@@ -491,11 +491,6 @@
     })
       .then((response) => {
         if (response.ok) {
-          alert(
-            studentAction === "1"
-              ? "Student enrollment approved!"
-              : "Student enrollment rejected!"
-          );
           window.location.reload();
         } else {
           alert("Failed to update enrollment status.");

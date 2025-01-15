@@ -132,7 +132,7 @@
                     <tr>
                       <td>{{ teacher.first_name }} {{ teacher.last_name }}</td>
                       <td>{{ teacher.username }}</td>
-                      <td>{{ teacher.email }}</td>
+                      <td><a href="maito:{{ teacher.email }}">{{ teacher.email }}</a></td>
                     </tr>
                     {% endfor %}
                   {% else %}
@@ -227,7 +227,6 @@
                     <th scope="col">Batch Name</th>
                     <th scope="col">Course</th>
                     <th scope="col">Teacher</th>
-                    <th scope="col">Strength</th>
                     <th scope="col">Action</th>
                   </tr>
                 </thead>
@@ -238,7 +237,6 @@
                       <td>{{ batch.batch_id }}</td>
                       <td>{{ batch.course_name }}</td>
                       <td>{{ batch.teacher }}</td>
-                      <td>{{ 0 }}</td>
                       <td>
                         <button
                             class="btn btn-sm"

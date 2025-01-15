@@ -152,7 +152,17 @@ class StudentEnrollment(models.Model):
     approval_status = models.BooleanField(default=False, help_text="Indicates whether the enrollment is approved")
 
     class Meta:
-        unique_together = ('student', 'batch')  # Ensures no duplicate entries for a student in a batch
+        unique_together = ('student', 'course')
+
+    def update(self, *args, **kwargs):
+        super(StudentEnrollment, self).save(*args, **kwargs)
+        return "Enrollment request sent successfully"
+
+    def save(self, *args, **kwargs):
+        if StudentEnrollment.objects.filter(student=self.student, course=self.course).exists():
+            return "You had already sent a request for enrolling into this course"
+        super(StudentEnrollment, self).save(*args, **kwargs)
+        return "Enrollment request sent successfully"
 
     def __str__(self):
         return f"{self.student.username}"
@@ -179,7 +189,7 @@ class CourseTopic(models.Model):
     batch = models.ForeignKey(Batch, on_delete=models.CASCADE)
     topic = models.CharField(max_length=255)
     description = models.TextField()
-    date = models.DateField(default=datetime.now().date)
+    date = models.DateField(default=datetime.now)
 
     def __str__(self):
         return self.topic

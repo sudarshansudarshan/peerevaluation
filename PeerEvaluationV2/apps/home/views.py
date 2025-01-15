@@ -436,12 +436,14 @@ def index(request):
             students = StudentEnrollment.objects.filter(batch=batch, approval_status=True)
             ta = User.objects.filter(is_staff=True).first()
             for enrollment in students:
+                incentives = Incentivization.objects.filter(student=enrollment.student)
                 students_list.append({
                     'student_username': enrollment.student.username,
                     'student_email': enrollment.student.email,
                     'batch_id': batch.batch_id,
                     'course_name': batch.course.name,
-                    'course_id': batch.course.course_id
+                    'course_id': batch.course.course_id,
+                    'incentivization': round(incentives.rewards, 2)
                 })
             for ta in tas_for_batch:
                 tas.append({
@@ -526,7 +528,7 @@ def index(request):
             "active_exams": len(active_exams)  # Number of active exams in the current time window.
         }
         context = {'segment': 'index', 'courses': batches_list, 'counts': counts,
-                   'is_ta': len(tas) > 0, 'exams': active_exams, 'topics': topics}
+                   'exams': active_exams, 'topics': topics}
         html_template = loader.get_template('home/student/index.html')
         return HttpResponse(html_template.render(context, request))
 
@@ -834,96 +836,60 @@ def download_answer_sheets(request):
 @login_required
 def enrollment(request):
 
-    if request.method == 'POST':     
-        try:   
-            data = request.body.decode('utf-8')
-            batch_id = int(json.loads(data)['batch_id'])
-            role = json.loads(data)['role']
-            if role == "TA":
-                username = str(json.loads(data)['student_username'])
-                action = json.loads(data)['student_action']
-                username = User.objects.get(email=username)
-                studentenrollment = StudentEnrollment.objects.filter(batch_id=batch_id, student__username=username).first()
-                if studentenrollment:
-                    if action == "1":
-                        studentenrollment.approval_status = True
-                        studentenrollment.save()
-                        messages.success(request, 'Student approved successfully!')
-                    elif action == "0":
-                        studentenrollment.delete()
-                        messages.error(request, 'Student rejected successfully!')
-                else:
-                    messages.error(request, 'Student not found in the selected batch.')
-                return redirect('home')
-        except Exception as e:
-            pass
-        batch_id = int(request.POST.get('batch_id'))
-        batch = Batch.objects.get(id=batch_id)
-        student_username = request.user.username
-        if course and student_username:
-            try:
-                student = User.objects.get(username=student_username)
-
-                enrolment = StudentEnrollment.objects.filter(student_id=student.id, batch_id=batch.id).first()
-
-                if enrolment:
-                    if enrolment.approval_status:
-                        messages.error(request, 'Student already enrolled in this course.')
-                        return redirect('home')
-                    else:
-                        enrolment.delete()
-                        messages.error(request, 'Student has not been approved by the teacher.')
-                        return redirect('home')
-                else:
-                    StudentEnrollment.objects.create(
-                        student=student,
-                        course=batch.course,
-                        batch=batch
-                    )
-                    messages.success(request, 'Student enrolled successfully!')
-                    return redirect('home')
-
-            except Batch.DoesNotExist:
-                messages.error(request, 'Batch not found.')
-                return redirect('home')
-            except User.DoesNotExist:
-                messages.error(request, 'Student not found.')
-                return redirect('home')
-        else:
-            messages.error(request, 'Please fill in all required fields.')
+    try:
+        data = request.body.decode('utf-8')
+        batch_id = int(json.loads(data)['batch_id'])
+        if request.user.is_ta():
+            username = str(json.loads(data)['student_username'])
+            action = json.loads(data)['student_action']
+            username = User.objects.get(email=username)
+            studentenrollment = StudentEnrollment.objects.filter(batch_id=batch_id, student__username=username).first()
+            if studentenrollment:
+                if action == 1:
+                    studentenrollment.approval_status = True
+                    studentenrollment.update()
+                    messages.success(request, 'Student accepted successfully!')
+                elif action == 0:
+                    studentenrollment.delete()
+                    messages.success(request, 'Student rejected successfully!')
+            else:
+                messages.error(request, 'Student not found in the selected batch.')
             return redirect('home')
-    
-    else:
-        messages.error(request, 'Invalid request method.')
+    except Exception as e:
+        print(e)
+        messages.error(request, f'Error processing enrollment: {str(e)}')
         return redirect('home')
 
 
-@user_passes_test(is_ta)
+@login_required
 def ta_hub(request):
 
     # Fetch data for TA hub
     if request.method == 'GET':
-        batches = Batch.objects.filter(ta_associations__teaching_assistant=request.user)
-        peerevaluations = PeerEvaluation.objects.filter(exam__batch__in=batches).filter(Q(score="") | Q(ticket__gt=0))
-        topics = CourseTopic.objects.filter(batch__in=batches).order_by('-date')[:5]
+        if request.user.is_ta:
+            batches = Batch.objects.filter(ta_associations__teaching_assistant=request.user)
+            peerevaluations = PeerEvaluation.objects.filter(exam__batch__in=batches).filter(Q(score="") | Q(ticket__gt=0))
+            topics = CourseTopic.objects.filter(batch__in=batches).order_by('-date')[:5]
 
-        tas = [{
-            'batch': ta.batch,
-            'batch_id': ta.batch.id,
-            'course': ta.batch.course.name,
-            'start_date': ta.batch.course.start_date,
-            'instructor': f"{ta.batch.teacher.first_name} {ta.batch.teacher.last_name}",
-            'instructor_email': ta.batch.teacher.email,
-            'students': [
-                {
-                    "name": f"{student.student.first_name} {student.student.last_name}",
-                    "username": student.student.username,
-                    "email": student.student.email
-                }
-                for student in StudentEnrollment.objects.filter(batch=ta.batch.id, approval_status=False).order_by('approval_status')
-            ],
-        } for ta in TeachingAssistantAssociation.objects.filter(teaching_assistant=request.user)]
-        return render(request, 'home/student/ta_hub.html', {'evaluations': peerevaluations, 'batches': batches, 'ta': tas, 'is_ta': len(tas) > 0, 'topics': topics})
+            tas = [{
+                'batch': ta.batch,
+                'batch_id': ta.batch.id,
+                'course': ta.batch.course.name,
+                'start_date': ta.batch.course.start_date,
+                'instructor': f"{ta.batch.teacher.first_name} {ta.batch.teacher.last_name}",
+                'instructor_email': ta.batch.teacher.email,
+                'students': [
+                    {
+                        "name": f"{student.student.first_name} {student.student.last_name}",
+                        "username": student.student.username,
+                        "email": student.student.email
+                    }
+                    for student in StudentEnrollment.objects.filter(batch=ta.batch.id, approval_status=False).order_by('approval_status')
+                ],
+            } for ta in TeachingAssistantAssociation.objects.filter(teaching_assistant=request.user)]
+            return render(request, 'home/student/ta_hub.html', {'evaluations': peerevaluations, 'batches': batches, 'ta': tas, 'is_ta': len(tas) > 0, 'topics': topics})
+        else:
+            return redirect('home')
 
     # Associate Teaching associate with batch
     if request.method == 'POST':
@@ -931,16 +897,20 @@ def ta_hub(request):
         ta_username = request.POST.get('teachingAssistantName')
         batch = Batch.objects.get(id=batch_id)
         ta = User.objects.get(username=ta_username)
-        try:
-            TeachingAssistantAssociation.objects.create(
-                batch=batch,
-                teaching_assistant=ta
-            )
-            messages.success(request, 'TA assigned successfully!')
-        except IntegrityError:
-            messages.error(request, 'TA already assigned to this batch.')
-        except Exception as e:
-            messages.error(request, f'An error occurred: {str(e)}')
+        if request.user.is_teacher():
+            try:
+                TeachingAssistantAssociation.objects.create(
+                    batch=batch,
+                    teaching_assistant=ta
+                )
+                messages.success(request, 'TA assigned successfully!')
+                return redirect('home')
+            except IntegrityError:
+                messages.error(request, 'TA already assigned to this batch.')
+            except Exception as e:
+                messages.error(request, f'An error occurred: {str(e)}')
+        else:
+            messages.error(request, 'You are not authorized to perform this operation.')
     
     return redirect('home')
 
@@ -1548,12 +1518,22 @@ def llm_answer(request):
                             Topic=topic,
                             student=request.user
                         )
-                        incentive = Incentivization.objects.filter(student=evaluation.evaluator, batch=topic.batch).first()
-                        total_exams = LLMEvaluation.objects.filter(topic__batch=evaluation.exam.batch).count()
+                        incentive = Incentivization.objects.filter(student=request.user, batch=topic.batch).first()
+                        total_exams = CourseTopic.objects.filter(batch=topic.batch).count()
+                        exam_count = LLMEvaluation.objects.filter(student=request.user, Topic__batch=topic.batch).count()
                         alpha = 0.01
-                        exam_count = PeerEvaluation.objects.filter(student=evaluation.evaluator, exam__batch=evaluation.exam.batch, score__isnull=False).values('exam_id').distinct().count()
-                        print(f"Exam count: {exam_count}")
                         incremental_reward = (1 / (1 + math.exp(-alpha * exam_count))) / total_exams
+                        if incentive:
+                            incentive.rewards += incremental_reward
+                            incentive.exam_count = exam_count
+                            incentive.save()
+                        else:
+                            Incentivization.objects.create(
+                                student=request.user,
+                                batch=topic.batch,
+                                rewards=incremental_reward,
+                                exam_count=1
+                            )
 
                     evaluation_thread = threading.Thread(target=evaluate_task)
                     evaluation_thread.start()
