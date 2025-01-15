@@ -66,7 +66,12 @@ def login_view(request):
             # Check using regex if the username is email
             email_regex = re.compile(r"[^@]+@[^@]+\.[^@]+")
             if email_regex.match(username):
-                user = authenticate(request, username=User.objects.filter(email=username).first().username, password=password)
+                username = User.objects.filter(email=username).first()
+                if username:
+                    user = authenticate(request, username=username.username, password=password)
+                else:
+                    msg = 'Invalid credentials'
+                    return render(request, "accounts/login.html", {"form": form, "msg": msg})
             else:
                 user = authenticate(username=username, password=password)
                 
@@ -98,10 +103,12 @@ def register_user(request):
             is_staff = form.cleaned_data.get("is_staff")
             user = authenticate(first_name=first_name, last_name=last_name,
                 username=username, password=raw_password, email=email)
-            if is_staff and request.user.is_superuser():
+            if is_staff and request.user.is_superuser:
                 user = User.objects.get(username=username)
                 user.is_staff = True
                 user.save()
+            else:
+                return redirect("/logout")
             subject = "Welcome to Peer Evaluation"
             html_message = render_to_string(
                 "email/new_account.html",

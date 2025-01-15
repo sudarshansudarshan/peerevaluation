@@ -34,7 +34,7 @@
           </li>
 
           <!-- TA Hub (Conditional) -->
-          {% if user.is_student and is_ta %}
+          {% if user.is_ta %}
           <li class="nav-item" title="Manage your TA operations">
               <a class="nav-link {% if 'ta' in segment %} active {% endif %}" href="/ta_hub/">
                   <i class="ni ni-hat-3 text-red"></i>
@@ -62,6 +62,13 @@
               </a>
           </li>
           {% endif %}
+
+          <li class="nav-item" title="View the documentation for easy navigation across the application">
+              <a class="nav-link {% if 'profile' in segment %} active {% endif %}" href="/documentation" target="_blank" rel="noopener noreferrer">
+                  <i class="ni ni-books text-blue"></i>
+                  <span class="nav-link-text">Documentation</span>
+              </a>
+          </li>
 
           <!-- Logout -->
             <li class="nav-item" title="Logout from the system">

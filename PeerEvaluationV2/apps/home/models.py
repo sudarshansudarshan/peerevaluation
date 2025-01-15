@@ -29,7 +29,7 @@ class Batch(models.Model):
         unique_together = ('course', 'batch_id', 'teacher')  # Ensures uniqueness of the teacher for a batch in a course
 
     def __str__(self):
-        return f"{self.batch_id} - {self.course.name} ({self.teacher.username})"
+        return f"{self.batch_id} - {self.course.name} ({self.teacher.first_name}) {self.teacher.last_name}"
     
     @property
     def enrolled_students_count(self):

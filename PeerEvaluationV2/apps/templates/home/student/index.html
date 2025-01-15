@@ -232,7 +232,7 @@
               <tr>
               <td class="sticky-column px-2 font-weight-bold" title="{{ course.name }}">{{ course.name|truncatechars:30 }}</td>
               <td class="px-2" title="{{ course.description }}">{{ course.description|truncatechars:30 }}</td>
-              <td class="px-2 text-center">{{ course.batch }}</td>
+              <td class="px-2 text-center" title="{{ course.batch }}">{{ course.batch }}</td>
               <td class="px-2 text-center">{{ course.start_date|date:"M d, Y" }}</td>
               <td class="px-2 text-center">{{ course.end_date|date:"M d, Y" }}</td>
               <td class="px-2 text-center">
@@ -344,8 +344,8 @@
               <!-- Today's Topic -->
               <div class="form-group">
                 <label for="todaysTopic">Today's Topics</label>
-                <select class="form-control" id="todaysTopic" name="todaysTopic">
-                    <option>Select topics</option>
+                <select class="form-control" id="todaysTopic" name="todaysTopic" required>
+                    <option disabled>Select topics</option>
                     {% for topic in topics %}
                     <option value="{{ topic.id }}" title="{{ topic.description }}">
                         {{ topic.course.name }} ({{ topic.batch.batch_id }}) | {{ topic.topic }} : : {{ topic.description }}
