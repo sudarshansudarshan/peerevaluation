@@ -223,10 +223,10 @@
                                 <input type="number" class="form-control border rounded px-2 py-1" id="duration" name="duration" minValue="0">
                               </td>
                               <td class="px-4 py-2">
-                                <input type="number" class="form-control border rounded px-2 py-1" id="num_que" name="num_que" minValue="0">
+                                <input type="number" class="form-control border rounded px-2 py-1" id="max_marks" name="max_marks" minValue="0">
                               </td>
                               <td class="px-4 py-2">
-                                <input type="number" class="form-control border rounded px-2 py-1" id="max_marks" name="max_marks" minValue="0">
+                                <input type="number" class="form-control border rounded px-2 py-1" id="num_que" name="num_que" minValue="0">
                               </td>
                               <td class="px-4 py-2">
                                 <input type="number" class="form-control border rounded px-2 py-1" id="k" name="k" minValue="0">
@@ -241,8 +241,8 @@
                           {% else %}
                             <td class="px-4 py-2">{{ batch.exams.date }}</td>
                             <td class="px-4 py-2">{{ batch.exams.duration }} mins</td>
-                            <td class="px-4 py-2">{{ batch.exams.number_of_questions }}</td>
                             <td class="px-4 py-2">{{ batch.exams.max_scores }}</td>
+                            <td class="px-4 py-2">{{ batch.exams.number_of_questions }}</td>
                             <td class="px-4 py-2">{{ batch.exams.k }}</td>
                             <td class="px-4 py-2">{{ batch.exams.student_count }}</td>
                             <td class="px-4 py-2">

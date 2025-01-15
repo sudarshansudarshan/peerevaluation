@@ -436,14 +436,14 @@ def index(request):
             students = StudentEnrollment.objects.filter(batch=batch, approval_status=True)
             ta = User.objects.filter(is_staff=True).first()
             for enrollment in students:
-                incentives = Incentivization.objects.filter(student=enrollment.student)
+                incentives = Incentivization.objects.filter(student=enrollment.student, batch=batch).first()
                 students_list.append({
                     'student_username': enrollment.student.username,
                     'student_email': enrollment.student.email,
                     'batch_id': batch.batch_id,
                     'course_name': batch.course.name,
                     'course_id': batch.course.course_id,
-                    'incentivization': round(incentives.rewards, 2)
+                    'incentivization': round(incentives.rewards, 2) if incentives else 0
                 })
             for ta in tas_for_batch:
                 tas.append({
@@ -454,7 +454,6 @@ def index(request):
                     'course_id': batch.course.course_id
                 })
 
-        # Pass data to the template
         context = {
             'segment': 'index',
             'batches': batches_list,
@@ -686,7 +685,7 @@ def generate_student_pdf(student, exam, n_extra_pages):
     
     try:
         # Create QR Code
-        qr = qrcode.QRCode(version=1, box_size=7, border=4)
+        qr = qrcode.QRCode(version=1, box_size=4, border=4)
         qr.add_data(student.uid)
         qr.make(fit=True)
         qr_img = qr.make_image(fill="black", back_color="white")
@@ -710,7 +709,7 @@ def generate_student_pdf(student, exam, n_extra_pages):
             pdf.set_y(40)
             
             # QR code on the left
-            pdf.image(tmpfile.name, x=20, y=40, w=50, h=50)
+            pdf.image(tmpfile.name, x=10, y=10, w=25, h=25)
             
             # Details on the right
             x_start = 80
@@ -754,7 +753,7 @@ def generate_student_pdf(student, exam, n_extra_pages):
             pdf = FPDF()
             for _ in range(n_extra_pages):
                 pdf.add_page()
-                pdf.image(tmpfile.name, x=10, y=12, w=40, h=40)
+                pdf.image(tmpfile.name, x=10, y=10, w=25, h=25)
             
             # Save additional pages
             with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as pdf_tmpfile:
@@ -1272,7 +1271,7 @@ def student_eval(request):
             evaluation.ticket = 0
             evaluation.save()
             messages.success(request, 'Evaluation submitted successfully!')
-            return redirect('ta_hub' if request.user.is_ta else 'peer_eval')
+            return redirect('peer_eval')
         except Exception as e:
             print(f"An error occurred: {str(e)}")
             return redirect('peer_eval')

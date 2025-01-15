@@ -17,4 +17,5 @@ venv.bak/
 # Django stuff:
 db.sqlite3
 
-./staticfiles
+staticfiles
+apps/static/documents

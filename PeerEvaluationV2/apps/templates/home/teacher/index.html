@@ -134,6 +134,7 @@
                     <th scope="col">Batch ID</th>
                     <th scope="col">Course Name</th>
                     <th scope="col">Course ID</th>
+                    <th scope="col">Incentives</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -144,6 +145,7 @@
                     <td>{{ student.batch_id }}</td>
                     <td>{{ student.course_name }}</td>
                     <td>{{ student.course_id }}</td>
+                    <td>{{ student.incentivization }}</td>
                   </tr>
                   {% endfor %}
                   {% if students|length == 0 %}
@@ -182,6 +184,7 @@
                     <th scope="col">Batch ID</th>
                     <th scope="col">Course Name</th>
                     <th scope="col">Course ID</th>
+                    <th scope="col">Action</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -192,6 +195,9 @@
                     <td>{{ student.batch_id }}</td>
                     <td>{{ student.course_name }}</td>
                     <td>{{ student.course_id }}</td>
+                    <td>
+                      <a href="" class="btn btn-sm btn-danger">Remove</a>
+                    </td>
                   </tr>
                   {% endfor %}
                   {% if tas|length == 0 %}
