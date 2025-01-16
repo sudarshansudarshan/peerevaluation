@@ -1,0 +1,50 @@
+version: '3.8'
+
+networks:
+  app_network:
+    driver: bridge
+
+services:
+  db:
+    image: postgres:15
+    container_name: postgres_db
+    environment:
+      POSTGRES_DB: peereval
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgress
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - app_network
+
+  web:
+    build:
+      context: .
+    container_name: django_app
+    command: >
+      sh -c "./wait-for-it.sh db:5432 -- 
+             python manage.py migrate && 
+             python manage.py createsuperuser --noinput --username root --email root@example.com &&
+             python manage.py runserver 0.0.0.0:8000"
+    volumes:
+      - .:/code
+    ports:
+      - "8000:8000"
+    environment:
+      DB_NAME: peereval
+      DB_USER: postgres
+      DB_PASSWORD: postgress
+      DB_HOST: db
+      DB_PORT: 5432
+      DJANGO_SUPERUSER_USERNAME: root
+      DJANGO_SUPERUSER_EMAIL: root@example.com
+      DJANGO_SUPERUSER_PASSWORD: pass
+    depends_on:
+      - db
+    networks:
+      - app_network
+
+volumes:
+  postgres_data:

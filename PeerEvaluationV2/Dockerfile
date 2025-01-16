@@ -1,18 +1,23 @@
-FROM python:3.9
+# Use official Python image as a parent image
+FROM python:3.11
 
-COPY . .
+# Set the working directory in the container
+WORKDIR /code
 
-# set environment variables
-ENV PYTHONDONTWRITEBYTECODE 1
-ENV PYTHONUNBUFFERED 1
+# Install system dependencies, including zbar
+RUN apt-get update && apt-get install -y \
+    zbar-tools \
+    libzbar-dev \
+    && rm -rf /var/lib/apt/lists/*
 
-# install python dependencies
-RUN pip install --upgrade pip
+# Copy the requirements file into the container
+COPY requirements.txt /code/
+
+# Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-# running migrations
-RUN python manage.py migrate
+# Copy the current directory contents into the container
+COPY . /code/
 
-# gunicorn
-CMD ["gunicorn", "--config", "gunicorn-cfg.py", "core.wsgi"]
-
+# Expose port 8000 for the Django application
+EXPOSE 8000

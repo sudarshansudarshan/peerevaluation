@@ -149,13 +149,13 @@
 <body>
     <!-- Header -->
     <header>
-        <h1>Professor User Manual</h1>
+        <h1> Student User Manual</h1>
     </header>
 
     <!-- Sidebar -->
     <div class="sidebar">
         <ul>
-            <li><a href="#for-professors"><i class="fas fa-user"></i> For Professors</a></li>
+            <li><a href="#for-professors"><i class="fas fa-user"></i> For Students</a></li>
             <li><a href="#exam-scheduling"><i class="fas fa-calendar-alt"></i> Exam Scheduling</a></li>
             <li><a href="#uploading-evaluations"><i class="fas fa-upload"></i> Uploading Evaluations</a></li>
         </ul>
@@ -163,31 +163,41 @@
 
     <!-- Main Content -->
     <div class="main-content">
-        <section id="for-professors">
-            <h2>For Professors</h2>
+        <section id="for-student">
+            <h2>For Students</h2>
             <div class="section-content">
                 <h3>Registration/Login</h3>
                 <p>
-                    Professors do not need to register themselves. Instead, they will receive login credentials from the admin.
+                    Students can register for the application through the register button, Make sure to use your stuent mail ID for registration.
                 </p>
                 <p>
-                    After receiving the login credentials, professors can log in as a professor/teacher for the application.
+                    Once the student has registered they can login, by entering their email and password.
                 </p>
 
                 <h3>Functionalities</h3>
                 <ul>
                     <li>
-                        <strong>Dashboard:</strong> The professor dashboard is where a professor can look into active batches, enrolled students concerning batch and course, and look into TeacherAssistants- can also be enrolled through the button Enroll TA.
+                        <strong>Dashboard:</strong> The student dashboard displays the courses that have been allotted to the student. Click on a course to view the exam details.<br>
+                        You can also find <b>No of Courses enrolled</b>, <b>Pending evaluations for you</b> and <b>No of Active exams</b> on the dashboard page.
                         <div class="image-frame">
-                            <img src="{% static 'assets/img/1.png' %}" alt="Teacher Dashboard">
+                            <img src="{% static 'assets/img/s1.png' %}" alt="Teacher Dashboard">
                         </div>
                     </li>
                     <li>
-                        Hover over buttons to see a description of their functionalities. <b>Use the navigation button at the top-left corner to explore other options.</b>
-                        <div class="image-frame">
-                            <img src="{% static 'assets/img/2.png' %}" alt="top left navigation button">
-                        </div>
+                        <b>These are the options available to the student on dashboard page:</b>
+                        <ol>
+                            <li><i>Course Enrollment:</i> In this section of the dashboard you can look for the courses you have enrolled in detail.</li>
+                            <li><i>Upload Evaluation:</i> In this section of the dashboard you can upload the evaluation,your answer sheet, for the course and exam taken.</li>
+                            <li><i>Lecture Evaluation:</i></li>In this section of the dashboard you can write on the topic that will appear under the <b>Today's Topic</b> section.<br> Your answers will have some intencives.<br>
+                            <p style="color: red;">Note: We highly advice you to refrain from using kind of AI, as LLMs will detect it and you will be flagged</p></li>
+                        </ol>
                     </li><br>
+                    <li>
+                        <strong>Navigations:</strong> You can navigate in your account through this side navbar
+                        <div class="image-frame">
+                            <img src="{% static 'assets/img/s2.png' %}" alt="top left navigation button">
+                        </div>
+                    </li>
                     <li>
                         <strong>Profile:</strong> Access your profile page to view account details and use the logout feature.
                         <div class="image-frame">
@@ -199,15 +209,21 @@
         </section>
 
         <section id="exam-scheduling">
-            <h2>Exam Scheduling</h2>
+            <h2>Evaluation:</h2>
             <div class="section-content">
-                <p><u>This functionality is only available when a course has been allotted to the professor by the admin.</u></p>
-                <div class="image-container">
-                    <img src="{% static 'assets/img/nocourseview.png' %}" alt="No Course Allotted View">
+                <p><b>Here you can see options to perform evaluations:</b></p>
+
+                    <ol>
+                        <li><i>Evaluate Answer Scripts:</i> In this section you can find about the answer sheets that had been provided to you for evaluation after your exam. You will get option to input marks and remarks based on the questions.</li>
+                        <li><i>Scores:</i> You can find your score card after the evaluations are done. Here you can see your final score. And don't worry if you are unsatified with the score we will automatically raise ticket and your score will be addressed by the professor twice. </li>
+                        
+                    </ol>
+                <div class="image-frame">
+                    <img src="{% static 'assets/img/s3.png' %}" alt="No Course Allotted View">
                     <p><em>View when no course is allotted<br><mark>If you see this please ask admin to allot you course</mark></em></p>
                 </div>
 
-                <div class="image-container">
+                <div class="image-frame">
                     <img src="{% static 'assets/img/exam-allotted.png' %}" alt="Course Allotted View">
                     <p><em>View when a course is allotted</em></p>
                 </div>
