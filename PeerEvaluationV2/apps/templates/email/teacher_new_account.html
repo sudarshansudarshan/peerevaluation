@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+        }
+
+        .email-container {
+            max-width: 600px;
+            margin: 40px auto;
+            background-color: #ffffff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        .header {
+            text-align: center;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #d3c1e5;
+        }
+
+        .header h1 {
+            font-size: 28px;
+            color: #5c4a72;
+        }
+
+        .content {
+            line-height: 1.8;
+            color: #5c4a72;
+            padding-top: 20px;
+        }
+
+        .cta-button {
+            display: block;
+            width: max-content;
+            margin: 20px auto;
+            padding: 12px 25px;
+            background-color: #8a5ea2;
+            color: #ffffff;
+            text-decoration: none;
+            border-radius: 5px;
+            font-size: 16px;
+            text-align: center;
+        }
+
+        .cta-button:hover {
+            background-color: #6d3d94;
+        }
+
+        .footer {
+            text-align: center;
+            font-size: 12px;
+            color: #b7a9cf;
+            padding-top: 20px;
+            border-top: 1px solid #d3c1e5;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="email-container">
+        <div class="header">
+            <h1>Welcome to Peer Evaluation</h1>
+        </div>
+        <div class="content">
+            <p>Dear {{ name }},</p>
+            <p>Welcome to the Peer Evaluation system!</p>
+            <p>We are excited to have you as part of our teaching team. This platform helps streamline feedback and performance evaluation for your students.</p>
+            <p>Your credentials for accessing the system are as follows:</p>
+            <ul>
+                <li><strong>Username:</strong> {{ username }}</li>
+                <li><strong>Password:</strong> {{ password }}</li>
+            </ul>
+            <p>To get started, follow these steps:</p>
+            <ol>
+                <li><strong>Set Up Your Courses:</strong> Log in to the system and create courses for peer evaluations.</li>
+                <li><strong>Approve Enrollments:</strong> Review and approve enrollment requests from students in your courses.</li>
+                <li><strong>Track Evaluations:</strong> Monitor the evaluation progress and provide guidance as necessary.</li>
+            </ol>
+            <p>If you have any questions or face any issues, please contact our support team. We are here to assist you!</p>
+            <p>With regards,<br>Peer Evaluation Team</p>
+        </div>
+        <a href="{{ evaluation_link }}" class="cta-button">Log In</a>
+        <div class="footer">
+            <p>Peer Evaluation System</p>
+        </div>
+    </div>
+</body>
+
+</html>

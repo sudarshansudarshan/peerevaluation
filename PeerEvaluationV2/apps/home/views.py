@@ -536,8 +536,7 @@ def index(request):
 @login_required(login_url="/login/")
 def pages(request):
     context = {}
-    # All resource paths end in .html.
-    # Pick out the html file name from the url. And load that template.
+    
     try:
 
         load_template = request.path.split('/')[-1]
@@ -673,11 +672,13 @@ def batch(request):
 
         return redirect('home')
 
+
     else:
         messages.error(request, 'Invalid request method.')
         return redirect('home')
 
 
+# Generate blank PDFs for students
 def generate_student_pdf(student, exam, n_extra_pages):
     """Helper function to generate PDF for a single student"""
     pdf_files = []
@@ -773,6 +774,7 @@ def generate_student_pdf(student, exam, n_extra_pages):
         raise e
     
 
+# Route for downloading the blank PDFs
 @user_passes_test(is_staff)
 def download_answer_sheets(request):
 
@@ -832,33 +834,75 @@ def download_answer_sheets(request):
 
 
 # Enrollment of student
-@login_required
 def enrollment(request):
 
-    try:
-        data = request.body.decode('utf-8')
-        batch_id = int(json.loads(data)['batch_id'])
-        if request.user.is_ta():
-            username = str(json.loads(data)['student_username'])
-            action = json.loads(data)['student_action']
-            username = User.objects.get(email=username)
-            studentenrollment = StudentEnrollment.objects.filter(batch_id=batch_id, student__username=username).first()
-            if studentenrollment:
-                if action == 1:
-                    studentenrollment.approval_status = True
-                    studentenrollment.update()
-                    messages.success(request, 'Student accepted successfully!')
-                elif action == 0:
-                    studentenrollment.delete()
-                    messages.success(request, 'Student rejected successfully!')
-            else:
-                messages.error(request, 'Student not found in the selected batch.')
-            return redirect('home')
-    except Exception as e:
-        print(e)
-        messages.error(request, f'Error processing enrollment: {str(e)}')
-        return redirect('home')
+    if request.method == 'POST':     
+        try:   
+            data = request.body.decode('utf-8')
+            batch_id = int(json.loads(data)['batch_id'])
+            role = json.loads(data)['role']
+            if role == "TA":
+                username = str(json.loads(data)['student_username'])
+                action = json.loads(data)['student_action']
+                username = User.objects.get(email=username)
+                studentenrollment = StudentEnrollment.objects.filter(batch_id=batch_id, student__username=username).first()
+                print(studentenrollment)
+                if studentenrollment:
+                    if action == "1":
+                        studentenrollment.approval_status = True
+                        studentenrollment.save()
+                        messages.success(request, 'Student approved successfully!')
+                        print("Approved")
+                    elif action == "0":
+                        studentenrollment.delete()
+                        messages.error(request, 'Student rejected successfully!')
+                        print("Rejected")
+                else:
+                    messages.error(request, 'Student not found in the selected batch.')
+                    print("Not found")
+                return redirect('home')
+        except Exception as e:
+            pass
+        batch_id = int(request.POST.get('batch_id'))
+        batch = Batch.objects.get(id=batch_id)
+        student_username = request.user.username
+        if course and student_username:
+            try:
+                student = User.objects.get(username=student_username)
 
+                enrolment = StudentEnrollment.objects.filter(student_id=student.id, batch_id=batch.id).first()
+
+                if enrolment:
+                    if enrolment.approval_status:
+                        messages.error(request, 'Student already enrolled in this course.')
+                        return redirect('home')
+                    else:
+                        enrolment.delete()
+                        messages.error(request, 'Student has not been approved by the teacher.')
+                        return redirect('home')
+                else:
+                    StudentEnrollment.objects.create(
+                        student=student,
+                        course=batch.course,
+                        batch=batch
+                    )
+                    messages.success(request, 'Student enrolled successfully!')
+                    return redirect('home')
+
+            except Batch.DoesNotExist:
+                messages.error(request, 'Batch not found.')
+                return redirect('home')
+            except User.DoesNotExist:
+                messages.error(request, 'Student not found.')
+                return redirect('home')
+        else:
+            messages.error(request, 'Please fill in all required fields.')
+            return redirect('home')
+    
+    else:
+        messages.error(request, 'Invalid request method.')
+        return redirect('home')
+    
 
 @login_required
 def ta_hub(request):
@@ -1080,7 +1124,7 @@ def examination(request):
             print(e)
             messages.error(request, f'An error occurred: {str(e)}')
         return redirect('examination')
-    
+
 
     elif request.method == 'DELETE':
         if request.user.is_staff:
@@ -1100,8 +1144,8 @@ def examination(request):
             else:
                 pass
             return redirect('examination')
-    
-    
+
+
     elif request.method == 'PUT':
         if request.user.is_staff:
             data = request.body.decode('utf-8')
@@ -1186,6 +1230,7 @@ def peer_evaluation(request):
                                                                      'is_ta': TeachingAssistantAssociation.objects.filter(teaching_assistant=request.user) != None,
                                                                      'results': final_results})
 
+
     if request.method == 'POST':
         if request.user.is_staff:
             data = json.loads(request.body.decode('utf-8'))
@@ -1227,6 +1272,7 @@ def peer_evaluation(request):
             else:
                 flag_evaluations_with_high_std(exam_instance, request)
                 return redirect('examination')
+
 
     else:
         return redirect('home')
@@ -1279,6 +1325,7 @@ def student_eval(request):
 
 @login_required
 def upload_evaluation(request):
+
 
     if request.method == "POST":
         uploaded_files = request.FILES.getlist("evaluationfile")
@@ -1367,10 +1414,12 @@ def upload_evaluation(request):
             return render(request, "home/student/peer_evaluation.html",
                           {"error": f"An error occurred while processing the files: {str(e)}"})
 
+
     return render(request, "home/student/peer_evaluation.html")
 
 
 def export_evaluations_to_csv(request, exam_id):
+
     # Fetch all evaluations with the required fields
     evaluations = PeerEvaluation.objects.filter(exam_id=int(exam_id)).values(
         'evaluator_id', 'evaluated_on', 'document_id', 'student_id', 

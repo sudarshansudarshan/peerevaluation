@@ -112,7 +112,6 @@
               <h3 class="mb-0">Teachers</h3>
               <button class="btn btn-sm btn-primary"
                       data-toggle="modal"
-                      title="Click here to enroll new teacher"
                       data-target="#registerStaffModal">
                       Add Teacher
               </button>
@@ -189,7 +188,6 @@
                         <button 
                             class="btn btn-sm" 
                             style="color: red; background: none; border: none;"
-                            title="Click here to delete course {{ course.name }}"
                             onclick="deleteCourse({{ course.id }})">
                             Delete
                         </button>
@@ -217,7 +215,7 @@
                 data-target="#addBatchModal"
                 data-toggle="modal"
                 title="Click here to add a new batch into a course">
-                Add Course
+                Add Batch
               </button>
             </div>
             <div class="table-responsive" style="max-height: 350px; overflow-y: auto;">
@@ -241,7 +239,6 @@
                         <button
                             class="btn btn-sm"
                             style="color: red; background: none; border: none;"
-                            title="Click here to delete batch {{ batch.batch_id }} from course {{ batch.course_name }}"
                             onclick="deleteBatch({{ batch.id }})">
                             Delete
                         </button>
@@ -408,21 +405,8 @@
                 <input type="email" class="form-control" id="email" name="email" required>
               </div>
 
-              <!-- Password -->
-              <div class="form-group">
-                <label for="password1">Password</label>
-                <input type="password" class="form-control" id="password1" name="password1" required>
-              </div>
-
-              <!-- Confirm Password -->
-              <div class="form-group">
-                <label for="confirmPassword">Confirm Password</label>
-                <input type="password" class="form-control" id="password2" name="password2" required>
-              </div>
-
               <!-- Role (Fixed as Staff) -->
               <input type="hidden" name="is_staff" value="True">
-
             </div>
             <div class="modal-footer">
               <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
@@ -494,6 +478,7 @@
     $('[title]').tooltip();
   });
 </script>
+
 <script src="/static/assets/vendor/chart.js/dist/Chart.min.js"></script>
 <script src="/static/assets/vendor/chart.js/dist/Chart.extension.js"></script>
 {% endblock javascripts %}

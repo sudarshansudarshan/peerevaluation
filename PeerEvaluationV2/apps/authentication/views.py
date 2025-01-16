@@ -17,7 +17,7 @@ from django.contrib import messages
 import re
 
 def generate_password(length):
-    MAX_LEN = 12
+    MAX_LEN = length
 
     DIGITS = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']  
     LOCASE_CHARACTERS = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 
@@ -28,7 +28,7 @@ def generate_password(length):
                         'I', 'J', 'K', 'M', 'N', 'O', 'P', 'Q',
                         'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y',
                         'Z']
-    SYMBOLS = ['@', '#', '$', '%', '=', ':', '?', '.', '/', '|', '~', '>', 
+    SYMBOLS = ['@', '#', '$', '%', '=', ':', '?', '/', '|', '~', '>', 
             '*', '(', ')', '<']
 
     COMBINED_LIST = DIGITS + UPCASE_CHARACTERS + LOCASE_CHARACTERS + SYMBOLS
@@ -99,35 +99,55 @@ def register_user(request):
             last_name = form.cleaned_data["last_name"]
             username = form.cleaned_data.get("username")
             email = form.cleaned_data.get("email")
-            raw_password = form.cleaned_data.get("password1")
             is_staff = form.cleaned_data.get("is_staff")
+            raw_password = form.cleaned_data.get("password1") if not is_staff else generate_password(10)
             user = authenticate(first_name=first_name, last_name=last_name,
                 username=username, password=raw_password, email=email)
             if is_staff and request.user.is_superuser:
                 user = User.objects.get(username=username)
                 user.is_staff = True
                 user.save()
+                subject = "Welcome to Peer Evaluation"
+                html_message = render_to_string(
+                    "email/teacher_new_account.html",
+                    {
+                        "name": first_name,
+                        "username": username,
+                        "password": raw_password,
+                        "evaluation_link": "https://pes.iitrpr.ac.in",
+                    },
+                )
+                plain_message = strip_tags(html_message)
+                send_mail(
+                    subject=subject,
+                    message=plain_message,
+                    from_email="no-reply@evaluation-system.com",
+                    recipient_list=[email],
+                    html_message=html_message,
+                    fail_silently=False)
+                msg = 'User created - please <a href="/login">login</a>.'
+                success = True
             else:
+                subject = "Welcome to Peer Evaluation"
+                html_message = render_to_string(
+                    "email/new_account.html",
+                    {
+                        "name": first_name,
+                        "username": username,
+                        "evaluation_link": "https://pes.iitrpr.ac.in",
+                    },
+                )
+                plain_message = strip_tags(html_message)
+                send_mail(
+                    subject=subject,
+                    message=plain_message,
+                    from_email="no-reply@evaluation-system.com",
+                    recipient_list=[email],
+                    html_message=html_message,
+                    fail_silently=False)
+                msg = 'User created - please <a href="/login">login</a>.'
+                success = True
                 return redirect("/logout")
-            subject = "Welcome to Peer Evaluation"
-            html_message = render_to_string(
-                "email/new_account.html",
-                {
-                    "name": first_name,
-                    "username": username,
-                    "evaluation_link": "https://pes.iitrpr.ac.in",
-                },
-            )
-            plain_message = strip_tags(html_message)
-            send_mail(
-                subject=subject,
-                message=plain_message,
-                from_email="no-reply@evaluation-system.com",
-                recipient_list=[email],
-                html_message=html_message,
-                fail_silently=False)
-            msg = 'User created - please <a href="/login">login</a>.'
-            success = True
         else:
             msg = 'Form is not valid'
     else:
