@@ -839,6 +839,7 @@ def enrollment(request):
     if request.method == 'POST':     
         try:   
             data = request.body.decode('utf-8')
+            print(data)
             batch_id = int(json.loads(data)['batch_id'])
             role = json.loads(data)['role']
             if role == "TA":
@@ -846,14 +847,14 @@ def enrollment(request):
                 action = json.loads(data)['student_action']
                 username = User.objects.get(email=username)
                 studentenrollment = StudentEnrollment.objects.filter(batch_id=batch_id, student__username=username).first()
-                print(studentenrollment)
                 if studentenrollment:
-                    if action == "1":
+                    if action == 1:
+                        print(action == 1)
                         studentenrollment.approval_status = True
-                        studentenrollment.save()
+                        studentenrollment.update()
                         messages.success(request, 'Student approved successfully!')
                         print("Approved")
-                    elif action == "0":
+                    elif action == 0:
                         studentenrollment.delete()
                         messages.error(request, 'Student rejected successfully!')
                         print("Rejected")

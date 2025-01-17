@@ -29,6 +29,7 @@ class SignUpForm(UserCreationForm):
                 "class": "form-control"
             }
         ))
+    
     last_name = forms.CharField(
         widget=forms.TextInput(
             attrs={
@@ -36,6 +37,7 @@ class SignUpForm(UserCreationForm):
                 "class": "form-control"
             }
         ))
+    
     username = forms.CharField(
         widget=forms.TextInput(
             attrs={
@@ -43,6 +45,7 @@ class SignUpForm(UserCreationForm):
                 "class": "form-control"
             }
         ))
+    
     email = forms.EmailField(
         widget=forms.EmailInput(
             attrs={
@@ -50,6 +53,7 @@ class SignUpForm(UserCreationForm):
                 "class": "form-control"
             }
         ))
+    
     password1 = forms.CharField(
         widget=forms.PasswordInput(
             attrs={
@@ -57,6 +61,7 @@ class SignUpForm(UserCreationForm):
                 "class": "form-control"
             }
         ))
+    
     password2 = forms.CharField(
         widget=forms.PasswordInput(
             attrs={
@@ -64,6 +69,7 @@ class SignUpForm(UserCreationForm):
                 "class": "form-control"
             }
         ))
+    
     is_staff = forms.BooleanField(
         widget=forms.CheckboxInput(
             attrs={

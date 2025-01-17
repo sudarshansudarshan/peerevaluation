@@ -92,7 +92,18 @@ def register_user(request):
     success = False
 
     if request.method == "POST":
-        form = SignUpForm(request.POST)
+        # Create a mutable copy of POST data
+        data = request.POST.copy()
+
+        # Check if `password1` and `password2` are not provided
+        if "password1" not in data or "password2" not in data:
+            generated_password = generate_password(10)
+            data["password1"] = generated_password
+            data["password2"] = generated_password
+
+        # Pass the modified data to the form
+        form = SignUpForm(data)
+        print(form.is_valid())
         if form.is_valid():
             form.save()
             first_name = form.cleaned_data["first_name"]
@@ -178,7 +189,7 @@ def forgetPassword(request):
 
             # Create the email content
             html_message = render_to_string(
-                "accounts/changePassword.html",  # Path to your email template
+                "email/forgot_password.html",  # Path to your email template
                 {
                     "username": user.username,
                     "new_password": new_password
@@ -207,4 +218,4 @@ def forgetPassword(request):
     else:
         form = PasswordResetForm()
 
-    return render(request, 'accounts/forgetPassword.html', {'form': form})
+    return render(request, 'accounts/forgot-password.html', {'form': form})
