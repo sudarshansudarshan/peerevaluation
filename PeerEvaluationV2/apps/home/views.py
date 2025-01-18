@@ -1,8 +1,10 @@
 from django import template
 from django.contrib.auth.decorators import login_required, user_passes_test
+from django.contrib.auth import update_session_auth_hash
 from django.http import HttpResponse, HttpResponseRedirect, FileResponse
 from django.template import loader
 from django.urls import reverse
+from .forms import CustomPasswordChangeForm
 from django.shortcuts import get_object_or_404, redirect
 from .models import *
 from django.contrib.auth.decorators import user_passes_test
@@ -1598,6 +1600,21 @@ def llm_answer(request):
     
     else:
         return redirect('home')
+    
+@login_required
+def change_password(request):
+    if request.method == 'POST':
+        form = CustomPasswordChangeForm(user=request.user, data=request.POST)
+        if form.is_valid():
+            user = form.save()
+            update_session_auth_hash(request, user)  # Prevents logout after password change
+            messages.success(request, "Your password has been changed successfully.")
+            return render(request,'home/profile.html')  # Redirect to profile or home
+    else:
+        form = CustomPasswordChangeForm(user=request.user)
+
+    messages.error(request, "Please input valid inputs.")
+    return render(request,'home/profile.html')
     
 
 @login_required

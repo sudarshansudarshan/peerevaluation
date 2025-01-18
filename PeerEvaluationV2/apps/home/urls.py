@@ -17,5 +17,6 @@ urlpatterns = [
     path('associateTopic/', views.topic, name='associateTopic'),
     path('llm_answer/', views.llm_answer, name='llm_answer'),
     path('documentation', views.documentation, name='llm_eval'),
+    path('change-password/', views.change_password, name='change_password'),
     re_path(r'^.*\.*', views.pages, name='pages'),
 ]
