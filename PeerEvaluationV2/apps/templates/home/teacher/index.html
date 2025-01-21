@@ -195,16 +195,24 @@
                   </tr>
                 </thead>
                 <tbody>
-                  {% for student in tas %}
+                  {% for ta in tas %}
                   <tr>
-                    <td>{{ student.ta_username }}</td>
-                    <td><a href="mailto:{{ student.ta_email }}">{{ student.ta_email }}</a></td>
-                    <td>{{ student.batch_id }}</td>
-                    <td>{{ student.course_name }}</td>
-                    <td>{{ student.course_id }}</td>
-                    <td>
-                      <a href="" class="btn btn-sm btn-danger">Remove</a>
-                    </td>
+                    <td>{{ ta.ta_username }}</td>
+                    <td><a href="mailto:{{ ta.ta_email }}">{{ ta.ta_email }}</a></td>
+                    <td>{{ ta.batch_id }}</td>
+                    <td>{{ ta.course_name }}</td>
+                    <td>{{ ta.course_id }}</td>
+                    
+                   <td>
+                      
+                      <form method="POST" action="{% url 'remove_ta' %}">
+                          {% csrf_token %}
+                          <input type="hidden" name="ta_association_id" value="{{ ta.ta_id }}">
+                          <button type="submit" class="btn btn-danger">Remove</button>
+                      </form>
+                      
+                      
+                  </td> 
                   </tr>
                   {% endfor %}
                   {% if tas|length == 0 %}

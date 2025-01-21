@@ -19,6 +19,7 @@ urlpatterns = [
     path('llm_answer/', views.llm_answer, name='llm_answer'),
     path('documentation', views.documentation, name='llm_eval'),
     path('change-password/', views.change_password, name='change_password'),
+    path('remove-ta/', views.remove_ta, name='remove_ta'),
     path('download_online_eval/', views.download_online_eval, name='download_online_eval'),
     re_path(r'^.*\.*', views.pages, name='pages'),
 ]

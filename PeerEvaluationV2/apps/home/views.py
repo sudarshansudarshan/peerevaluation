@@ -454,7 +454,8 @@ def index(request):
                     'ta_email': ta.teaching_assistant.email,
                     'batch_id': batch.batch_id,
                     'course_name': batch.course.name,
-                    'course_id': batch.course.course_id
+                    'course_id': batch.course.course_id,
+                    'ta_id': ta.id
                 })
 
         context = {
@@ -919,6 +920,7 @@ def ta_hub(request):
             topics = CourseTopic.objects.filter(batch__in=batches).order_by('-date')[:5]
 
             tas = [{
+                'id': ta.id,
                 'batch': ta.batch,
                 'batch_id': ta.batch.id,
                 'course': ta.batch.course.name,
@@ -1660,6 +1662,26 @@ def download_online_eval(request):
         return response
 
     return JsonResponse({"error": "Invalid request"}, status=400)
+
+@login_required
+@user_passes_test(lambda u: u.is_staff or u.is_superuser)  # Ensure only teachers or admins can remove TAs
+def remove_ta(request):
+    if request.method == 'POST':
+        ta_association_id = request.POST.get('ta_association_id')
+        # Step 1: Check if ID is provided
+        if not ta_association_id:
+            messages.error(request, "No TA ID provided.")
+            return redirect('home')
+        try:
+            ta_association = get_object_or_404(TeachingAssistantAssociation, id=int(ta_association_id))
+            ta_association.delete()
+            messages.success(request, "TA removed successfully.")
+        except ValueError:
+            messages.error(request, "Invalid TA ID.")
+        except Exception as e:
+            messages.error(request, f"An error occurred: {str(e)}")
+
+    return redirect('home')
 
     
 @login_required
