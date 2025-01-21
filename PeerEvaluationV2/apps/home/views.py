@@ -1,9 +1,10 @@
 from django import template
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth import update_session_auth_hash
-from django.http import HttpResponse, HttpResponseRedirect, FileResponse
+from django.http import HttpResponse, HttpResponseRedirect, FileResponse, JsonResponse
 from django.template import loader
 from django.urls import reverse
+from django.views.decorators.csrf import csrf_exempt
 from .forms import CustomPasswordChangeForm
 from django.shortcuts import get_object_or_404, redirect
 from .models import *
@@ -108,7 +109,7 @@ def evaluate_answers(answer1, answer2, topic, description):
 
     Ensure the response strictly follows the JSON format and provides clear scores for each answer.
     """
-
+    
     scores = parse_llama_json(geminiGenerate(prompt))
 
     # Calculate aggregate score (penalizing AI plagiarism)
@@ -942,7 +943,11 @@ def ta_hub(request):
         batch_id = request.POST.get('batch_id')
         ta_username = request.POST.get('teachingAssistantName')
         batch = Batch.objects.get(id=batch_id)
-        ta = User.objects.get(username=ta_username)
+        ta = User.objects.filter(Q(email=ta_username) | Q(username=ta_username)).first()
+        if not ta:
+            messages.error(request, 'TA not found.')
+            return redirect('home')
+        
         if request.user.is_teacher():
             try:
                 TeachingAssistantAssociation.objects.create(
@@ -1601,8 +1606,65 @@ def llm_answer(request):
     else:
         return redirect('home')
     
+
+
+@csrf_exempt
+def download_online_eval(request):
+    if request.method == "POST":
+        batch_id = request.POST.get("batch_id")
+        print("Received Batch ID:", batch_id)  # Debugging
+
+        if not batch_id:
+            return JsonResponse({"error": "Batch ID is missing."}, status=400)
+
+        try:
+            batch_id = int(batch_id)  # Convert batch_id to integer
+        except ValueError:
+            return JsonResponse({"error": "Invalid Batch ID format."}, status=400)
+
+        batch = Batch.objects.filter(id=batch_id).first()
+        print("Fetched Batch:", batch)  # Debugging
+
+        if not batch:
+            return JsonResponse({"error": "Invalid Batch ID."}, status=404)
+
+        evaluations = LLMEvaluation.objects.filter(Topic__batch=batch)
+        print("Evaluations Found:", evaluations.exists())  # Debugging
+
+        if not evaluations.exists():
+            return JsonResponse({"error": "No evaluations found for this batch."}, status=404)
+
+        # Convert evaluations to DataFrame
+        data = [
+            {
+                "Evaluated On": eval.date.strftime("%Y-%m-%d"),
+                "Student": eval.student.first_name + " " + eval.student.last_name + " (" + eval.student.username + ")",
+                "Topic": eval.Topic.topic,
+                "answer": eval.answer,
+                "Feedback": eval.feedback,
+                "AI": eval.ai,
+                "Score": eval.score,
+            }
+            for eval in evaluations
+        ]
+
+        df = pd.DataFrame(data)
+
+        # Generate Excel file
+        response = HttpResponse(content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+        response["Content-Disposition"] = f'attachment; filename="Online_Evaluation_Batch_{batch.id}.xlsx"'
+
+        with pd.ExcelWriter(response, engine="openpyxl") as writer:
+            df.to_excel(writer, index=False)
+
+        return response
+
+    return JsonResponse({"error": "Invalid request"}, status=400)
+
+    
 @login_required
 def change_password(request):
+
     if request.method == 'POST':
         form = CustomPasswordChangeForm(user=request.user, data=request.POST)
         if form.is_valid():

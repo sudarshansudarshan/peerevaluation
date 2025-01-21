@@ -91,6 +91,7 @@
                     <th scope="col">Batch Name</th>
                     <th scope="col">Course</th>
                     <th scope="col">Strength</th>
+                    <th scope="col">Download OnlineEval</th>
                   </tr>
                 </thead>
                 <tbody style="min-height: 100px;">
@@ -100,6 +101,12 @@
                     <td>{{ batch.batch_id }}</td>
                     <td>{{ batch.course_name }}</td>
                     <td>{{ batch.strength }}</td>
+                    <td>
+                      <form id="downloadForm{{ batch.id }}" method="POST" action="{% url 'download_online_eval' %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="batch_id" value="{{ batch.id }}">
+                        <button type="button" class="btn btn-sm btn-primary" onclick="submitDownloadForm('{{ batch.id }}')">Download</button>
+                      </form></td>
                   </tr>
                   {% endfor %}
                   {% else %}
@@ -274,6 +281,18 @@
       });
     });
   </script>
+  <script>
+    function submitDownloadForm(studentUsername) {
+        console.log("Submitting form for student username:", studentUsername); // Debugging
+        let form = document.getElementById("downloadForm" + studentUsername);
+        if (form) {
+            form.submit();  // Submit the form to trigger Excel download
+        } else {
+            console.error("Form not found for student username:", studentUsername);
+        }
+    }
+  </script>
+
   
   
 {% endblock javascripts %}

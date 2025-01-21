@@ -2,6 +2,7 @@
 from django.urls import path, re_path
 from apps.home import views
 
+
 urlpatterns = [
     path('', views.index, name='home'),
     path('add_course', views.course, name='add_course'),
@@ -18,5 +19,6 @@ urlpatterns = [
     path('llm_answer/', views.llm_answer, name='llm_answer'),
     path('documentation', views.documentation, name='llm_eval'),
     path('change-password/', views.change_password, name='change_password'),
+    path('download_online_eval/', views.download_online_eval, name='download_online_eval'),
     re_path(r'^.*\.*', views.pages, name='pages'),
 ]
