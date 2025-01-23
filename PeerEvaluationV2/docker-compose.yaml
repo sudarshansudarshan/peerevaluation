@@ -36,9 +36,9 @@ services:
       DB_PASSWORD: postgress
       DB_HOST: db
       DB_PORT: 5432
-      DJANGO_SUPERUSER_USERNAME: root
-      DJANGO_SUPERUSER_EMAIL: root@example.com
-      DJANGO_SUPERUSER_PASSWORD: pass
+      DJANGO_SUPERUSER_USERNAME: admin
+      DJANGO_SUPERUSER_EMAIL: ashu.kaushik@gmail.com
+      DJANGO_SUPERUSER_PASSWORD: Abcd@1234
     depends_on:
       - db
     networks:
