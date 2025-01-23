@@ -891,7 +891,7 @@ def enrollment(request):
                         course=batch.course,
                         batch=batch
                     )
-                    messages.success(request, 'Student enrolled successfully!')
+                    messages.success(request, 'Student enrollment requested!')
                     return redirect('home')
 
             except Batch.DoesNotExist:
@@ -1144,6 +1144,7 @@ def examination(request):
                     exam_id = json.loads(data)['exam_id']
                     exam = Exam.objects.get(id=exam_id)
                     exam.delete()
+                    return redirect('examination')
                     messages.success(request, 'Exam deleted successfully!')
                 except json.JSONDecodeError:
                     print(request, 'Invalid JSON data.')
@@ -1382,7 +1383,7 @@ def upload_evaluation(request):
                         document=final_filename,
                         uploaded_by=request.user
                     )
-                    document.save()
+                   
                     with open(f"apps/static/documents/{final_filename}", "wb") as f:
                         f.write(pdf_content)
                 messages.success(request, 'Evaluation uploaded successfully!')
@@ -1421,12 +1422,12 @@ def upload_evaluation(request):
                 return redirect('examination')
 
         except Exception as e:
+            messages.error(request, f'An error occurred: {str(e)}')
             return render(request, "home/student/peer_evaluation.html",
                           {"error": f"An error occurred while processing the files: {str(e)}"})
 
-
+    print("Invalid request method.")
     return render(request, "home/student/peer_evaluation.html")
-
 
 def export_evaluations_to_csv(request, exam_id):
 

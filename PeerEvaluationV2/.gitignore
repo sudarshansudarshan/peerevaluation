@@ -18,4 +18,3 @@ venv.bak/
 db.sqlite3
 
 staticfiles
-apps/static/documents
