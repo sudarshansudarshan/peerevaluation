@@ -199,6 +199,7 @@
                     <th scope="col" title="Number of questions in an exam">#Questions</th>
                     <th scope="col" title="Number of stdents evaluating each sheet">#Evaluations</th>
                     <th scope="col" title="Number of stdents in a batch">#Students</th>
+                    <th scope="col" title="Number of evaluations uploaded">#Upload Received</th>
                     <th scope="col">Action</th>
                   </tr>
                 </thead>
@@ -236,6 +237,9 @@
                                 <input type="number" class="form-control border rounded px-2 py-1" minValue="0" value="{{ batch.enrolled_students_count }}" disabled>
                               </td>
                               <td class="px-4 py-2">
+                                <input type="number" class="form-control border rounded px-2 py-1" minValue="0" value="{{ batch.exams.document_count }}" disabled>
+                              </td>
+                              <td class="px-4 py-2">
                                 <button type="submit" class="btn btn-sm btn-success tooltip-trigger" data-tooltip="Save the exam details"><i class="fas fa-save"></i> Save</button>
                               </td>
                             </form>
@@ -245,7 +249,8 @@
                             <td class="px-4 py-2">{{ batch.exams.max_scores }}</td>
                             <td class="px-4 py-2">{{ batch.exams.number_of_questions }}</td>
                             <td class="px-4 py-2">{{ batch.exams.k }}</td>
-                            <td class="px-4 py-2">{{ batch.exams.student_count }}</td>
+                            <td class="px-4 py-2">{{ batch.exams.strength }}</td>
+                            <td class="px-4 py-2">{{ batch.exams.document_count}}</td>
                             <td class="px-4 py-2">
                               <div class="d-flex align-items-center">
                                 <!-- Download Answer Sheet PDFs -->
@@ -261,33 +266,46 @@
                                 </form>
                                 {% if batch.exams.document_count == batch.exams.total_students %}
                                 
-                                  {% if not batch.exams.evaluations_sent %}
-                                    <button
-                                      type="button"
-                                      class="btn btn-sm tooltip-trigger btn-warning"
-                                      data-tooltip="Send Documents for Peer Evaluations"
-                                      onclick="peerEval({{ batch.exams.id }}, 0)">
-                                      <i class="fas fa-paper-plane"></i>
-                                    </button>
-                                  {% endif %}
-
-                                  {% if batch.exams.evaluations_sent and not batch.exams.flags %}
-                                    <button
-                                      type="button"
-                                      class="btn btn-sm tooltip-trigger btn-warning"
-                                      data-tooltip="Flag the Evaluations with issues"
-                                      onclick="peerEval({{ batch.exams.id }}, 1)">
-                                      <i class="fas fa-flag"></i>
-                                    </button>
-                                  {% endif %}
+                                {% if not batch.exams.evaluations_sent %}
+                                  <script>
+                                    function showLoadingBar(examId) {
+                                      document.getElementById('loading-bar-' + examId).style.display = 'block';
+                                    }
+                                  </script>
+                                  <button
+                                    type="button"
+                                    class="btn btn-sm tooltip-trigger btn-warning"
+                                    data-tooltip="Send Documents for Peer Evaluations"
+                                    onclick="if(confirm('This will send the evaluations to the students, please wait after confirmation for evaluations to be sent.')) { showLoadingBar({{ batch.exams.id }}); peerEval({{ batch.exams.id }}, 0); }">
+                                    <i class="fas fa-paper-plane"></i>
+                                  </button>
+                                  <div id="loading-bar-{{ batch.exams.id }}" class="progress mt-2" style="display: none;">
+                                    <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar"
+                                      aria-valuenow="100" aria-valuemin="0" aria-valuemax="100" style="width: 100%;">
+                                      Sending...
+                                    </div>
+                                  </div>
                                 {% endif %}
+
+                                {% if batch.exams.evaluations_sent and not batch.exams.flags %}
+                                  <button
+                                    type="button"
+                                    class="btn btn-sm tooltip-trigger btn-warning"
+                                    data-tooltip="Flag the Evaluations with issues"
+                                    onclick="if (confirm('This will mark the cycle as complete and final marks will be distributed among all the students, Are you sure you want to continue?')) {peerEval({{ batch.exams.id }}, 1)}">
+                                    <i class="fas fa-flag"></i>
+                                  </button>
+                                {% endif %}
+                              {% endif %}
+
+
 
                                 <!-- Declare Examination Cycle as Completed -->
                                 <button 
                                   type="button" 
                                   class="btn btn-sm btn-success mr-2 tooltip-trigger" 
                                   data-tooltip="Declare Examination Cycle as Completed" 
-                                  onclick="markAsCompleted({{ batch.exams.id }})">
+                                  onclick="if (confirm('This will mark the cycle as complete and final marks will be distributed among all the students, Are you sure you want to continue?')) {markAsCompleted({{ batch.exams.id }});}">
                                   <i class="fas fa-check"></i>
                                 </button>
 
@@ -296,7 +314,7 @@
                                   type="button" 
                                   class="btn btn-sm btn-danger mr-2 tooltip-trigger" 
                                   data-tooltip="Delete Exam Scheduling" 
-                                  onclick="deleteExamination({{ batch.exams.id }})">
+                                  onclick="if(confirm('Are you sure you want to delete this exam?, The entire exam will be deleted.')) { deleteExamination({{ batch.exams.id }}); }">
                                   <i class="fas fa-trash"></i>
                                 </button>
 
