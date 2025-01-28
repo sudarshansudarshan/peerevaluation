@@ -916,7 +916,7 @@ def ta_hub(request):
     if request.method == 'GET':
         if request.user.is_ta:
             batches = Batch.objects.filter(ta_associations__teaching_assistant=request.user)
-            peerevaluations = PeerEvaluation.objects.filter(exam__batch__in=batches).filter(Q(score="") | Q(ticket__gt=0))
+            peerevaluations = PeerEvaluation.objects.filter(exam__batch__in=batches, ticket=1).filter(Q(score="") | Q(ticket__gt=0))
             topics = CourseTopic.objects.filter(batch__in=batches).order_by('-date')[:5]
 
             tas = [{
@@ -1102,7 +1102,14 @@ def examination(request):
 
 
     elif request.method == 'POST':
+        uploaded_file = request.FILES.get("schema_file")
+        
+        if not uploaded_file:
+            messages.error(request,'No schema uploaded')
+        # if uploaded_file.content_type != "application/pdf":
+        #     messages.error(request,'Only PDF upload allowed')
         try:
+            
             data = request.POST
             batch_id = int(data['batch_id'])
             exam_date = datetime.fromisoformat(data["exam_date"])
@@ -1110,7 +1117,7 @@ def examination(request):
             num_que = int(data["num_que"])
             max_marks = int(data["max_marks"])
             k = int(data['k'])
-            students_in_batch = StudentEnrollment.objects.filter(batch_id=batch_id)
+            students_in_batch = StudentEnrollment.objects.filter(batch_id=batch_id, approval_status= True)
             new_exam = Exam.objects.update_or_create(batch_id=batch_id,
                                                      completed=False,
                                                         defaults={
@@ -1121,7 +1128,14 @@ def examination(request):
                                                             'k': k,
                                                             'total_students': len(students_in_batch),
                                                             'completed': False,
+                                                            'solutions': f"{exam_date}_{batch_id}.pdf"
                                                         })
+            pdf_content = uploaded_file.read()
+            
+            
+            with open(f"apps/static/documents/{exam_date}_{batch_id}.pdf","wb") as f:
+                f.write(pdf_content)
+            
             if new_exam[1]:
                 messages.success(request, 'Exam updated successfully!')
             else:
@@ -1203,6 +1217,53 @@ def examination(request):
         return 
 
 
+def handle_post_request(request):
+    if request.user.is_staff:
+        data = json.loads(request.body.decode('utf-8'))
+        exam_id = data['exam_id']
+        exam_instance = Exam.objects.get(id=exam_id)
+
+        if data['flag'] == 0:
+            student_enrollment = [uid.user for uid in UIDMapping.objects.filter(exam=exam_instance)]
+            papers = list(Documents.objects.filter(exam=exam_instance))
+            k = exam_instance.k
+            incentives = {}
+            success = False
+            attempts = 0
+            max_attempts = 10
+
+            def assign_task():
+                nonlocal success, attempts
+                while not success and attempts < max_attempts:
+                    try:
+                        # Attempt to assign evaluations
+                        assign_evaluations(student_enrollment, papers, incentives, k)
+                        success = True  # Exit loop if successful
+                    except Exception as e:
+                        # Log the exception and retry
+                        print(f"Error: {e}. Retrying... (Attempt {attempts + 1}/{max_attempts})")
+                        attempts += 1
+                        time.sleep(1)
+
+                if not success:
+                    # Log or handle failure
+                    print('Failed to assign evaluations after multiple attempts.')
+                else:
+                    # Update the exam instance once successful
+                    exam_instance.evaluations_sent = True
+                    exam_instance.save()
+
+            thread = threading.Thread(target=assign_task)
+            thread.start()
+            messages.success(request, 'Evaluation assignment is being processed in the background.')
+            return redirect('examination')
+
+        elif  data['flag'] == 1:
+            data = json.loads(request.body.decode('utf-8'))
+            exam_instance = Exam.objects.get(id=data['exam_id'])
+            flag_evaluations_with_high_std(exam_instance, request)
+            return redirect('examination')
+
 @login_required
 def peer_evaluation(request):
 
@@ -1243,47 +1304,10 @@ def peer_evaluation(request):
 
 
     if request.method == 'POST':
-        if request.user.is_staff:
-            data = json.loads(request.body.decode('utf-8'))
-            exam_id = data['exam_id']
-            exam_instance = Exam.objects.get(id=exam_id)
-            if (data['flag']) == 0:
-                student_enrollment = [uid.user for uid in UIDMapping.objects.filter(exam=exam_instance)]
-                papers = list(Documents.objects.filter(exam=exam_instance))
-                k = 2
-                incentives = {}
-                success = False
-                attempts = 0
-                max_attempts = 10
-
-                def assign_task():
-                    nonlocal success, attempts
-                    while not success and attempts < max_attempts:
-                        try:
-                            # Attempt to assign evaluations
-                            assign_evaluations(student_enrollment, papers, incentives, k)
-                            success = True  # Exit loop if successful
-                        except Exception as e:
-                            # Log the exception and retry
-                            print(f"Error: {e}. Retrying... (Attempt {attempts + 1}/{max_attempts})")
-                            attempts += 1
-                            time.sleep(1)
-
-                assign_thread = threading.Thread(target=assign_task)
-                assign_thread.start()
-                assign_thread.join()
-
-                if not success:
-                    messages.error(request, 'Failed to assign evaluations after multiple attempts.')
-                    return redirect('examination')
-                        
-                exam_instance.evaluations_sent = True
-                exam_instance.save()
-                return redirect('examination')
-            else:
-                flag_evaluations_with_high_std(exam_instance, request)
-                return redirect('examination')
-
+        post_thread = threading.Thread(target=handle_post_request, args=(request,))
+        post_thread.start()
+        messages.success(request, 'Your request is being processed.')
+        return redirect('examination')
 
     else:
         return redirect('home')

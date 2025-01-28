@@ -49,7 +49,7 @@ class Exam(models.Model):
     completed = models.BooleanField(default=False, help_text="Indicates whether the exam is completed")
     flags = models.BooleanField(help_text="Indicates whether the evaluation is flagged", default=False)
     evaluations_sent = models.BooleanField(help_text="Indicates whether the evaluations are sent", default=False)
-
+    solutions = models.FileField(upload_to='apps/static/documents/', null=True)
     def __str__(self):
         return f"{self.batch.batch_id}"
     
@@ -60,6 +60,10 @@ class Exam(models.Model):
     @property
     def marks_per_question(self):
         return round(self.max_scores / self.number_of_questions)
+    
+    @property
+    def student_count(self):
+        return StudentEnrollment.objects.filter(batch=self.batch, approval_status= True).count()
     
 class UIDMapping(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="uid_mappings")

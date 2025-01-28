@@ -196,10 +196,11 @@
                     <th scope="col">Exam Date</th>
                     <th scope="col" title="Duration in minutes allocated for an evaluation">Duration</th>
                     <th scope="col"title="Maxmum number of marks in an exam (Each question with mark weightage: Max Marks/Number of questions)">Max Marks</th>
-                    <th scope="col" title="Number of questions in an exam">#Questions</th>
-                    <th scope="col" title="Number of stdents evaluating each sheet">#Evaluations</th>
-                    <th scope="col" title="Number of stdents in a batch">#Students</th>
-                    <th scope="col" title="Number of evaluations uploaded">#Upload Received</th>
+                    <th scope="col" title="Number of questions in an exam">Questions</th>
+                    <th scope="col" title="Number of stdents evaluating each sheet">Evaluations</th>
+                    <th scope="col" title="Answer schema to be uploaded by teacher">Answer Schema</th>
+                    <th scope="col" title="Number of stdents in a batch">Students</th>
+                    <th scope="col" title="Number of evaluations uploaded">Upload Received</th>
                     <th scope="col">Action</th>
                   </tr>
                 </thead>
@@ -215,7 +216,7 @@
                           <strong>{{ batch.batch.course }}</strong> ({{ batch.batch.batch_id }})
                         </td>
                           {% if not batch.exams %}
-                            <form class="course-form" method="post" action="/examination/">
+                            <form class="course-form" method="post" action="/examination/" enctype="multipart/form-data">
                               {% csrf_token %}
                               <td class="px-4 py-2">
                                 <input type="hidden" class="form-control border rounded px-2 py-1" id="batch_id" name="batch_id" value="{{ batch.batch.id }}">
@@ -233,6 +234,12 @@
                               <td class="px-4 py-2">
                                 <input type="number" class="form-control border rounded px-2 py-1" id="k" name="k" minValue="0">
                               </td>
+                              <td class = "px-4 py-2">
+                                <label for="schema_file" class="text-primary font-weight-bold cursor-pointer" style="background-color: green; color: white; padding: 8px 12px; border-radius: 4px;">
+                                  <span>Upload files</span>
+                                  <input id="schema_file" name="schema_file" type="file" accept="application/pdf" class="sr-only" required>
+                              </label>
+                              </td>
                               <td class="px-4 py-2">
                                 <input type="number" class="form-control border rounded px-2 py-1" minValue="0" value="{{ batch.enrolled_students_count }}" disabled>
                               </td>
@@ -244,13 +251,16 @@
                               </td>
                             </form>
                           {% else %}
+                          {% load static %}
                             <td class="px-4 py-2">{{ batch.exams.date }}</td>
                             <td class="px-4 py-2">{{ batch.exams.duration }} mins</td>
                             <td class="px-4 py-2">{{ batch.exams.max_scores }}</td>
                             <td class="px-4 py-2">{{ batch.exams.number_of_questions }}</td>
                             <td class="px-4 py-2">{{ batch.exams.k }}</td>
-                            <td class="px-4 py-2">{{ batch.exams.strength }}</td>
+                            <td class="px-4 py-2"><a href="{% static 'documents/' %}{{ batch.exams.solutions }}">View Solutions</a></td>
+                            <td class="px-4 py-2">{{ batch.exams.student_count }}</td>
                             <td class="px-4 py-2">{{ batch.exams.document_count}}</td>
+                            
                             <td class="px-4 py-2">
                               <div class="d-flex align-items-center">
                                 <!-- Download Answer Sheet PDFs -->

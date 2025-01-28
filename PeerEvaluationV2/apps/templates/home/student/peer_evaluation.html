@@ -155,6 +155,8 @@
                       <p><strong>Batch:</strong> {{ eval.exam.batch.batch_id }}</p>
                       <p><strong>Total Questions:</strong> {{ eval.exam.number_of_questions }}</p>
                       <p><strong>Total Marks:</strong> {{ eval.exam.max_scores }}</p>
+                      <p><strong>Solution Scheme:</strong><a href="{% static 'documents/' %}{{ eval.exam.solutions }}" download>View Solutions</a></p>
+                      
                       </div>
                       <form id="assessment-form" class="space-y-4 overflow-y-auto max-h-[calc(100vh-200px)]" method="POST" action="{% url 'student_eval' %}">
                         {% csrf_token %}

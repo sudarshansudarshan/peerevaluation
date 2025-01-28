@@ -3,6 +3,7 @@
 set -e  # Exit on any error
 
 echo "Running database migrations..."
+python manage.py makemigrations
 python manage.py migrate
 
 echo "Creating superuser..."
