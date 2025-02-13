@@ -24,7 +24,7 @@ Below are the instructions for installing Git and Docker on various platforms.
 
 ### Step 1: Install Git
 
-#### On Ubuntu (Linux):
+#### On Ubuntu (Linux with User access instead of root):
 1. Open a terminal.
 2. Run:
    ```bash
@@ -34,7 +34,8 @@ Below are the instructions for installing Git and Docker on various platforms.
 3. Verify installation:
    ```bash
    git --version
-   ```
+   ...
+Permission to upload and retrive files   
 
 #### On macOS:
 1. Open a terminal.
@@ -46,7 +47,6 @@ Below are the instructions for installing Git and Docker on various platforms.
    ```bash
    git --version
    ```
-
 #### On Windows:
 1. Download the [Git installer](https://git-scm.com/downloads).
 2. Run the installer and follow the setup wizard.
