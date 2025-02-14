@@ -121,15 +121,14 @@
         </div>
         <div class="col-xl-7">
           <div class="card" style="height: 400px; overflow: hidden; border-radius: 10px;">
-            <div class="card-header border-0">
-              <div class="row align-items-center">
-                <div class="col">
-                  <h3 class="mb-0">Enrolled Students</h3>
+            <div class="card-header border-0 d-flex justify-content-between">
+              <div class="col">
+                <h3 class="mb-0">Enrolled Students</h3>
                   <p class="mb-0 small">
                     Details of all the enrolled students.
                   </p>
-                </div>
               </div>
+              <button class="btn btn-sm btn-primary tooltip-trigger" data-tooltip="Click to bulk upload students" data-toggle="modal" data-target="#bulkUploadModal">Bulk enroll</button>
             </div>
             <div class="table-responsive" style="max-height: 350px; overflow-y: auto;">
               <!-- Students table -->
@@ -180,49 +179,48 @@
               <button class="btn btn-sm btn-primary tooltip-trigger" data-tooltip="Click to add a Teaching assistant" data-toggle="modal" data-target="#addTeachingAssistantModal">Enroll TA</button>
             </div>
             <div>
-              
-            <div class="table-responsive" style="max-height: 350px; overflow-y: auto;">
-              <!-- Students table -->
-              <table class="table align-items-center table-flush">
-                <thead class="thead-light">
-                  <tr>
-                    <th scope="col">Student Username</th>
-                    <th scope="col">Email</th>
-                    <th scope="col">Batch ID</th>
-                    <th scope="col">Course Name</th>
-                    <th scope="col">Course ID</th>
-                    <th scope="col">Action</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {% for ta in tas %}
-                  <tr>
-                    <td>{{ ta.ta_username }}</td>
-                    <td><a href="mailto:{{ ta.ta_email }}">{{ ta.ta_email }}</a></td>
-                    <td>{{ ta.batch_id }}</td>
-                    <td>{{ ta.course_name }}</td>
-                    <td>{{ ta.course_id }}</td>
-                    
-                   <td>
+              <div class="table-responsive" style="max-height: 350px; overflow-y: auto;">
+                <!-- Students table -->
+                <table class="table align-items-center table-flush">
+                  <thead class="thead-light">
+                    <tr>
+                      <th scope="col">Student Username</th>
+                      <th scope="col">Email</th>
+                      <th scope="col">Batch ID</th>
+                      <th scope="col">Course Name</th>
+                      <th scope="col">Course ID</th>
+                      <th scope="col">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for ta in tas %}
+                    <tr>
+                      <td>{{ ta.ta_username }}</td>
+                      <td><a href="mailto:{{ ta.ta_email }}">{{ ta.ta_email }}</a></td>
+                      <td>{{ ta.batch_id }}</td>
+                      <td>{{ ta.course_name }}</td>
+                      <td>{{ ta.course_id }}</td>
                       
-                      <form method="POST" action="{% url 'remove_ta' %}">
-                          {% csrf_token %}
-                          <input type="hidden" name="ta_association_id" value="{{ ta.ta_id }}">
-                          <button type="submit" class="btn btn-danger">Remove</button>
-                      </form>
-                      
-                      
-                  </td> 
-                  </tr>
-                  {% endfor %}
-                  {% if tas|length == 0 %}
-                  <tr>
-                    <td colspan="5" class="text-center">No TAs</td>
-                  </tr>
-                  {% endif %}
-                </tbody>
-              </table>
-            </div>
+                    <td>
+                        
+                        <form method="POST" action="{% url 'remove_ta' %}">
+                            {% csrf_token %}
+                            <input type="hidden" name="ta_association_id" value="{{ ta.ta_id }}">
+                            <button type="submit" class="btn btn-danger">Remove</button>
+                        </form>
+                        
+                        
+                    </td> 
+                    </tr>
+                    {% endfor %}
+                    {% if tas|length == 0 %}
+                    <tr>
+                      <td colspan="5" class="text-center">No TAs</td>
+                    </tr>
+                    {% endif %}
+                  </tbody>
+                </table>
+              </div>
           </div>
         </div>
       </div>
@@ -268,6 +266,49 @@
         </form>
       </div>
     </div>
+
+    <!-- Assign Teaching Assistant & Bulk Upload Modal -->
+    <div class="modal fade" id="bulkUploadModal" tabindex="-1" role="dialog" aria-labelledby="bulkUploadModal" aria-hidden="true">
+      <div class="modal-dialog" role="document">
+        <form method="POST" action="{% url 'bulk_register_users' %}" enctype="multipart/form-data">
+          {% csrf_token %}
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title" id="addTeachingAssistantModalLabel">Assign Teaching Assistant & Bulk Upload</h5>
+              <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+              </button>
+            </div>
+            <div class="modal-body">
+              <!-- Select Batch -->
+              <div class="form-group">
+                <label for="batch_id">Select Batch</label>
+                <select class="form-control" id="batch_id" name="batch_id" required>
+                  {% for batch in batches %}
+                  <option value="{{ batch.batch_id }}">{{ batch.batch_id }} | {{ batch.course_id }} | {{ batch.course_name }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+
+              <hr> <!-- Divider -->
+
+              <!-- Bulk Upload Section -->
+              <div class="form-group">
+                <label for="csv_file">Upload CSV File (Bulk Register Students)</label>
+                <input type="file" class="form-control-file" id="csv_file" name="csv_file" accept=".csv" required>
+                <small class="form-text text-muted">Ensure the CSV contains headers: first_name, last_name, email.</small>
+              </div>
+            </div>
+
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+              <button type="submit" class="btn btn-primary">Submit</button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+
 
 {% endblock content %}
 

@@ -1268,7 +1268,7 @@ def examination(request):
 def peer_evaluation(request):
 
     if request.method == 'GET':
-        peerevaluations = PeerEvaluation.objects.filter(evaluator=request.user)
+        peerevaluations = PeerEvaluation.objects.filter(evaluator=request.user, exam__completed=False)
         results = PeerEvaluation.objects.filter(student=request.user, exam__completed=True)
         final_results = {}
         for result in results:
@@ -1311,7 +1311,7 @@ def peer_evaluation(request):
             if (data['flag']) == 0:
                 student_enrollment = [uid.user for uid in UIDMapping.objects.filter(exam=exam_instance)]
                 papers = list(Documents.objects.filter(exam=exam_instance))
-                k = 2
+                k = exam_instance.k
                 incentives = {}
                 success = False
                 attempts = 0
@@ -1515,8 +1515,8 @@ def export_evaluations_to_csv(request, exam_id):
         try:
             # Parse scores into lists of numbers and calculate the average
             score_lists = [ast.literal_eval(score) for score in scores if isinstance(score, str)]
-            flattened_scores = [item for sublist in score_lists for item in sublist]  # Flatten the list of lists
-            return sum(flattened_scores) / len(flattened_scores) if flattened_scores else 0
+            flattened_scores = [item for sublist in score_lists for item in sublist]
+            return sum(flattened_scores) if flattened_scores else 0
         except (ValueError, SyntaxError):
             # Return 0 if parsing fails
             return 0
@@ -1538,19 +1538,19 @@ def export_evaluations_to_csv(request, exam_id):
             student_data.append({
                 'Document ID': row['document_id'],
                 'Student Name': f"{student.first_name} {student.last_name} ({student.username})",
-                'Average Marks': row['avg_marks']
+                'Average Marks': row['avg_marks']/exam.k
             })
         except Documents.DoesNotExist:
             student_data.append({
                 'Document ID': row['document_id'],
                 'Student Name': 'Unknown',
-                'Average Marks': row['avg_marks']
+                'Average Marks': row['avg_marks']/exam.k
             })
         except UIDMapping.DoesNotExist:
             student_data.append({
                 'Document ID': row['document_id'],
                 'Student Name': 'UID Mapping Not Found',
-                'Average Marks': row['avg_marks']
+                'Average Marks': row['avg_marks']/exam.k
             })
 
     # Convert to DataFrame for Sheet 1
@@ -1758,6 +1758,17 @@ def change_password(request):
 
     messages.error(request, "Please input valid inputs.")
     return render(request,'home/profile.html')
+
+
+def fetch_document(request, file_name):
+    file_obj = Documents.objects.filter(file__icontains=file_name).first()
+    if file_obj:
+        file_path = file_obj.file.path
+        with open(file_path, 'rb') as file:
+            # Prepare the response with the file content
+            response = HttpResponse(file.read(), content_type='application/pdf')
+            response['Content-Disposition'] = f'inline; filename={file_name}'
+            return response
     
 
 @login_required
@@ -1768,3 +1779,154 @@ def documentation(request):
             return render(request, 'documentation/student.html')
         else:
             return render(request, 'documentation/teacher.html')
+        
+def generate_password(length):
+    MAX_LEN = length
+
+    DIGITS = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']  
+    LOCASE_CHARACTERS = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 
+                        'i', 'j', 'k', 'm', 'n', 'o', 'p', 'q',
+                        'r', 's', 't', 'u', 'v', 'w', 'x', 'y',
+                        'z']
+    UPCASE_CHARACTERS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 
+                        'I', 'J', 'K', 'M', 'N', 'O', 'P', 'Q',
+                        'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y',
+                        'Z']
+    SYMBOLS = ['@', '#', '$', '%', '=', ':', '?', '/', '|', '~', '>', 
+            '*', '(', ')', '<']
+
+    COMBINED_LIST = DIGITS + UPCASE_CHARACTERS + LOCASE_CHARACTERS + SYMBOLS
+
+    rand_digit = random.choice(DIGITS)
+    rand_upper = random.choice(UPCASE_CHARACTERS)
+    rand_lower = random.choice(LOCASE_CHARACTERS)
+    rand_symbol = random.choice(SYMBOLS)
+
+    temp_pass = rand_digit + rand_upper + rand_lower + rand_symbol
+
+    for x in range(MAX_LEN - 4):
+        temp_pass = temp_pass + random.choice(COMBINED_LIST)
+
+        temp_pass_list = array.array('u', temp_pass)
+        random.shuffle(temp_pass_list)
+
+    password = ""
+    for x in temp_pass_list:
+            password = password + x
+            
+    return password
+
+
+def send_email_async(subject, plain_message, html_message, recipient_list):
+    """Send email asynchronously using threading."""
+    def send():
+        send_mail(
+            subject=subject,
+            message=plain_message,
+            from_email="no-reply@evaluation-system.com",
+            recipient_list=recipient_list,
+            html_message=html_message,
+            fail_silently=False,
+        )
+
+    thread = threading.Thread(target=send)
+    thread.start()
+
+from django.contrib.auth import authenticate, login
+from apps.authentication.forms import LoginForm, SignUpForm, PasswordResetForm
+
+def bulk_register_users(request):
+    msg = None
+    success = False
+
+    if request.method == "POST" and request.FILES.get("csv_file"):
+        csv_file = request.FILES["csv_file"]
+        df = pd.read_csv(csv_file)
+
+        created_users = []
+        failed_users = []
+        skipped_users = []
+
+        batch_id = request.POST.get("batch_id")
+        try:
+            batch = Batch.objects.get(batch_id=batch_id)
+        except Batch.DoesNotExist:
+            return redirect('home')
+
+        for index, row in df.iterrows():
+            try:
+                username = row["email"].split("@")[0]
+
+                # Check if user already exists
+                user = User.objects.filter(username=username).first()
+                if user:
+                    # Check if user is already enrolled in the batch
+                    if StudentEnrollment.objects.filter(student=user, batch=batch, course=batch.course, approval_status=True).exists():
+                        skipped_users.append(username)
+                        continue
+                    elif StudentEnrollment.objects.filter(student=user, batch=batch, course=batch.course, approval_status=False).exists():
+                        existing = StudentEnrollment.objects.get(student=user, batch=batch, course=batch.course)
+                        existing.approval_status = True
+                        existing.update()
+                        created_users.append(username)
+                    else:
+                        StudentEnrollment.objects.create(student=user, batch=batch, course=batch.course, approval_status=True)
+                        created_users.append(username)                      
+
+                else:
+                    data = {
+                        "first_name": row["first_name"],
+                        "last_name": row["last_name"],
+                        "username": username,
+                        "email": row["email"],
+                        "is_staff": False,
+                    }
+                    password = generate_password(10)
+                    data["password1"] = password
+                    data["password2"] = password
+                    print(row["first_name"])
+
+                    # Create the form instance
+                    form = SignUpForm(data)
+                    if form.is_valid():
+                        form.save()
+                        user = authenticate(username=username, password=password)
+
+                        if user and data["is_staff"]:
+                            user.is_staff = True
+                            user.save()
+
+                        created_users.append(username)
+
+                        # Send email notification asynchronously
+                        email_template = "email/new_account.html"
+                        subject = "Welcome to Peer Evaluation"
+                        html_message = render_to_string(
+                            email_template,
+                            {
+                                "name": data["first_name"],
+                                "username": username,
+                                "password": password,
+                                "evaluation_link": "https://pes.iitrpr.ac.in",
+                            },
+                        )
+                        plain_message = strip_tags(html_message)
+                        send_email_async(subject, plain_message, html_message, [data["email"]])
+                    else:
+                        failed_users.append({"username": username, "errors": form.errors})
+                        continue  # Skip to next user
+
+                # Enroll the user in the batch
+                StudentEnrollment.objects.create(student=user, batch=batch, course=batch.course, approval_status=True)
+
+            except Exception as e:
+                failed_users.append({"username": row.get("username", "Unknown"), "errors": str(e)})
+
+        msg = (
+            f"Users Created: {len(created_users)}, "
+            f"Skipped (Already Exists): {len(skipped_users)}, "
+            f"Failed: {len(failed_users)}"
+        )
+        success = True if created_users else False
+
+    return redirect('home')

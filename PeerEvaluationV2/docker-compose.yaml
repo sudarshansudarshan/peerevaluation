@@ -29,7 +29,7 @@ services:
     volumes:
       - .:/code
     ports:
-      - "8000:8000"
+      - "443:443"
     environment:
       DB_NAME: peereval
       DB_USER: postgres

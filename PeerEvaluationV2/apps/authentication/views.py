@@ -1,9 +1,3 @@
-# -*- encoding: utf-8 -*-
-"""
-Copyright (c) 2019 - present AppSeed.us
-"""
-
-# Create your views here.
 from django.shortcuts import render, redirect
 from django.contrib.auth import authenticate, login
 from .forms import LoginForm, SignUpForm, PasswordResetForm
@@ -15,6 +9,10 @@ import random
 import array
 from django.contrib import messages
 import re
+import pandas as pd
+import threading
+from apps.home.models import Batch
+
 
 def generate_password(length):
     MAX_LEN = length
@@ -219,3 +217,5 @@ def forgetPassword(request):
         form = PasswordResetForm()
 
     return render(request, 'accounts/forgot-password.html', {'form': form})
+
+

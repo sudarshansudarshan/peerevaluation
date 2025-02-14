@@ -21,5 +21,6 @@ urlpatterns = [
     path('change-password/', views.change_password, name='change_password'),
     path('remove-ta/', views.remove_ta, name='remove_ta'),
     path('download_online_eval/', views.download_online_eval, name='download_online_eval'),
+    path('bulk_register_users/', views.bulk_register_users, name='bulk_register_users'),
     re_path(r'^.*\.*', views.pages, name='pages'),
 ]

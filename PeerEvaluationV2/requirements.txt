@@ -21,5 +21,9 @@ PyPDF2
 google.generativeai
 pandas
 openpyxl
+django-extensions
 psycopg2-binary
+pyOpenSSL
+openpyxl
+Werkzeug
 # sudo apt install zbar-tools

@@ -150,7 +150,7 @@
                   <div class="d-flex justify-content-center align-items-center">
                     <label for="evaluationfile" class="text-primary font-weight-bold cursor-pointer">
                     <span>Upload files</span>
-                    <input id="evaluationfile" name="evaluationfile" type="file" accept=".pdf" {% if user.is_teacher %}multiple{% endif %} class="sr-only" required>
+                    <input id="evaluationfile" name="evaluationfile" type="file" accept=".pdf" {% if user.is_teacher %}multiple{% endif %} class="sr-only">
                     </label>
                     <p class="ml-1 mb-0">or drag and drop</p>
                   </div>
@@ -199,7 +199,6 @@
                     <th scope="col" title="Number of questions in an exam">Questions</th>
                     <th scope="col" title="Number of stdents evaluating each sheet">Evaluations</th>
                     <th scope="col" title="Answer schema to be uploaded by teacher">Answer Schema</th>
-                    <th scope="col" title="Number of stdents in a batch">Students</th>
                     <th scope="col" title="Number of evaluations uploaded">Upload Received</th>
                     <th scope="col">Action</th>
                   </tr>
@@ -237,14 +236,11 @@
                               <td class = "px-4 py-2">
                                 <label for="schema_file" class="text-primary font-weight-bold cursor-pointer" style="background-color: green; color: white; padding: 8px 12px; border-radius: 4px;">
                                   <span>Upload files</span>
-                                  <input id="schema_file" name="schema_file" type="file" accept="application/pdf" class="sr-only" required>
+                                  <input id="schema_file" name="schema_file" type="file" accept="application/pdf" class="sr-only">
                               </label>
                               </td>
                               <td class="px-4 py-2">
                                 <input type="number" class="form-control border rounded px-2 py-1" minValue="0" value="{{ batch.enrolled_students_count }}" disabled>
-                              </td>
-                              <td class="px-4 py-2">
-                                <input type="number" class="form-control border rounded px-2 py-1" minValue="0" value="{{ batch.exams.document_count }}" disabled>
                               </td>
                               <td class="px-4 py-2">
                                 <button type="submit" class="btn btn-sm btn-success tooltip-trigger" data-tooltip="Save the exam details"><i class="fas fa-save"></i> Save</button>
@@ -258,8 +254,7 @@
                             <td class="px-4 py-2">{{ batch.exams.number_of_questions }}</td>
                             <td class="px-4 py-2">{{ batch.exams.k }}</td>
                             <td class="px-4 py-2"><a href="{% static 'documents/' %}{{ batch.exams.solutions }}">View Solutions</a></td>
-                            <td class="px-4 py-2">{{ batch.exams.student_count }}</td>
-                            <td class="px-4 py-2">{{ batch.exams.document_count}}</td>
+                            <td class="px-4 py-2">{{ batch.exams.document_count}}/{{ batch.exams.student_count }}</td>
                             
                             <td class="px-4 py-2">
                               <div class="d-flex align-items-center">
@@ -278,23 +273,20 @@
                                 
                                 {% if not batch.exams.evaluations_sent %}
                                   <script>
-                                    function showLoadingBar(examId) {
-                                      document.getElementById('loading-bar-' + examId).style.display = 'block';
-                                    }
+                                  function showLoadingButton(examId) {
+                                    const button = document.getElementById('send-button-' + examId);
+                                    button.disabled = true;
+                                    button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending...';
+                                  }
                                   </script>
                                   <button
-                                    type="button"
-                                    class="btn btn-sm tooltip-trigger btn-warning"
-                                    data-tooltip="Send Documents for Peer Evaluations"
-                                    onclick="if(confirm('This will send the evaluations to the students, please wait after confirmation for evaluations to be sent.')) { showLoadingBar({{ batch.exams.id }}); peerEval({{ batch.exams.id }}, 0); }">
-                                    <i class="fas fa-paper-plane"></i>
+                                  id="send-button-{{ batch.exams.id }}"
+                                  type="button"
+                                  class="btn btn-sm tooltip-trigger btn-warning"
+                                  data-tooltip="Send Documents for Peer Evaluations"
+                                  onclick="if(confirm('This will send the evaluations to the students, please wait after confirmation for evaluations to be sent.')) { showLoadingButton({{ batch.exams.id }}); peerEval({{ batch.exams.id }}, 0); }">
+                                  <i class="fas fa-paper-plane"></i> Send
                                   </button>
-                                  <div id="loading-bar-{{ batch.exams.id }}" class="progress mt-2" style="display: none;">
-                                    <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar"
-                                      aria-valuenow="100" aria-valuemin="0" aria-valuemax="100" style="width: 100%;">
-                                      Sending...
-                                    </div>
-                                  </div>
                                 {% endif %}
 
                                 {% if batch.exams.evaluations_sent and not batch.exams.flags %}
