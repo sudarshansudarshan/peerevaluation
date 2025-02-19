@@ -4,8 +4,8 @@
 - **Evaluation through QR code:** The peer evaluation software can evaluate and detect QR on the answer sheets and map it to the peers for peer evaluation. This not only keeps the privacy of the students, whose papers they are correcting
  but also makes the paper distribution process more secure and accurate.
 - **Automated student to UID mapping:** As the student uploads their answer scripts, the answer scripts are automatically mapped to the student's account and also to their mail ID with the unique ID of the answer script.
-- **The User interface:** The UI of this version of peer evaluation is easy to navigate for both professors and students and more smooth on both mobile web and desktop web. Bulk upload feature has been added again in the portal.
-- **The Analytics:** As the peer evaluation goes on the professor can see all the details of markings and students in graphical form, this is to give insights on mean marks and standard deviation.
+- **The User interface:** The UI of this version of peer evaluation is easy to navigate for both professors and students and more smooth on both mobile web and desktop web (responsive designed using bootstrap). Bulk upload feature has been added again in the portal. Now we have both the options "Register and Enroll" and "Bulk Upload". 
+- **The Analytics:** As the peer evaluation goes on the professor can see all the details of markings and students in graphical form, this is to give insights on mean marks and standard deviation. An excel sheet is there to give detailed analysis.
 - **LLM Integration for daily evaluation:** LLM generates 2 questions each day and asks students to answer those two questions this makes a robust learning environment along with corrections for incorrect answers.
 - **Feedback and Raise Ticket:** During the evaluation the student can give feedback for each answer they have given marks. In case any student is unsatisfied of the marks or the feedback or faces any kind of issue, they can raise ticket for the same.
 
