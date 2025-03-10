@@ -10,6 +10,7 @@ The **Peer Evaluation System** is a reliable and scalable solution designed to e
 * **Automated File Mapping (OCR):** Files are renamed using the number from the top-left corner and mapped to the student with the corresponding unique ID for the current exam.
 * **Automated File Distribution:** Files are automatically distributed to students for evaluation based on class size or the number of students who appeared in the exam.
 * **Tiered Ticket Raising:** A tiered ticketing system for peer evaluation, allowing issues to be escalated based on complexity.
+* **Integration with LLM (Gemini):** For Incentivization.
 
 ---
 
