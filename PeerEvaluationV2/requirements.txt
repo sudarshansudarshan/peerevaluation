@@ -24,6 +24,7 @@ openpyxl
 django-extensions
 psycopg2-binary
 pyOpenSSL
-openpyxl
+openpyx
+Gemini LLM authentication token 
 Werkzeug
 # sudo apt install zbar-tools
