@@ -23,8 +23,6 @@ pandas
 openpyxl
 django-extensions
 psycopg2-binary
-pyOpenSSL
-openpyx
-Gemini LLM authentication token 
+pyOpenSSL 
 Werkzeug
 # sudo apt install zbar-tools
