@@ -1,0 +1,117 @@
+/* Responsive styles  */
+
+html, body, #root {
+    height: 100%;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    background: none !important;
+    overflow: hidden !important;
+}
+body {
+    background: none !important;
+}
+.teacher-dashboard-bg {
+    min-height: 100vh;
+    width: 100vw;
+    background: linear-gradient(135deg, #ece9f7 0%, #c3cfe2 100%);
+    display: flex;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    box-sizing: border-box;
+    overflow: hidden;
+}
+.teacher-dashboard-container {
+    display: flex;
+    min-height: 100vh;
+    width: 100%;
+    position: relative;
+}
+.teacher-dashboard-sidebar {
+    position: relative;
+    top: 0;
+    left: 0;
+    height: auto;
+    min-height: 100vh;
+    z-index: 1;
+}
+.sidebar-toggle-btn {
+    display: none;
+}
+.teacher-dashboard-main {
+    flex: 1;
+    margin-left: 0;
+    transition: margin-left 0.3s;
+}
+@media (max-width: 900px) {
+    .teacher-dashboard-sidebar {
+    width: 220px;
+    padding: 1.5rem 0.75rem;
+    }
+    .teacher-dashboard-main {
+    margin-left: 220px;
+    padding: 1rem;
+    }
+}
+@media (max-width: 700px) {
+    .teacher-dashboard-sidebar {
+    left: -260px;
+    width: 220px;
+    border-radius: 0 20px 20px 0;
+    box-shadow: 4px 0 12px rgba(0,0,0,0.1);
+    transition: left 0.3s;
+    }
+    .teacher-dashboard-sidebar.open {
+    left: 0;
+    }
+    .sidebar-toggle-btn {
+    display: block;
+    position: fixed;
+    top: 1.2rem;
+    left: 1.2rem;
+    z-index: 1100;
+    background: #3f3d56;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 0.5rem 0.8rem;
+    cursor: pointer;
+    }
+    .teacher-dashboard-main {
+    margin-left: 0;
+    padding: 1rem;
+    transition: margin-left 0.3s;
+    }
+    /* .teacher-dashboard-main.sidebar-open {
+    } */
+}
+@media (max-width: 600px) {
+    .teacher-dashboard-content {
+    padding: 1rem;
+    max-width: 100%;
+    }
+    .teacher-dashboard-sidebar {
+    padding: 1rem 0.5rem;
+    width: 180px;
+    }
+}
+@media (max-width: 700px) {
+    div[style*="overflowY: 'auto'"]::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+    }
+
+    div[style*="overflowY: 'auto'"]::-webkit-scrollbar-thumb {
+    background-color: #d3d3d3; /* Light color for scrollbar thumb */
+    border-radius: 4px;
+    }
+
+    div[style*="overflowY: 'auto'"]::-webkit-scrollbar-track {
+    background-color: #f0f0f0; /* Light color for scrollbar track */
+    border-radius: 4px;
+    }
+}
