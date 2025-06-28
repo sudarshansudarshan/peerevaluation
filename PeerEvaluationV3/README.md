@@ -19,7 +19,7 @@ Peer Evaluation System An open-source web application built using the MERN stack
 
 ```bash
 git clone <REPO_URL>
-cd PES_Project_V3
+cd .\peerevaluation\PeerEvaluationV3\
 ```
 
 ### 2. Setup the Backend -
