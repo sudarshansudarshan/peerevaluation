@@ -133,7 +133,7 @@ export default function StudentExamsTab({
 
                     if (!isToday) {
                       return (
-                        <span style={{ color: "#888" }}>Exam is over.</span>
+                        <span style={{ color: "#888" }}>Submission time is over.</span>
                       );
                     }
                     if (currentMinutes < startMinutes) {
@@ -145,7 +145,7 @@ export default function StudentExamsTab({
                     }
                     if (currentMinutes >= endMinutes) {
                       return (
-                        <span style={{ color: "#888" }}>Exam is over.</span>
+                        <span style={{ color: "#888" }}>Submission time is over.</span>
                       );
                     }
                     return (

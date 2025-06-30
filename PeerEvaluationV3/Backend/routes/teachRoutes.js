@@ -1,6 +1,6 @@
 import express from 'express';
 import { protect, adminOrTeacherOnly } from '../middleware/authMiddleware.js';
-import { assignTA, bulkUploadDocuments, completeExam, deassignTA, deleteExam, downloadPDF, getEnrolledStudents, getExamsForTeacher, getTeacherCoursesAndBatches, scheduleExam, sendEvaluation, studentsEnroll, updateExam } from '../controllers/teacherController.js';
+import { assignTA, bulkUploadDocuments, completeExam, deassignTA, deleteExam, downloadPDF, flagEvaluations, getEnrolledStudents, getExamsForTeacher, getTeacherCoursesAndBatches, scheduleExam, sendEvaluation, studentsEnroll, updateExam } from '../controllers/teacherController.js';
 // import multer from 'multer';
 import upload from '../utils/fileUpload.js'; // Assuming you have a fileUpload.js for handling file uploads
 
@@ -17,7 +17,8 @@ router.get('/teacher-exams', protect, adminOrTeacherOnly, getExamsForTeacher);
 router.put('/update-exam/:id', protect, adminOrTeacherOnly, upload.single('solutions'), updateExam);
 router.get('/download-pdf/:examId', protect, adminOrTeacherOnly, downloadPDF);
 router.post('/bulk-upload', protect, adminOrTeacherOnly, upload.array('documents'), bulkUploadDocuments);
-router.post('/send-evaluation/:id', protect, adminOrTeacherOnly, sendEvaluation);
+router.post('/send-evaluation/:examId', protect, adminOrTeacherOnly, sendEvaluation);
+router.post('/flag-evaluations/:examId', protect, adminOrTeacherOnly, flagEvaluations);
 router.put('/mark-exam-done/:examId', protect, adminOrTeacherOnly, completeExam);
 router.delete('/delete-exam/:id', protect, adminOrTeacherOnly, deleteExam);
 

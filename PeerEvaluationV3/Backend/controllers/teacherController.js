@@ -612,10 +612,95 @@ export const sendEvaluation = async (req, res) => {
     return res.status(400).json({ message: 'Exam ID is required' });
   }
 
+  const exam = await Examination.findById(examId);
+  if (!exam) {
+    return res.status(404).json({ message: 'Exam not found' });
+  }
+
   try {
-    // Replace with actual evaluation logic
-    res.status(200).json({ message: 'Evaluation sent successfully' });
+    const documents = await Document.find({ examId }).populate('uniqueId');
+    const students = await Enrollment.find({ batch: exam.batch, status: 'active' }).populate('student');
+
+    if (!documents.length || !students.length) {
+      return res.status(404).json({ message: 'No documents or students found for this exam.' });
+    }
+
+    const studentMap = new Map(); // Map to track evaluations assigned to each student
+    const documentMap = new Map(); // Map to track documents already evaluated
+
+    // Initialize studentMap with empty arrays for evaluations
+    students.forEach((enrollment) => {
+      studentMap.set(enrollment.student._id.toString(), []);
+    });
+
+    // Ensure each student evaluates exactly `k` documents
+    for (const document of documents) {
+      const eligibleEvaluators = students.filter(
+        (enrollment) =>
+          enrollment.student._id.toString() !== document.uniqueId.userId.toString() && // Exclude the document owner
+          studentMap.get(enrollment.student._id.toString()).length < exam.k // Ensure the student hasn't exceeded `k` evaluations
+      );
+
+      if (eligibleEvaluators.length < exam.k) {
+        return res.status(400).json({
+          message: `Not enough eligible evaluators for document ${document._id}. Constraints cannot be satisfied.`,
+        });
+      }
+
+      // Randomly assign `k` evaluators to the document
+      const assignedEvaluators = eligibleEvaluators
+        .sort(() => Math.random() - 0.5) // Shuffle the array
+        .slice(0, exam.k); // Select `k` evaluators
+
+      for (const evaluator of assignedEvaluators) {
+        const evaluatorId = evaluator.student._id.toString();
+        studentMap.get(evaluatorId).push(document._id); // Add document to evaluator's list
+        documentMap.set(document._id.toString(), evaluatorId); // Track the evaluator for the document
+
+        // Create PeerEvaluation entry
+        await PeerEvaluation.create({
+          evaluator: evaluator.student._id,
+          uid: document.uniqueId._id,
+          student: document.uniqueId.userId,
+          exam: examId,
+          document: document._id,
+          feedback: '', // Placeholder for feedback
+          ticket: Math.floor(Math.random() * 100000), // Generate a random ticket number
+          score: '', // Placeholder for score
+        });
+      }
+    }
+
+    exam.evaluations_sent = true;
+    await exam.save();
+
+    res.status(200).json({ message: 'Evaluation sent successfully!' });
   } catch (error) {
-    res.status(500).json({ message: 'Failed to send evaluation' });
+    console.error('Error sending evaluations:', error);
+    res.status(500).json({ message: 'Failed to send evaluation!' });
+  }
+};
+
+// TODO: Implement the logic to flag evaluations
+export const flagEvaluations = async (req, res) => {
+  const { examId } = req.params; 
+
+  if (!examId) {
+    return res.status(400).json({ message: 'Exam ID is required!' });
+  }
+  const exam = await Examination.findById(examId);
+  if (!exam) {
+    return res.status(404).json({ message: 'Exam not found!' });
+  }
+
+  try {
+    // Replace with actual flagging logic
+    console.log(`Flagging evaluations for exam ID: ${examId}`);
+
+    exam.flags = true; // Mark as evaluations flagged
+    await exam.save();
+    res.status(200).json({ message: 'Evaluations flagged successfully!' });
+  } catch (error) {
+    res.status(500).json({ message: 'Failed to flag evaluations!' });
   }
 };

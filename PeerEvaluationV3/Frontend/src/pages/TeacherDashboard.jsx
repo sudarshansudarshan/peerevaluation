@@ -10,6 +10,7 @@ import ScheduleExamOverlay from '../components/Teacher/ScheduleExamOverlay.jsx';
 import EnrollStudentsOverlay from '../components/Teacher/EnrollStudentsOverlay.jsx';
 import EditExamOverlay from '../components/Teacher/EditExamOverlay.jsx';
 import ExamList from '../components/Teacher/ExamList.jsx';
+import { showSendEvaluationDialog, showFlagEvaluationsDialog, showMarkAsDoneDialog, showDeleteExamDialog } from '../components/Teacher/messageDialogs.jsx';
 import BulkUploadOverlay from '../components/Teacher/BulkUploadOverlay.jsx';
 
 export default function TeacherDashboard() {
@@ -138,9 +139,27 @@ export default function TeacherDashboard() {
     navigate('/login');
   };
 
+  const refreshExamsList = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('http://localhost:5000/api/teacher/teacher-exams', {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      const data = await response.json();
+      if (Array.isArray(data.exams)) {
+        setExams(data.exams);
+      }
+    } catch (error) {
+      console.error('Error refreshing exams list:', error);
+      // Optionally handle error
+    }
+  };
+
   const handleSidebarToggle = () => setSidebarOpen(open => !open);
-  
-  // Added functionality to handle the TA update request.
+
   const handleTAAssignment = async (e) => {
     e.preventDefault();
     const email = e.target.email.value;
@@ -365,21 +384,7 @@ export default function TeacherDashboard() {
 
     setEditExamOverlayOpen(false);
     setSelectedExam(null);
-    try {
-      const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:5000/api/teacher/teacher-exams', {
-        method: 'GET',
-        headers: {
-        Authorization: `Bearer ${token}`,
-        },
-      });
-      const data = await response.json();
-      if (Array.isArray(data.exams)) {
-        setExams(data.exams);
-      }
-    } catch (error) {
-    // Optionally handle error
-    }
+    await refreshExamsList();
   };
 
   const handleDownloadPDF = async (examId) => {
@@ -443,25 +448,62 @@ export default function TeacherDashboard() {
   };
 
   const handleSendEvaluation = async (examId) => {
+    const confirmSend = await showSendEvaluationDialog();
+    if (!confirmSend) return;
+    
     try {
+      const token = localStorage.getItem('token');
+
       const response = await fetch(`http://localhost:5000/api/teacher/send-evaluation/${examId}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
         },
       });
-
+      console.log(`Sending evaluation for exam ID: ${examId}`);
+      const data = await response.json();
       if (response.ok) {
-        showMessage('Evaluation sent successfully!', 'success');
+        showMessage(data.message, 'success');
+        await refreshExamsList();
       } else {
-        showMessage('Failed to send evaluation', 'error');
+        showMessage(`Failed to send evaluation: ${data.message}`, 'error');
       }
     } catch (error) {
       showMessage('An error occurred while sending the evaluation.', 'error');
     }
   };
 
+  // Implement the logic to flag evaluations here
+  const handleFlagEvaluations = async (examId) => {
+    const confirmFlag = await showFlagEvaluationsDialog();
+    if (!confirmFlag) return;
+
+    const token = localStorage.getItem('token');
+    try {
+      const response = await fetch(`http://localhost:5000/api/teacher/flag-evaluations/${examId}`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      const data = await response.json();
+      if (response.ok) {
+        showMessage(data.message, 'success');
+        await refreshExamsList();
+      } else {
+        showMessage(`Failed to flag evaluations: ${data.message}`, 'error');
+      }
+    } catch (error) {
+      showMessage('An error occurred while flagging evaluations.', 'error');
+    }
+  };
+
   const handleMarkAsDone = async (examId) => {
+    const confirmMark = await showMarkAsDoneDialog();
+    if (!confirmMark) return;
+
     const token = localStorage.getItem('token');
     try {
       const response = await fetch(`http://localhost:5000/api/teacher/mark-exam-done/${examId}`, {
@@ -483,94 +525,6 @@ export default function TeacherDashboard() {
     }
   };
 
-  function showDeleteExamDialog() {
-    return new Promise((resolve) => {
-      // Create overlay
-      const overlay = document.createElement('div');
-      overlay.style.position = 'fixed';
-      overlay.style.top = 0;
-      overlay.style.left = 0;
-      overlay.style.width = '100vw';
-      overlay.style.height = '100vh';
-      overlay.style.background = 'rgba(0,0,0,0.45)';
-      overlay.style.display = 'flex';
-      overlay.style.alignItems = 'center';
-      overlay.style.justifyContent = 'center';
-      overlay.style.zIndex = 9999;
-
-      // Create dialog
-      const dialog = document.createElement('div');
-      dialog.style.background = '#fff';
-      dialog.style.borderRadius = '14px';
-      dialog.style.boxShadow = '0 8px 32px rgba(192,57,43,0.18)';
-      dialog.style.padding = '2rem 2.5rem';
-      dialog.style.display = 'flex';
-      dialog.style.flexDirection = 'column';
-      dialog.style.alignItems = 'center';
-      dialog.style.minWidth = '320px';
-
-      const title = document.createElement('div');
-      title.innerText = 'Delete Exam?';
-      title.style.fontWeight = 'bold';
-      title.style.fontSize = '1.3rem';
-      title.style.color = '#c0392b';
-      title.style.marginBottom = '0.7rem';
-
-      const msg = document.createElement('div');
-      msg.innerText = 'Are you sure you want to delete this exam? This action cannot be undone.';
-      msg.style.color = '#3f3d56';
-      msg.style.fontSize = '1.05rem';
-      msg.style.marginBottom = '1.5rem';
-      msg.style.textAlign = 'center';
-
-      const btnRow = document.createElement('div');
-      btnRow.style.display = 'flex';
-      btnRow.style.gap = '1.5rem';
-
-      const yesBtn = document.createElement('button');
-      yesBtn.innerText = 'Delete';
-      yesBtn.style.background = '#c0392b';
-      yesBtn.style.color = '#fff';
-      yesBtn.style.border = 'none';
-      yesBtn.style.padding = '0.6rem 1.5rem';
-      yesBtn.style.borderRadius = '8px';
-      yesBtn.style.fontWeight = 'bold';
-      yesBtn.style.cursor = 'pointer';
-      yesBtn.style.fontSize = '1rem';
-
-      const noBtn = document.createElement('button');
-      noBtn.innerText = 'Cancel';
-      noBtn.style.background = '#e3e6f0';
-      noBtn.style.color = '#3f3d56';
-      noBtn.style.border = 'none';
-      noBtn.style.padding = '0.6rem 1.5rem';
-      noBtn.style.borderRadius = '8px';
-      noBtn.style.fontWeight = 'bold';
-      noBtn.style.cursor = 'pointer';
-      noBtn.style.fontSize = '1rem';
-
-      yesBtn.onclick = () => {
-        document.body.removeChild(overlay);
-        resolve(true);
-      };
-      noBtn.onclick = () => {
-        document.body.removeChild(overlay);
-        resolve(false);
-      };
-
-      btnRow.appendChild(yesBtn);
-      btnRow.appendChild(noBtn);
-
-      dialog.appendChild(title);
-      dialog.appendChild(msg);
-      dialog.appendChild(btnRow);
-
-      overlay.appendChild(dialog);
-      document.body.appendChild(overlay);
-    });
-  }
-
-  // Handler for deleting an exam
   const handleDeleteExam = async (examId) => {
     const confirmDelete = await showDeleteExamDialog();
 
@@ -598,6 +552,11 @@ export default function TeacherDashboard() {
     }
   };
 
+  // Implement handle viewing evaluations for an exam
+  const handleViewEvaluations = (examId) => {
+    // navigate(`/teacher/exam-evaluations/${examId}`);
+    showMessage(`Viewing evaluations for exam ID: ${examId}`);
+  };
 
   return (
     <div
@@ -994,9 +953,11 @@ export default function TeacherDashboard() {
                 handleEditClick={handleEditClick} 
                 handleDownloadPDF={handleDownloadPDF} 
                 handleBulkUploadClick={handleBulkUploadClick} 
-                handleSendEvaluation={handleSendEvaluation} 
+                handleSendEvaluation={handleSendEvaluation}
+                handleFlagEvaluations={handleFlagEvaluations}
                 handleMarkAsDone={handleMarkAsDone}
-                handleDeleteExam={handleDeleteExam} 
+                handleDeleteExam={handleDeleteExam}
+                handleViewEvaluations={handleViewEvaluations}
               />
             </div>
           )}

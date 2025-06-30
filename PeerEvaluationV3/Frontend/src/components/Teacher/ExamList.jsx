@@ -1,7 +1,7 @@
 import React from 'react';
-import { FaEdit, FaDownload, FaUpload, FaPaperPlane, FaTrashAlt, FaCheck } from 'react-icons/fa';
+import { FaEdit, FaDownload, FaUpload, FaPaperPlane, FaTrashAlt, FaCheck, FaEye, FaFlag } from 'react-icons/fa';
 
-const ExamList = ({ exams, handleEditClick, handleDownloadPDF, handleBulkUploadClick, handleSendEvaluation, handleMarkAsDone, handleDeleteExam }) => {
+const ExamList = ({ exams, handleEditClick, handleDownloadPDF, handleBulkUploadClick, handleSendEvaluation, handleFlagEvaluations, handleMarkAsDone, handleDeleteExam, handleViewEvaluations }) => {
   return (
     <div style={{ marginTop: '2rem', maxHeight: '350px', border: '1px solid #ddd', borderRadius: '12px' }}>
       <h3 style={{ color: '#3f3d56', fontWeight: 'bold', marginBottom: '1rem' }}>Exams</h3>
@@ -58,75 +58,102 @@ const ExamList = ({ exams, handleEditClick, handleDownloadPDF, handleBulkUploadC
                     </td>
                     <td style={{ padding: '12px', overflowX: 'auto' }}>
                       <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
-                        <button
-                          onClick={() => handleEditClick(exam)}
-                          style={{
-                            // padding: '0.5rem 1rem',
-                            borderRadius: '8px',
-                            color: '#ffffff',
-                            background: 'none',
-                            border: ' #006400 1px solid',
-                            fontSize: '0.6rem',
-                            fontWeight: 'bold',
-                            cursor: 'pointer',
-                          }}
-                          title="Edit Exam"
-                        >
-                          <FaEdit style={{ color: ' #006400', fontSize: '1.2rem' }} />
-                        </button>
+                        {!exam.evaluations_sent && (
+                          <>
+                            <button
+                              onClick={() => handleEditClick(exam)}
+                              style={{
+                                // padding: '0.5rem 1rem',
+                                borderRadius: '8px',
+                                color: '#ffffff',
+                                background: 'none',
+                                border: ' #006400 1px solid',
+                                fontSize: '0.6rem',
+                                fontWeight: 'bold',
+                                cursor: 'pointer',
+                              }}
+                              title="Edit Exam"
+                            >
+                              <FaEdit style={{ color: ' #006400', fontSize: '1.2rem' }} />
+                            </button>
 
-                        <button
-                          onClick={() => handleDownloadPDF(exam._id)} // Pass examId when clicking the button
-                          style={{
-                            // padding: '0.5rem 1rem',
-                            borderRadius: '8px',
-                            color: '#ffffff',
-                            background: 'none',
-                            border: ' #00008b 1px solid', // Indigo shade
-                            fontSize: '0.6rem',
-                            fontWeight: 'bold',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '0.5rem',
-                          }}
-                          title="Download PDF"
-                        >
-                          <FaDownload style={{ color: ' #00008b', fontSize: '1.2rem' }} /> {/* Indigo shade */}
-                        </button>
-                        
-                        <button
-                          onClick={() => handleBulkUploadClick(exam._id)} // Pass examId when clicking the button
-                          style={{
-                            // padding: '0.5rem 1rem',
-                            borderRadius: '8px',
-                            color: '#ffffff',
-                            background: 'none',
-                            border: ' #6a0dad 1px solid',
-                            fontSize: '0.6rem',
-                            fontWeight: 'bold',
-                            cursor: 'pointer',
-                          }}
-                          title="Bulk Upload"
-                        >
-                          <FaUpload style={{ color: ' #6a0dad', fontSize: '1.2rem' }} />
-                        </button>
-                        <button
-                          onClick={() => handleSendEvaluation(exam._id)}
-                          style={{
-                            // padding: '0.5rem 1rem',
-                            borderRadius: '8px',
-                            color: '#ffffff',
-                            background: 'none',
-                            border: ' #007bff 1px solid',
-                            fontSize: '0.6rem',
-                            fontWeight: 'bold',
-                            cursor: 'pointer',
-                          }}
-                          title="Send Evaluation"
-                        >
-                          <FaPaperPlane style={{ color: ' #007bff', fontSize: '1.2rem' }} />
-                        </button>
+                            <button
+                              onClick={() => handleDownloadPDF(exam._id)} // Pass examId when clicking the button
+                              style={{
+                                // padding: '0.5rem 1rem',
+                                borderRadius: '8px',
+                                color: '#ffffff',
+                                background: 'none',
+                                border: ' #00008b 1px solid', // Indigo shade
+                                fontSize: '0.6rem',
+                                fontWeight: 'bold',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.5rem',
+                              }}
+                              title="Download PDF"
+                            >
+                              <FaDownload style={{ color: ' #00008b', fontSize: '1.2rem' }} /> {/* Indigo shade */}
+                            </button>
+                            
+                            <button
+                              onClick={() => handleBulkUploadClick(exam._id)} // Pass examId when clicking the button
+                              style={{
+                                // padding: '0.5rem 1rem',
+                                borderRadius: '8px',
+                                color: '#ffffff',
+                                background: 'none',
+                                border: ' #6a0dad 1px solid',
+                                fontSize: '0.6rem',
+                                fontWeight: 'bold',
+                                cursor: 'pointer',
+                              }}
+                              title="Bulk Upload"
+                            >
+                              <FaUpload style={{ color: ' #6a0dad', fontSize: '1.2rem' }} />
+                            </button>
+
+                            <button
+                              onClick={() => handleSendEvaluation(exam._id)}
+                              style={{
+                                // padding: '0.5rem 1rem',
+                                borderRadius: '8px',
+                                color: '#ffffff',
+                                background: 'none',
+                                border: ' #007bff 1px solid',
+                                fontSize: '0.6rem',
+                                fontWeight: 'bold',
+                                cursor: 'pointer',
+                              }}
+                              title="Send Evaluation"
+                            >
+                              <FaPaperPlane style={{ color: ' #007bff', fontSize: '1.2rem' }} />
+                            </button>
+
+                          </>
+                        )}
+
+                        {exam.evaluations_sent && !exam.flags && (
+                          <>
+                            <button
+                              onClick={() => handleFlagEvaluations(exam._id)}
+                              style={{
+                                // padding: '0.5rem 1rem',
+                                borderRadius: '8px',
+                                color: '#ffffff',
+                                background: 'none',
+                                border: ' #df610d 1px solid',
+                                fontSize: '0.6rem',
+                                fontWeight: 'bold',
+                                cursor: 'pointer',
+                              }}
+                              title="Flag Evaluations"
+                            >
+                              <FaFlag style={{ color: ' #df610d', fontSize: '1.2rem' }} />
+                            </button>
+                          </>
+                        )}
 
                         <button
                           onClick={() => handleMarkAsDone(exam._id)}
@@ -164,6 +191,26 @@ const ExamList = ({ exams, handleEditClick, handleDownloadPDF, handleBulkUploadC
                         >
                           <FaTrashAlt style={{ color: ' #c0392b', fontSize: '1.2rem' }} />
                         </button>
+
+                        { exam.evaluations_sent && (
+                          <>
+                            <button
+                              onClick={() => handleViewEvaluations(exam._id)}
+                              style={{
+                                borderRadius: '8px',
+                                color: '#ffffff',
+                                background: 'none',
+                                border: ' #007bff 1px solid',
+                                fontSize: '0.6rem',
+                                fontWeight: 'bold',
+                                cursor: 'pointer',
+                              }}
+                              title="View Evaluations"
+                            >
+                              <FaEye style={{ color: ' #007bff', fontSize: '1.2rem' }} />
+                            </button>
+                          </>
+                        )}
                       </div>
                     </td>
                   </tr>

@@ -84,7 +84,7 @@ const BulkUploadOverlay = ({ examId, onClose, onUpload }) => {
             disabled={!selectedFiles.length}
             style={{
               padding: '0.5rem 1rem',
-              backgroundColor: ' #0c67b8', // Lighter blue for upload button
+              backgroundColor: ' #4b3c70',
               color: '#fff',
               border: 'none',
               borderRadius: '4px',
@@ -99,7 +99,7 @@ const BulkUploadOverlay = ({ examId, onClose, onUpload }) => {
             onClick={onClose}
             style={{
               padding: '0.5rem 1rem',
-              backgroundColor: ' #585a5c', // Darker grey for close button
+              backgroundColor: ' #585a5c', 
               color: '#fff',
               border: 'none',
               borderRadius: '4px',
