@@ -5,6 +5,7 @@ import { Document } from '../models/Document.js';
 import { Batch } from '../models/Batch.js';
 import { Course } from '../models/Course.js';
 import { UIDMap } from '../models/UIDMap.js';
+import { PeerEvaluation } from '../models/PeerEvaluation.js';
 import fs from 'fs';
 
 export const getStudentDashboardStats = async (req, res) => {
@@ -245,5 +246,38 @@ export const uploadExamDocument = async (req, res) => {
       console.warn('Failed to delete new document file:', err);
     }
     res.status(500).json({ message: 'Failed to upload document!' });
+  }
+};
+
+export const getEvaluationsByBatchAndExam = async (req, res) => {
+  try {
+    const { batchId, examId } = req.query;
+    const studentId = req.user._id; // Assuming user ID is available in req.user
+
+    // Fetch evaluations assigned to the student
+    const query = { evaluatorId: studentId };
+    if (batchId) query.batchId = batchId;
+    if (examId) query.examId = examId;
+
+    const evaluations = await PeerEvaluation.find(query)
+      .populate('examId', 'examName')
+      .populate('batchId', 'batchName')
+      .populate('documentId', 'documentName');
+
+    // Format the response
+    const formattedEvaluations = evaluations.map(evaluation => ({
+      examId: evaluation.examId._id,
+      examName: evaluation.examId.examName,
+      batchId: evaluation.batchId._id,
+      batchName: evaluation.batchId.batchName,
+      documentId: evaluation.documentId._id,
+      documentName: evaluation.documentId.documentName,
+      // status: evaluation.status,
+    }));
+
+    res.status(200).json(formattedEvaluations);
+  } catch (error) {
+    console.error('Error fetching evaluations:', error);
+    res.status(500).json({ message: 'Failed to fetch evaluations.' });
   }
 };

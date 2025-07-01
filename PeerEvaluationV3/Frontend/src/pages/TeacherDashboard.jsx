@@ -302,10 +302,10 @@ export default function TeacherDashboard() {
 
       if (response.ok) {
         const data = await response.json();
-        showMessage(`Exam scheduled successfully: ${data.message}`, 'success');
+        showMessage(data.message, 'success');
       } else {
         const errorData = await response.json();
-        showMessage(`Failed to schedule exam: ${errorData.message}`, 'error');
+        showMessage(errorData.message, 'error');
       }
     } catch (error) {
       showMessage('An error occurred while scheduling the exam.', 'error');
@@ -314,22 +314,7 @@ export default function TeacherDashboard() {
 
     setExamOverlayOpen(false);
     setSelectedCourseId('');
-    // After scheduling, fetch the updated list of exams so the new one appears
-    try {
-      const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:5000/api/teacher/teacher-exams', {
-        method: 'GET',
-        headers: {
-        Authorization: `Bearer ${token}`,
-        },
-      });
-      const data = await response.json();
-      if (Array.isArray(data.exams)) {
-        setExams(data.exams);
-      }
-    } catch (error) {
-    // Optionally handle error
-    }
+    await refreshExamsList();
   };
 
   const handleEditClick = (exam) => {
@@ -467,7 +452,7 @@ export default function TeacherDashboard() {
         showMessage(data.message, 'success');
         await refreshExamsList();
       } else {
-        showMessage(`Failed to send evaluation: ${data.message}`, 'error');
+        showMessage(data.message, 'error');
       }
     } catch (error) {
       showMessage('An error occurred while sending the evaluation.', 'error');

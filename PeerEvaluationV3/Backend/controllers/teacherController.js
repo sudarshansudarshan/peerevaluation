@@ -6,6 +6,7 @@ import { Examination } from '../models/Examination.js';
 import { Document } from '../models/Document.js';
 import { UIDMap } from '../models/UIDMap.js';
 import { TA } from '../models/TA.js';
+import { PeerEvaluation } from '../models/PeerEvaluation.js';
 import csv from 'csv-parser';
 import fs from 'fs';
 import bcrypt from 'bcryptjs';
@@ -604,7 +605,6 @@ export const bulkUploadDocuments = async (req, res) => {
   }
 };
 
-// TODO: Implement the logic to send evaluations to students
 export const sendEvaluation = async (req, res) => {
   const { examId } = req.params;
 
@@ -618,15 +618,22 @@ export const sendEvaluation = async (req, res) => {
   }
 
   try {
-    const documents = await Document.find({ examId }).populate('uniqueId');
+    const documentsWithoutUserId = await Document.find({ examId });
+    const uidMaps = await UIDMap.find({ examId });
     const students = await Enrollment.find({ batch: exam.batch, status: 'active' }).populate('student');
+    const documents = documentsWithoutUserId.map((doc) => {
+      const matchingUidMap = uidMaps.find((uidMap) => uidMap.uniqueId === doc.uniqueId);
+      return {
+        ...doc.toObject(), // Convert Mongoose document to plain object
+        userId: matchingUidMap ? matchingUidMap.userId : null, // Map userId if found
+      };
+    });
 
     if (!documents.length || !students.length) {
       return res.status(404).json({ message: 'No documents or students found for this exam.' });
     }
 
     const studentMap = new Map(); // Map to track evaluations assigned to each student
-    const documentMap = new Map(); // Map to track documents already evaluated
 
     // Initialize studentMap with empty arrays for evaluations
     students.forEach((enrollment) => {
@@ -637,8 +644,10 @@ export const sendEvaluation = async (req, res) => {
     for (const document of documents) {
       const eligibleEvaluators = students.filter(
         (enrollment) =>
-          enrollment.student._id.toString() !== document.uniqueId.userId.toString() && // Exclude the document owner
-          studentMap.get(enrollment.student._id.toString()).length < exam.k // Ensure the student hasn't exceeded `k` evaluations
+          document.uniqueId && // Check if document.uniqueId exists
+          document.userId && // Check if document.userId exists
+          enrollment.student._id.toString() !== document.userId.toString() &&
+          studentMap.get(enrollment.student._id.toString()).length < exam.k
       );
 
       if (eligibleEvaluators.length < exam.k) {
@@ -649,24 +658,19 @@ export const sendEvaluation = async (req, res) => {
 
       // Randomly assign `k` evaluators to the document
       const assignedEvaluators = eligibleEvaluators
-        .sort(() => Math.random() - 0.5) // Shuffle the array
-        .slice(0, exam.k); // Select `k` evaluators
+        .sort(() => Math.random() - 0.5)
+        .slice(0, exam.k);
 
       for (const evaluator of assignedEvaluators) {
         const evaluatorId = evaluator.student._id.toString();
-        studentMap.get(evaluatorId).push(document._id); // Add document to evaluator's list
-        documentMap.set(document._id.toString(), evaluatorId); // Track the evaluator for the document
-
-        // Create PeerEvaluation entry
+        studentMap.get(evaluatorId).push(document._id);
+      
         await PeerEvaluation.create({
           evaluator: evaluator.student._id,
-          uid: document.uniqueId._id,
-          student: document.uniqueId.userId,
+          uid: document.uniqueId,
+          student: document.userId,
           exam: examId,
           document: document._id,
-          feedback: '', // Placeholder for feedback
-          ticket: Math.floor(Math.random() * 100000), // Generate a random ticket number
-          score: '', // Placeholder for score
         });
       }
     }
