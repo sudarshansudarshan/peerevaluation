@@ -8,9 +8,10 @@ const PeerEvaluationSchema = new mongoose.Schema({
     student: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     exam: { type: mongoose.Schema.Types.ObjectId, ref: 'Examination', required: true },
     document: { type: mongoose.Schema.Types.ObjectId, ref: 'Document', required: true },
-    feedback: { type: String, required: true, default: 'NA' }, 
+    feedback: { type: [String], required: true, default: [] },
     ticket: { type: Number, required: true, default: 0 }, 
-    score: { type: Number, required: true, default: -1 }, 
+    score: { type: [Number], required: true, default: [] }, 
+    eval_status: { type: String, enum: ['pending', 'completed'], default: 'pending' },
 });
 
 export const PeerEvaluation = mongoose.model('PeerEvaluation', PeerEvaluationSchema);

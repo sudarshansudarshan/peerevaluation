@@ -5,6 +5,7 @@ import '../styles/Student/StudentDashboard.css';
 import EnrolledCoursesSection from '../components/Student/EnrolledCoursesSection';
 import EnrollmentRequestSection from '../components/Student/EnrollmentRequestSection';
 import StudentExamsTab from '../components/Student/StudentExamsTab';
+import EvaluationsTable from '../components/Student/EvaluationTable';
 import { containerStyle, sidebarStyle, mainStyle, contentStyle, sidebarToggleBtnStyle, buttonStyle, sectionHeading } from '../styles/Student/StudentDashboard.js'
 import { FaBook, FaClipboardList, FaLaptopCode } from 'react-icons/fa';
 import { showMessage } from '../utils/Message';
@@ -26,6 +27,7 @@ export default function StudentDashboard() {
   const [batchExams, setBatchExams] = useState([]);
   const [examFileMap, setExamFileMap] = useState({});
   const [selectedExam, setSelectedExam] = useState('');
+  const [evaluationExams, setEvaluationExams] = useState([]);
   const [evaluations, setEvaluations] = useState([]);
   const fileInputRefs = useRef({});
   const navigate = useNavigate();
@@ -196,32 +198,42 @@ export default function StudentDashboard() {
     if (activeTab !== 'evaluation') return;
 
     const fetchEvaluations = async () => {
-      console.log('Fetching evaluations for tab:', activeTab);
       const token = localStorage.getItem('token');
       if (!token) return;
 
-      console.log('Fetching evaluations with filters:', selectedBatch, selectedExam);
-
       let url = 'http://localhost:5000/api/student/evaluations';
-      const params = [];
-      if (selectedBatch) params.push(`batchId=${selectedBatch}`);
-      if (selectedExam) params.push(`examId=${selectedExam}`);
-      if (params.length > 0) url += `?${params.join('&')}`;
 
       try {
         const response = await fetch(url, {
           headers: { Authorization: `Bearer ${token}` },
         });
         const data = await response.json();
-        setEvaluations(Array.isArray(data) ? data : []);
+
+        if (Array.isArray(data)) {
+          setEvaluations(data);
+
+          // Extract unique exams from evaluations
+          const uniqueExams = data.reduce((acc, evaluation) => {
+            if (!acc.some(exam => exam.examId === evaluation.examId)) {
+              acc.push({ examId: evaluation.examId, name: evaluation.examName, courseName: evaluation.courseName, batchName: evaluation.batchId });
+            }
+            return acc;
+          }, []);
+
+          setEvaluationExams(uniqueExams); // Update dropdown options with unique exams
+        } else {
+          setEvaluations([]);
+          setEvaluationExams([]);
+        }
       } catch (error) {
         console.error('Failed to fetch evaluations:', error);
         setEvaluations([]);
+        setEvaluationExams([]);
       }
     };
 
     fetchEvaluations();
-  }, [activeTab, selectedBatch, selectedExam]);
+  }, [activeTab]);
 
   // Handle enrollment request
   const handleEnrollmentRequest = async (e) => {
@@ -319,7 +331,7 @@ export default function StudentDashboard() {
         position: 'fixed',
         top: 24,
         right: 36,
-        zIndex: 2000,
+        zIndex: 999,
         display: 'flex',
         alignItems: 'center',
       }}>
@@ -513,88 +525,12 @@ export default function StudentDashboard() {
           {activeTab === 'evaluation' && (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', color: '#2d3559', width: '100%' }}>
               <h2 style={{ ...sectionHeading, marginTop: 0, marginBottom: '2rem', color: '#3f3d56' }}>Evaluations</h2>
-
-              {/* Filter Dropdowns */}
-              <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem', width: '100%', justifyContent: 'center' }}>
-                <select
-                  value={selectedBatch || ''}
-                  onChange={e => setSelectedBatch(e.target.value)}
-                  style={{
-                    minWidth: 180,
-                    padding: '0.6rem 1.2rem',
-                    borderRadius: '8px',
-                    border: '1.5px solid #4b3c70',
-                    fontSize: '1rem',
-                    background: '#fff',
-                    color: '#000',
-                    fontWeight: 500,
-                    transition: 'background 0.2s',
-                    outline: 'none',
-                    cursor: 'pointer',
-                  }}
-                >
-                  <option value="">All Batches</option>
-                  {studentBatches.map((batch, idx) => (
-                    <option key={idx} value={batch.batchId}>
-                      {batch.courseName} - {batch.batchId}
-                    </option>
-                  ))}
-                </select>
-
-                <select
-                  value={selectedExam || ''}
-                  onChange={e => setSelectedExam(e.target.value)}
-                  style={{
-                    minWidth: 180,
-                    padding: '0.6rem 1.2rem',
-                    borderRadius: '8px',
-                    border: '1.5px solid #4b3c70',
-                    fontSize: '1rem',
-                    background: '#fff',
-                    color: '#000',
-                    fontWeight: 500,
-                    transition: 'background 0.2s',
-                    outline: 'none',
-                    cursor: 'pointer',
-                  }}
-                >
-                  <option value="">All Exams</option>
-                  {batchExams.map((exam, idx) => (
-                    <option key={idx} value={exam.examId}>
-                      {exam.name} - {exam.batch.batchId}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Evaluations Table */}
-              <table style={{ width: '100%', borderCollapse: 'collapse', background: '#fff', borderRadius: 8, boxShadow: '0 2px 8px #4b3c70' }}>
-                <thead style={{ backgroundColor: '#4b3c70', color: '#ffffff', position: 'sticky', top: 0, zIndex: 1 }}>
-                  <tr>
-                    <th style={{ padding: '12px', textAlign: 'center' }}>Exam Name</th>
-                    <th style={{ padding: '12px', textAlign: 'center' }}>Batch</th>
-                    <th style={{ padding: '12px', textAlign: 'center' }}>Document Name</th>
-                    {/* <th style={{ padding: '12px', textAlign: 'center' }}>Status</th> */}
-                  </tr>
-                </thead>
-                <tbody>
-                  {evaluations
-                    .filter(evaluation => 
-                      (!selectedBatch || evaluation.batchId === selectedBatch) &&
-                      (!selectedExam || evaluation.examId === selectedExam)
-                    )
-                    .map((evaluation, idx) => (
-                      <tr key={idx}>
-                        <td style={{ padding: '12px', textAlign: 'center', fontWeight: 500 }}>{evaluation.name}</td>
-                        <td style={{ padding: '12px', textAlign: 'center', fontWeight: 500 }}>{evaluation.batchId}</td>
-                        <td style={{ padding: '12px', textAlign: 'center', fontWeight: 500 }}>{evaluation.documentName}</td>
-                        {/* <td style={{ padding: '12px', textAlign: 'center', fontWeight: 500 }}>
-                          {evaluation.status === 'pending' ? 'Pending' : 'Completed'}
-                        </td> */}
-                      </tr>
-                    ))}
-                </tbody>
-              </table>
+              <EvaluationsTable
+                evaluations={evaluations}
+                evaluationExams={evaluationExams}
+                selectedExam={selectedExam}
+                setSelectedExam={setSelectedExam}
+              />
             </div>
           )}
 
