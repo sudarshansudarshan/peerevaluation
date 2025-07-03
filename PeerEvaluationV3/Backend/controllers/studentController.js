@@ -15,9 +15,9 @@ export const getStudentDashboardStats = async (req, res) => {
 
     const coursesEnrolled = await Enrollment.countDocuments({ student: studentId , status: 'active' });
 
-    const pendingEvaluations = await Document.countDocuments({
-      uniqueId: studentId,
-      evaluationStatus: 'pending'
+    const pendingEvaluations = await PeerEvaluation.countDocuments({
+      evaluator: studentId,
+      eval_status: 'pending'
     });
 
     const today = new Date();
@@ -252,22 +252,20 @@ export const uploadExamDocument = async (req, res) => {
 export const getEvaluationsByBatchAndExam = async (req, res) => {
   try {
     const { examId } = req.query;
-    const studentId = req.user._id; // Assuming user ID is available in req.user
+    const studentId = req.user._id;
 
-    // Fetch evaluations assigned to the student
     const query = { evaluator: studentId };
     if (examId) query.exam = examId;
 
     const evaluations = await PeerEvaluation.find(query)
-      .populate('exam')//, 'name date time duration totalMarks batch') // Include batch in exam population
+      .populate({
+        path: 'exam',
+        match: { completed: false }
+      })//, 'name date time duration totalMarks batch') // Include batch in exam population
       .populate('document')//, 'uniqueId documentPath uploadedOn');
 
-    // console.log('Evaluations fetched:', evaluations);
-
-    // Create a map to store batchId and courseName for each unique examId
     const batchCourseMap = {};
 
-    // Fetch batchId and courseName for each unique examId
     for (const evaluation of evaluations) {
       const exam = evaluation.exam;
       if (exam && exam.batch && !batchCourseMap[exam._id]) {
@@ -281,20 +279,22 @@ export const getEvaluationsByBatchAndExam = async (req, res) => {
       }
     }
 
-    // Format the response
     const formattedEvaluations = evaluations.map(evaluation => {
       const exam = evaluation.exam;
       const document = evaluation.document;
 
       return {
+        evaluationId: evaluation._id,
         examId: exam._id,
         examName: exam.name,
         examDate: exam.date,
         examTime: exam.time,
         examDuration: exam.duration,
         examTotalMarks: exam.totalMarks,
-        batchId: batchCourseMap[exam._id]?.batchId, // Use the batchId from the map
-        courseName: batchCourseMap[exam._id]?.courseName, // Use the courseName from the map
+        exam_number_of_Questions: exam.number_of_questions,
+        exam_solutions: exam.solutions,
+        batchId: batchCourseMap[exam._id]?.batchId,
+        courseName: batchCourseMap[exam._id]?.courseName,
         documentId: document._id,
         documentUniqueId: document.uniqueId,
         documentPath: document.documentPath,
@@ -309,7 +309,50 @@ export const getEvaluationsByBatchAndExam = async (req, res) => {
 
     res.status(200).json(formattedEvaluations);
   } catch (error) {
-    console.error('Error fetching evaluations:', error);
     res.status(500).json({ message: 'Failed to fetch evaluations.' });
+  }
+};
+
+export const submitEvaluation = async (req, res) => {
+  try {
+    const { evaluationId, examId, marks, feedback } = req.body;
+
+    if (!examId || !Array.isArray(marks) || !Array.isArray(feedback)) {
+      return res.status(400).json({ message: "Invalid input data." });
+    }
+
+    if (marks.length !== feedback.length) {
+      return res.status(400).json({ message: "Marks and feedback arrays must have the same length." });
+    }
+
+    const totalMarks = marks.reduce((sum, mark) => sum + mark, 0);
+
+    const exam = await Examination.findById(examId);
+    if (!exam) {
+      return res.status(404).json({ message: "Exam not found!" });
+    }
+
+    if (totalMarks > exam.totalMarks) {
+      return res.status(400).json({ message: `Total marks (${totalMarks}) exceed the allowed maximum (${exam.totalMarks}).` });
+    }
+
+    const evaluation = await PeerEvaluation.findById({
+      _id: evaluationId,
+    });
+
+    if (!evaluation) {
+      return res.status(404).json({ message: "Evaluation not found!" });
+    }
+
+    evaluation.score = marks;
+    evaluation.feedback = feedback;
+    evaluation.evaluated_on = new Date();
+    evaluation.eval_status = 'completed';
+
+    await evaluation.save();
+
+    res.status(200).json({ message: "Evaluation updated successfully!" });
+  } catch (error) {
+    res.status(500).json({ message: "Failed to submit evaluation!" });
   }
 };
