@@ -120,13 +120,13 @@ export const requestEnrollment = async (req, res) => {
     });
 
     if (existingEnrollment && existingEnrollment.status === 'active') {
-      return res.status(400).json({ message: 'Already enrolled in this course!' });
+      return res.status(400).json({ message: 'Already enrolled in this batch!' });
     }
     else if (existingEnrollment && existingEnrollment.status === 'pending') {
-      return res.status(400).json({ message: 'You have a pending enrollment request for this course!' });
+      return res.status(400).json({ message: 'You have a pending enrollment request for this batch!' });
     }
     else if (existingEnrollment && existingEnrollment.status === 'dropped') {
-      return res.status(400).json({ message: 'Your enrollment request for this course was already rejected or you have dropped!' });
+      return res.status(400).json({ message: 'You have been dropped from this batch!' });
     }
 
     const newEnrollment = new Enrollment({

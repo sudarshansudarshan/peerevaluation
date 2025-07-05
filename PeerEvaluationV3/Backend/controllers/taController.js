@@ -6,6 +6,7 @@ import { Batch } from '../models/Batch.js';
 import { Course } from '../models/Course.js';
 import { UIDMap } from '../models/UIDMap.js';
 import { TA } from '../models/TA.js';
+import { PeerEvaluation } from '../models/PeerEvaluation.js';
 
 
 export const getMyTABatches = async (req, res) => {
@@ -89,16 +90,54 @@ export const declineEnrollment = async (req, res) => {
   try {
     const { enrollmentId } = req.params;
 
-    const enrollment = await Enrollment.findById(enrollmentId);
+    const enrollment = await Enrollment.findByIdAndDelete(enrollmentId);
     if (!enrollment) {
       return res.status(404).json({ message: "Enrollment not found!" });
     }
-
-    enrollment.status = "dropped";
-    await enrollment.save();
-
     res.status(200).json({ message: "Enrollment declined successfully!" });
   } catch (error) {
     res.status(500).json({ message: "Failed to decline enrollment!" });
+  }
+};
+
+export const getFlaggedEvaluations = async (req, res) => {
+  try {
+    const { batchId } = req.params;
+    if (!batchId) {
+      return res.status(400).json({ message: "Batch ID is required!" });
+    }
+
+    const exams = await Examination.find({
+      batch: batchId,
+      flags: true,
+      evaluations_sent: true,
+    });
+
+    if (!exams.length) {
+      return res.status(404).json({ message: "No exams found for the batch!" });
+    }
+
+    const examIds = exams.map((exam) => exam._id);
+
+    const evaluations = await PeerEvaluation.find({
+      exam: { $in: examIds },
+      $or: [{ eval_status: "pending" }, { eval_status: "completed", ticket: 1 }],
+    }).populate("exam")
+    .populate("evaluator")
+    .populate("student");
+
+    if (!evaluations.length) {
+      return res.status(404).json({ message: "No flagged evaluations found!" });
+    }
+
+    const groupedEvaluations = exams.map((exam) => ({
+      exam: exam,
+      evaluations: evaluations.filter((evaluation) => evaluation.exam._id.toString() === exam._id.toString()),
+    }));
+
+    res.status(200).json(groupedEvaluations);
+  } catch (error) {
+    console.error("Error fetching flagged evaluations:", error);
+    res.status(500).json({ error: "Failed to fetch flagged evaluations." });
   }
 };

@@ -36,6 +36,7 @@ export default function StudentDashboard() {
   const [manageTAData, setManageTAData] = useState(null);
   const [pendingEnrollments, setPendingEnrollments] = useState([]);
   const [flaggedEvaluations, setFlaggedEvaluations] = useState([]);
+  const [selectedTAExam, setSelectedTAExam] = useState("");
   const fileInputRefs = useRef({});
   const navigate = useNavigate();
 
@@ -377,8 +378,8 @@ export default function StudentDashboard() {
     // console.log("Assignment clicked:", assignment);
     const enrollmentsData = await fetchTAPendingEnrollments(assignment.batch_id);
     setPendingEnrollments(enrollmentsData);
-    // const evaluationsData = await fetchTAFlaggedEvaluations(assignment.batch_id);
-    // setFlaggedEvaluations(evaluationsData);
+    const evaluationsData = await fetchTAFlaggedEvaluations(assignment.batch_id);
+    setFlaggedEvaluations(evaluationsData);
   };
 
   const closeTAManageOverlay = () => {
@@ -391,7 +392,6 @@ export default function StudentDashboard() {
   const fetchTAPendingEnrollments = async (batchId) => {
     const token = localStorage.getItem("token");
     if (!token) return;
-    console.log("Fetching pending enrollments for batch:", batchId);
     try {
       const res = await fetch(
         `http://localhost:5000/api/ta/pending_enrollments/${batchId}`,
@@ -416,10 +416,11 @@ export default function StudentDashboard() {
     if (!token) return;
     try {
       const res = await fetch(
-        `http://localhost:5000/api/ta/evaluations/${batchId}`,
+        `http://localhost:5000/api/ta/flagged_evaluations/${batchId}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
           },
         }
       );
@@ -465,7 +466,7 @@ export default function StudentDashboard() {
       const res = await fetch(
         `http://localhost:5000/api/ta/decline/${enrollmentId}`,
         {
-          method: "PUT",
+          method: "DELETE",
           headers: {
             Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
@@ -734,6 +735,8 @@ export default function StudentDashboard() {
               flaggedEvaluations={flaggedEvaluations}
               acceptEnrollment={acceptEnrollment}
               declineEnrollment={declineEnrollment}
+              selectedTAExam={selectedTAExam}
+              setSelectedTAExam={setSelectedTAExam}
             />
           )}
 
