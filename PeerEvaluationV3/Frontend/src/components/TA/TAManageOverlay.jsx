@@ -10,6 +10,8 @@ export default function ManageOverlay({
   declineEnrollment,
   selectedTAExam,
   setSelectedTAExam,
+  TAEditEval,
+  TADelEval,
 }) {
   if (!showTAManageOverlay) return null;
 
@@ -166,10 +168,10 @@ export default function ManageOverlay({
                         {/* <td style={cellStyle}>{evalItem.ticket}</td> */}
                         <td style={cellStyle}>
                           <div style={{ display: "flex", gap: "0.3rem", justifyContent: "center" }}>
-                            <button style={btnAccept}>
+                            <button style={btnAccept} onClick={() => TAEditEval(evalItem)}>
                               <FaEdit />
                             </button>
-                            <button style={btnDecline}>
+                            <button style={btnDecline} onClick={() => TADelEval(evalItem)}>
                               <FaTimes />
                             </button>
                           </div>

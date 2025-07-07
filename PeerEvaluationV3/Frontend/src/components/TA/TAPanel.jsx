@@ -15,6 +15,8 @@ export default function TAPanel({
   declineEnrollment,
   selectedTAExam,
   setSelectedTAExam,
+  TAEditEval,
+  TADelEval,
 }) {
   return (
     <div
@@ -186,6 +188,8 @@ export default function TAPanel({
           declineEnrollment={declineEnrollment}
           selectedTAExam={selectedTAExam}
           setSelectedTAExam={setSelectedTAExam}
+          TAEditEval={TAEditEval}
+          TADelEval={TADelEval}
         />
       )}
     </div>

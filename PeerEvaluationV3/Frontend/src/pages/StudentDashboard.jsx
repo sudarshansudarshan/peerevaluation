@@ -7,6 +7,7 @@ import EnrollmentRequestSection from '../components/Student/EnrollmentRequestSec
 import StudentExamsTab from '../components/Student/StudentExamsTab';
 import EvaluationsTable from '../components/Student/EvaluationTable';
 import TAPanel from '../components/TA/TAPanel';
+import TAEvalOverlay from '../components/TA/TAEvalOverlay';
 import { containerStyle, sidebarStyle, mainStyle, contentStyle, sidebarToggleBtnStyle, buttonStyle, sectionHeading } from '../styles/Student/StudentDashboard.js'
 import { FaBook, FaClipboardList, FaLaptopCode } from 'react-icons/fa';
 import { showMessage } from '../utils/Message';
@@ -37,6 +38,8 @@ export default function StudentDashboard() {
   const [pendingEnrollments, setPendingEnrollments] = useState([]);
   const [flaggedEvaluations, setFlaggedEvaluations] = useState([]);
   const [selectedTAExam, setSelectedTAExam] = useState("");
+  const [showTAEvalOverlay, setShowTAEvalOverlay] = useState(false);
+  const [selectedTAEvaluation, setSelectedTAEvaluation] = useState(null);
   const fileInputRefs = useRef({});
   const navigate = useNavigate();
 
@@ -484,6 +487,55 @@ export default function StudentDashboard() {
     }
   };
 
+  const TAEditEval = async (evaluation) => {
+    console.log("Edit evaluation:", evaluation);
+    setSelectedTAEvaluation(evaluation);
+    setShowTAEvalOverlay(true);
+  };
+
+  const TADelEval = async (evaluation) => {
+    // Implementation for delete functionality if needed
+    console.log("Delete evaluation:", evaluation);
+  };
+
+  const closeTAEvalOverlay = () => {
+    setShowTAEvalOverlay(false);
+    setSelectedTAEvaluation(null);
+  };
+
+  const handleTAEvaluationUpdate = async (updateData) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`http://localhost:5000/api/ta/update-evaluation/${updateData.evaluationId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          score: updateData.score,
+          feedback: updateData.feedback,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        showMessage(data.message || "Evaluation updated successfully!", "success");
+        closeTAEvalOverlay();
+        if (manageTAData?.batch_id) {
+          const evaluationsData = await fetchTAFlaggedEvaluations(manageTAData.batch_id);
+          setFlaggedEvaluations(evaluationsData);
+        }
+      } else {
+        showMessage(data.message || "Failed to update evaluation!", "error");
+      }
+    } catch (error) {
+      showMessage("Error updating evaluation!", "error");
+      console.error('Error updating evaluation:', error);
+    }
+  };
+
   const handleSidebarToggle = () => setSidebarOpen(open => !open);
 
   return (
@@ -737,11 +789,21 @@ export default function StudentDashboard() {
               declineEnrollment={declineEnrollment}
               selectedTAExam={selectedTAExam}
               setSelectedTAExam={setSelectedTAExam}
+              TAEditEval={TAEditEval}
+              TADelEval={TADelEval}
             />
           )}
 
         </div>
       </main>
+      {showTAEvalOverlay && (
+        <TAEvalOverlay
+          isTAOverlayOpen={showTAEvalOverlay}
+          selectedTAEvaluation={selectedTAEvaluation}
+          closeTAEvalOverlay={closeTAEvalOverlay}
+          handleTAEvaluationUpdate={handleTAEvaluationUpdate}
+        />
+      )}
     </div>
   );
 }

@@ -122,7 +122,8 @@ export const getFlaggedEvaluations = async (req, res) => {
     const evaluations = await PeerEvaluation.find({
       exam: { $in: examIds },
       $or: [{ eval_status: "pending" }, { eval_status: "completed", ticket: 1 }],
-    }).populate("exam")
+    }).populate("document")
+    .populate("exam")
     .populate("evaluator")
     .populate("student");
 

@@ -6,6 +6,7 @@ import { Batch } from '../models/Batch.js';
 import { Course } from '../models/Course.js';
 import { UIDMap } from '../models/UIDMap.js';
 import { PeerEvaluation } from '../models/PeerEvaluation.js';
+import { TA } from '../models/TA.js';
 import fs from 'fs';
 
 export const getStudentDashboardStats = async (req, res) => {
@@ -111,6 +112,15 @@ export const requestEnrollment = async (req, res) => {
   try {
     const { courseId, batchId } = req.body;
     const studentId = req.user._id;
+
+    const existingTA = await TA.findOne({
+      batch: batchId,
+      userId: studentId
+    });
+
+    if (existingTA) {
+      return res.status(400).json({ message: 'You are already a TA for this batch and cannot enroll as a student!' });
+    }
 
     const existingEnrollment = await Enrollment.findOne({
       student: studentId,
