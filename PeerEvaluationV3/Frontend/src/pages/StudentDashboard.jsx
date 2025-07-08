@@ -488,14 +488,69 @@ export default function StudentDashboard() {
   };
 
   const TAEditEval = async (evaluation) => {
-    console.log("Edit evaluation:", evaluation);
     setSelectedTAEvaluation(evaluation);
     setShowTAEvalOverlay(true);
   };
 
+  const TAFlagEval = async (evaluation) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`http://localhost:5000/api/ta/flag-evaluation/${evaluation._id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({}),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        showMessage(data.message, "success");
+        if (manageTAData?.batch_id) {
+          const evaluationsData = await fetchTAFlaggedEvaluations(manageTAData.batch_id);
+          setFlaggedEvaluations(evaluationsData);
+        }
+      } else {
+        showMessage(data.message, "error");
+      }
+    } catch (error) {
+      showMessage(error.message, "error");
+    }
+  };
+
   const TADelEval = async (evaluation) => {
-    // Implementation for delete functionality if needed
-    console.log("Delete evaluation:", evaluation);
+    try {
+      const token = localStorage.getItem('token');
+
+      if (evaluation?.eval_status === 'pending') {
+        showMessage("Cannot remove/reject pending evaluations!", "error");
+        return;
+      }
+      const response = await fetch(`http://localhost:5000/api/ta/remove-evaluation/${evaluation._id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({}),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        showMessage(data.message, "success");
+        if (manageTAData?.batch_id) {
+          const evaluationsData = await fetchTAFlaggedEvaluations(manageTAData.batch_id);
+          setFlaggedEvaluations(evaluationsData);
+        }
+      } else {
+        showMessage(data.message, "error");
+      }
+    } catch (error) {
+      showMessage("Error rejecting evaluation!", "error");
+    }
   };
 
   const closeTAEvalOverlay = () => {
@@ -531,8 +586,7 @@ export default function StudentDashboard() {
         showMessage(data.message || "Failed to update evaluation!", "error");
       }
     } catch (error) {
-      showMessage("Error updating evaluation!", "error");
-      console.error('Error updating evaluation:', error);
+      showMessage(error.message, "error");
     }
   };
 
@@ -790,6 +844,7 @@ export default function StudentDashboard() {
               selectedTAExam={selectedTAExam}
               setSelectedTAExam={setSelectedTAExam}
               TAEditEval={TAEditEval}
+              TAFlagEval={TAFlagEval}
               TADelEval={TADelEval}
             />
           )}

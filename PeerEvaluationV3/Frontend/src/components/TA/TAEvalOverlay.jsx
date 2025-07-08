@@ -45,7 +45,7 @@ const TAEvalOverlay = ({
     
     // Validate total score
     if (totalScore > selectedTAEvaluation?.exam.totalMarks) {
-      showMessage(`Total score (${totalScore}) cannot exceed maximum marks (${selectedTAEvaluation.exam.totalMarks})`, 'info');
+      showMessage(`Total score ${totalScore} cannot exceed maximum marks ${selectedTAEvaluation.exam.totalMarks}`, 'info');
       return;
     }
     

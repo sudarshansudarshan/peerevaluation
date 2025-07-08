@@ -138,7 +138,67 @@ export const getFlaggedEvaluations = async (req, res) => {
 
     res.status(200).json(groupedEvaluations);
   } catch (error) {
-    console.error("Error fetching flagged evaluations:", error);
     res.status(500).json({ error: "Failed to fetch flagged evaluations." });
+  }
+};
+
+export const updateFlaggedEvaluation = async (req, res) => {
+  try {
+    const { evaluationId } = req.params;
+    const updateData = req.body;
+
+    const updatedEvaluation = await PeerEvaluation.findByIdAndUpdate(
+      evaluationId, 
+      { ...updateData, ticket: 0, eval_status: "completed" }, 
+      { new: true }
+    );
+    
+    if (!updatedEvaluation) {
+      return res.status(404).json({ message: "Evaluation not found!" });
+    }
+    
+    res.status(200).json({ message: "Evaluation updated successfully!" });
+  } catch (error) {
+    res.status(500).json({ message: "Failed to update flagged evaluation!" });
+  }
+};
+
+export const removeFlaggedEvaluation = async (req, res) => {
+  try {
+    const { evaluationId } = req.params;
+
+    const updatedEvaluation = await PeerEvaluation.findByIdAndUpdate(
+      evaluationId,
+      { ticket: 0 },
+      { new: true }
+    );
+
+    if (!updatedEvaluation) {
+      return res.status(404).json({ message: "Evaluation not found!" });
+    }
+
+    res.status(200).json({ message: "Evaluation rejected and unflagged successfully!" });
+  } catch (error) {
+    res.status(500).json({ message: "Failed to reject evaluation!" });
+  }
+};
+
+export const flagEvaluation = async (req, res) => {
+  try {
+    const { evaluationId } = req.params;
+
+    const updatedEvaluation = await PeerEvaluation.findByIdAndUpdate(
+      evaluationId,
+      { ticket: 2 },
+      { new: true }
+    );
+
+    if (!updatedEvaluation) {
+      return res.status(404).json({ message: "Evaluation not found!" });
+    }
+
+    res.status(200).json({ message: "Evaluation flagged to teacher successfully!" });
+  } catch (error) {
+    res.status(500).json({ message: "Failed to flag evaluation!" });
   }
 };

@@ -16,6 +16,7 @@ export default function TAPanel({
   selectedTAExam,
   setSelectedTAExam,
   TAEditEval,
+  TAFlagEval,
   TADelEval,
 }) {
   return (
@@ -189,6 +190,7 @@ export default function TAPanel({
           selectedTAExam={selectedTAExam}
           setSelectedTAExam={setSelectedTAExam}
           TAEditEval={TAEditEval}
+          TAFlagEval={TAFlagEval}
           TADelEval={TADelEval}
         />
       )}

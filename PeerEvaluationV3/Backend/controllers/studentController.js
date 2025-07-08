@@ -16,10 +16,12 @@ export const getStudentDashboardStats = async (req, res) => {
 
     const coursesEnrolled = await Enrollment.countDocuments({ student: studentId , status: 'active' });
 
-    const pendingEvaluations = await PeerEvaluation.countDocuments({
+    const evaluations = await PeerEvaluation.find({
       evaluator: studentId,
       eval_status: 'pending'
-    });
+    }).populate('exam', 'flags');
+
+    const pendingEvaluations = evaluations.filter(evaluation =>  evaluation.exam && evaluation.exam.flags === false).length;
 
     const today = new Date();
     today.setHours(0, 0, 0, 0);

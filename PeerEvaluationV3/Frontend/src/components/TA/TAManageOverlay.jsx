@@ -1,5 +1,5 @@
 import React from "react";
-import { FaCheck, FaTimes, FaEdit } from "react-icons/fa";
+import { FaCheck, FaTimes, FaEdit, FaFlag } from "react-icons/fa";
 
 export default function ManageOverlay({
   showTAManageOverlay,
@@ -11,6 +11,7 @@ export default function ManageOverlay({
   selectedTAExam,
   setSelectedTAExam,
   TAEditEval,
+  TAFlagEval,
   TADelEval,
 }) {
   if (!showTAManageOverlay) return null;
@@ -171,9 +172,14 @@ export default function ManageOverlay({
                             <button style={btnAccept} onClick={() => TAEditEval(evalItem)}>
                               <FaEdit />
                             </button>
-                            <button style={btnDecline} onClick={() => TADelEval(evalItem)}>
-                              <FaTimes />
+                            <button style={btnFlag} onClick={() => TAFlagEval(evalItem)}>
+                              <FaFlag />
                             </button>
+                            {evalItem.eval_status !== "pending" && (
+                              <button style={btnDecline} onClick={() => TADelEval(evalItem)}>
+                                <FaTimes />
+                              </button>
+                            )}
                           </div>
                         </td>
                       </tr>
@@ -226,6 +232,15 @@ const btnAccept = {
   borderRadius: "4px",
   border: "none",
   backgroundColor: "#4caf50",
+  color: "#fff",
+  cursor: "pointer",
+};
+
+const btnFlag = {
+  padding: "4px 8px",
+  borderRadius: "4px",
+  border: "none",
+  backgroundColor: " #ff9800",
   color: "#fff",
   cursor: "pointer",
 };
