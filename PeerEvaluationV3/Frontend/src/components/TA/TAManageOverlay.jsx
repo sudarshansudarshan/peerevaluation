@@ -100,95 +100,101 @@ export default function ManageOverlay({
         {/* Flagged Evaluations Column */}
         <div style={{ flex: 1, minWidth: "320px" }}>
           <h3 style={{ marginBottom: "1rem" }}>Flagged Evaluations</h3>
-          <div style={{ marginBottom: "1rem" }}>
-            <label style={{ marginRight: "0.5rem", fontWeight: 500 }}>Filter by Exam:</label>
-            <select
-              value={selectedTAExam || ""}
-              onChange={(e) => setSelectedTAExam(e.target.value)}
-              style={{
-                padding: "0.4rem 0.8rem",
-                borderRadius: "4px",
-                border: "1px solid #4b3c70",
-                fontSize: "0.9rem",
-                background: "#fff",
-                color: "#000",
-                fontWeight: 500,
-                outline: "none",
-                cursor: "pointer",
-              }}
-            >
-              <option value="">All Exams</option>
-              {flaggedEvaluations.map((examGroup, idx) => (
-                <option key={idx} value={examGroup.exam._id}>
-                  {examGroup.exam.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {(selectedTAExam
-            ? flaggedEvaluations.filter((eg) => eg.exam._id === selectedTAExam)
-            : flaggedEvaluations
-          ).map((examGroup, idx) => (
-            <div key={idx} style={{ marginBottom: "1rem" }}>
-              <p style={{ fontWeight: "bold" }}>
-                {examGroup.exam.name} — {new Date(examGroup.exam.date).toLocaleDateString()}
-              </p>
-              <div style={{ overflowX: "auto" }}>
-                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.85rem", border: "1px solid #ddd" }}>
-                  <thead style={{ backgroundColor: "#4b3c70", color: "#fff" }}>
-                    <tr>
-                      <th style={cellHeader}>Evaluator</th>
-                      <th style={cellHeader}>Student</th>
-                      <th style={cellHeader}>Status</th>
-                      <th style={cellHeader}>Feedback</th>
-                      <th style={cellHeader}>Score</th>
-                      {/* <th style={cellHeader}>Ticket</th> */}
-                      <th style={cellHeader}>Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {examGroup.evaluations.map((evalItem, idx) => (
-                      <tr key={idx}>
-                        <td style={cellStyle}>{evalItem.evaluator.name}</td>
-                        <td style={cellStyle}>{evalItem.student.name}</td>
-                        <td style={cellStyle}>
-                          {evalItem.eval_status.charAt(0).toUpperCase() +
-                            evalItem.eval_status.slice(1)}
-                        </td>
-                        <td style={{ ...cellStyle, maxWidth: 100, overflow: "hidden" }}>
-                          {Array.isArray(evalItem.feedback)
-                            ? evalItem.feedback.join(", ")
-                            : evalItem.feedback || "No feedback"}
-                        </td>
-                        <td style={cellStyle}>
-                          {Array.isArray(evalItem.score) 
-                            ? evalItem.score.reduce((sum, current) => sum + current, 0)
-                            : evalItem.score}
-                        </td>
-                        {/* <td style={cellStyle}>{evalItem.ticket}</td> */}
-                        <td style={cellStyle}>
-                          <div style={{ display: "flex", gap: "0.3rem", justifyContent: "center" }}>
-                            <button style={btnAccept} onClick={() => TAEditEval(evalItem)}>
-                              <FaEdit />
-                            </button>
-                            <button style={btnFlag} onClick={() => TAFlagEval(evalItem)}>
-                              <FaFlag />
-                            </button>
-                            {evalItem.eval_status !== "pending" && (
-                              <button style={btnDecline} onClick={() => TADelEval(evalItem)}>
-                                <FaTimes />
-                              </button>
-                            )}
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+          {flaggedEvaluations.length > 0 && (
+            <div style={{ marginBottom: "1rem" }}>
+              <label style={{ marginRight: "0.5rem", fontWeight: 500 }}>Filter by Exam:</label>
+              <select
+                value={selectedTAExam || ""}
+                onChange={(e) => setSelectedTAExam(e.target.value)}
+                style={{
+                  padding: "0.4rem 0.8rem",
+                  borderRadius: "4px",
+                  border: "1px solid #4b3c70",
+                  fontSize: "0.9rem",
+                  background: "#fff",
+                  color: "#000",
+                  fontWeight: 500,
+                  outline: "none",
+                  cursor: "pointer",
+                }}
+              >
+                <option value="">All Exams</option>
+                {flaggedEvaluations.map((examGroup, idx) => (
+                  <option key={idx} value={examGroup.exam._id}>
+                    {examGroup.exam.name}
+                  </option>
+                ))}
+              </select>
             </div>
-          ))}
+          )}
+
+          {flaggedEvaluations.length === 0 ? (
+            <p>No flagged evaluations available.</p>
+          ) : (
+            (selectedTAExam
+              ? flaggedEvaluations.filter((eg) => eg.exam._id === selectedTAExam)
+              : flaggedEvaluations
+            ).map((examGroup, idx) => (
+              <div key={idx} style={{ marginBottom: "1rem" }}>
+                <p style={{ fontWeight: "bold" }}>
+                  {examGroup.exam.name} — {new Date(examGroup.exam.date).toLocaleDateString()}
+                </p>
+                <div style={{ overflowX: "auto" }}>
+                  <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.85rem", border: "1px solid #ddd" }}>
+                    <thead style={{ backgroundColor: "#4b3c70", color: "#fff" }}>
+                      <tr>
+                        <th style={cellHeader}>Evaluator</th>
+                        <th style={cellHeader}>Student</th>
+                        <th style={cellHeader}>Status</th>
+                        <th style={cellHeader}>Feedback</th>
+                        <th style={cellHeader}>Score</th>
+                        {/* <th style={cellHeader}>Ticket</th> */}
+                        <th style={cellHeader}>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {examGroup.evaluations.map((evalItem, idx) => (
+                        <tr key={idx}>
+                          <td style={cellStyle}>{evalItem.evaluator.name}</td>
+                          <td style={cellStyle}>{evalItem.student.name}</td>
+                          <td style={cellStyle}>
+                            {evalItem.eval_status.charAt(0).toUpperCase() +
+                              evalItem.eval_status.slice(1)}
+                          </td>
+                          <td style={{ ...cellStyle, maxWidth: 100, overflow: "hidden" }}>
+                            {Array.isArray(evalItem.feedback)
+                              ? evalItem.feedback.join(", ")
+                              : evalItem.feedback || "No feedback"}
+                          </td>
+                          <td style={cellStyle}>
+                            {Array.isArray(evalItem.score) 
+                              ? evalItem.score.reduce((sum, current) => sum + current, 0)
+                              : evalItem.score}
+                          </td>
+                          {/* <td style={cellStyle}>{evalItem.ticket}</td> */}
+                          <td style={cellStyle}>
+                            <div style={{ display: "flex", gap: "0.3rem", justifyContent: "center" }}>
+                              <button style={btnAccept} onClick={() => TAEditEval(evalItem)}>
+                                <FaEdit />
+                              </button>
+                              <button style={btnFlag} onClick={() => TAFlagEval(evalItem)}>
+                                <FaFlag />
+                              </button>
+                              {evalItem.eval_status !== "pending" && (
+                                <button style={btnDecline} onClick={() => TADelEval(evalItem)}>
+                                  <FaTimes />
+                                </button>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            ))
+          )}
         </div>
 
         {/* Close Button */}
@@ -240,7 +246,7 @@ const btnFlag = {
   padding: "4px 8px",
   borderRadius: "4px",
   border: "none",
-  backgroundColor: " #ff9800",
+  backgroundColor: " #df610d",
   color: "#fff",
   cursor: "pointer",
 };

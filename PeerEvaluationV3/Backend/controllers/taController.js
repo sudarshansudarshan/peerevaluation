@@ -121,7 +121,7 @@ export const getFlaggedEvaluations = async (req, res) => {
 
     const evaluations = await PeerEvaluation.find({
       exam: { $in: examIds },
-      $or: [{ eval_status: "pending" }, { eval_status: "completed", ticket: 1 }],
+      $or: [{ eval_status: "pending", ticket: { $in: [0, 1] } }, { eval_status: "completed", ticket: 1 }],
     }).populate("document")
     .populate("exam")
     .populate("evaluator")
@@ -149,7 +149,7 @@ export const updateFlaggedEvaluation = async (req, res) => {
 
     const updatedEvaluation = await PeerEvaluation.findByIdAndUpdate(
       evaluationId, 
-      { ...updateData, ticket: 0, eval_status: "completed" }, 
+      { ...updateData, ticket: 0, eval_status: "completed", evaluated_on: new Date(), evaluated_by: req.user._id }, 
       { new: true }
     );
     
@@ -183,13 +183,13 @@ export const removeFlaggedEvaluation = async (req, res) => {
   }
 };
 
-export const flagEvaluation = async (req, res) => {
+export const taFlagEvaluation = async (req, res) => {
   try {
     const { evaluationId } = req.params;
 
     const updatedEvaluation = await PeerEvaluation.findByIdAndUpdate(
       evaluationId,
-      { ticket: 2 },
+      { ticket: 2, evaluated_on: new Date(), evaluated_by: req.user._id },
       { new: true }
     );
 

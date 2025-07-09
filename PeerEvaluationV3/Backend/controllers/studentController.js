@@ -363,10 +363,11 @@ export const submitEvaluation = async (req, res) => {
     evaluation.feedback = feedback;
     evaluation.evaluated_on = new Date();
     evaluation.eval_status = 'completed';
+    evaluation.evaluated_by = req.user._id;
 
     await evaluation.save();
 
-    res.status(200).json({ message: "Evaluation updated successfully!" });
+    res.status(200).json({ message: "Evaluation submitted successfully!" });
   } catch (error) {
     res.status(500).json({ message: "Failed to submit evaluation!" });
   }

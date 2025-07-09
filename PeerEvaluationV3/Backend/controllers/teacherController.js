@@ -7,6 +7,7 @@ import { Document } from '../models/Document.js';
 import { UIDMap } from '../models/UIDMap.js';
 import { TA } from '../models/TA.js';
 import { PeerEvaluation } from '../models/PeerEvaluation.js';
+import { Statistics } from '../models/Statistics.js';
 import csv from 'csv-parser';
 import fs from 'fs';
 import bcrypt from 'bcryptjs';
@@ -474,6 +475,8 @@ export const deleteExam = async (req, res) => {
         });
       }
     }
+    await PeerEvaluation.deleteMany({ exam: examId });
+
     await Document.deleteMany({ examId });
 
     await UIDMap.deleteMany({ examId });
@@ -685,26 +688,129 @@ export const sendEvaluation = async (req, res) => {
   }
 };
 
-// TODO: Implement the logic to flag evaluations
+// TODO: Test the logic to flag evaluations on large number of evaluations
 export const flagEvaluations = async (req, res) => {
   const { examId } = req.params; 
+  console.log('Flagging evaluations for exam ID:', examId);
 
   if (!examId) {
     return res.status(400).json({ message: 'Exam ID is required!' });
   }
+
   const exam = await Examination.findById(examId);
   if (!exam) {
     return res.status(404).json({ message: 'Exam not found!' });
   }
+  console.log('Exam found:', exam);
 
   try {
-    // Replace with actual flagging logic
-    console.log(`Flagging evaluations for exam ID: ${examId}`);
+    const evaluations = await PeerEvaluation.find({ 
+      exam: examId, 
+      eval_status: 'completed' 
+    }).populate('student');
 
-    exam.flags = true; // Mark as evaluations flagged
+    if (!evaluations.length) {
+      return res.status(400).json({ message: 'No completed evaluations found for this exam!' });
+    }
+    console.log(`Found ${evaluations.length} completed evaluations for exam ID: ${examId}`);
+
+    const enrolledStudents = await Enrollment.find({ 
+      batch: exam.batch, 
+      status: 'active' 
+    }).populate('student');
+    console.log(`Found ${enrolledStudents.length} enrolled students for exam ID: ${examId}`);
+
+    const studentAverages = new Map();
+    
+    enrolledStudents.forEach(enrollment => {
+      const studentId = enrollment.student._id.toString();
+      const studentEvaluations = evaluations.filter(evaluation => evaluation.student._id.toString() === studentId);
+
+      if (studentEvaluations.length > 0) {
+        const totalScore = studentEvaluations.reduce((sum, evaluation) => {
+          const evalScore = Array.isArray(evaluation.score) 
+            ? evaluation.score.reduce((a, b) => a + b, 0) 
+            : evaluation.score;
+          return sum + evalScore;
+        }, 0);
+        
+        const avgScore = totalScore / studentEvaluations.length;
+        studentAverages.set(studentId, avgScore);
+      }
+    });
+
+    const classAverage = Array.from(studentAverages.values()).reduce((sum, avg) => sum + avg, 0) / studentAverages.size;
+    console.log('Class average score:', classAverage);
+
+    const variance = Array.from(studentAverages.values()).reduce((sum, avg) => {
+      return sum + Math.pow(avg - classAverage, 2);
+    }, 0) / studentAverages.size;
+    
+    const classStdDev = Math.sqrt(variance);
+    console.log('Class standard deviation:', classStdDev);
+
+    await Statistics.findOneAndUpdate(
+      { exam_id: examId },
+      { 
+        exam_id: examId,
+        avg_score: classAverage,
+        std_dev: classStdDev 
+      },
+      { upsert: true, new: true }
+    );
+    console.log('Statistics updated in the database:', { exam_id: examId, avg_score: classAverage, std_dev: classStdDev });
+
+    if (exam.k <= 3) {
+      console.log('Case 1: k <= 3 - Checking evaluations against class standard deviation');
+      for (const evaluation of evaluations) {
+        const evalScore = Array.isArray(evaluation.score) 
+          ? evaluation.score.reduce((a, b) => a + b, 0) 
+          : evaluation.score;
+        
+        const deviation = Math.abs(evalScore - classAverage);
+        
+        if (deviation > 2 * classStdDev) {
+          await PeerEvaluation.findByIdAndUpdate(evaluation._id, { ticket: 1 });
+        }
+      }
+    } else {
+      console.log('Case 2: k > 3 - Checking evaluations against individual student standard deviations');
+      for (const [studentId, studentAvg] of studentAverages) {
+        const studentEvaluations = evaluations.filter(evaluation => evaluation.student._id.toString() === studentId);
+
+        if (studentEvaluations.length > 1) {
+          const studentVariance = studentEvaluations.reduce((sum, evaluation) => {
+            const evalScore = Array.isArray(evaluation.score) 
+              ? evaluation.score.reduce((a, b) => a + b, 0) 
+              : evaluation.score;
+            return sum + Math.pow(evalScore - studentAvg, 2);
+          }, 0) / studentEvaluations.length;
+          
+          const studentStdDev = Math.sqrt(studentVariance);
+          
+          for (const evaluation of studentEvaluations) {
+            const evalScore = Array.isArray(evaluation.score) 
+              ? evaluation.score.reduce((a, b) => a + b, 0) 
+              : evaluation.score;
+            
+            const deviation = Math.abs(evalScore - studentAvg);
+            
+            if (deviation > 1.5 * studentStdDev) {
+              await PeerEvaluation.findByIdAndUpdate(evaluation._id, { ticket: 1 });
+            }
+          }
+        }
+      }
+    }
+    console.log('All evaluations processed and flagged where necessary and I have updated the database.');
+
+    exam.flags = true;
     await exam.save();
+    console.log('Exam marked as flagged successfully.');
+
     res.status(200).json({ message: 'Evaluations flagged successfully!' });
   } catch (error) {
+    console.error('Error flagging evaluations:', error);
     res.status(500).json({ message: 'Failed to flag evaluations!' });
   }
 };
