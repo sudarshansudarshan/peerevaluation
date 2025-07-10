@@ -7,6 +7,7 @@ import EnrollmentRequestSection from '../components/Student/EnrollmentRequestSec
 import StudentExamsTab from '../components/Student/StudentExamsTab';
 import EvaluationsTable from '../components/Student/EvaluationTable';
 import ResultsTable from '../components/Student/ResultsTable';
+import PeerResultOverlay from '../components/Student/PeerResultOverlay';
 import TAPanel from '../components/TA/TAPanel';
 import TAEvalOverlay from '../components/TA/TAEvalOverlay';
 import { containerStyle, sidebarStyle, mainStyle, contentStyle, sidebarToggleBtnStyle, buttonStyle, sectionHeading } from '../styles/Student/StudentDashboard.js'
@@ -41,9 +42,12 @@ export default function StudentDashboard() {
   const [selectedTAExam, setSelectedTAExam] = useState("");
   const [showTAEvalOverlay, setShowTAEvalOverlay] = useState(false);
   const [selectedTAEvaluation, setSelectedTAEvaluation] = useState(null);
-  const [results, setResults] = useState([]);
+  const [resultsBatches, setResultsBatches] = useState([]);
+  const [selectedResultsBatch, setSelectedResultsBatch] = useState("");
   const [resultExams, setResultExams] = useState([]);
-  const [selectedResultExam, setSelectedResultExam] = useState("");
+  const [isPeerResultOverlayOpen, setIsPeerResultOverlayOpen] = useState(false);
+  const [selectedExamForPeerResult, setSelectedExamForPeerResult] = useState(null);
+  const [peerResultsForExam, setPeerResultsForExam] = useState([]);
   const fileInputRefs = useRef({});
   const navigate = useNavigate();
 
@@ -163,9 +167,16 @@ export default function StudentDashboard() {
   }, [activeTab]);
 
   useEffect(() => {
-    if (activeTab !== 'result') return;
-    fetchResults();
+    if (activeTab === 'result') {
+      fetchResultsBatches();
+    }
   }, [activeTab]);
+
+  useEffect(() => {
+    if (selectedResultsBatch) {
+      fetchResultExams();
+    }
+  }, [selectedResultsBatch]);
 
   const fetchDashboardStats = async () => {
     try {
@@ -254,36 +265,35 @@ export default function StudentDashboard() {
     }
   };
 
-const fetchResults = async () => {
+  const fetchResultsBatches = async () => {
     const token = localStorage.getItem('token');
     if (!token) return;
     try {
-      const response = await fetch('http://localhost:5000/api/student/results', {
+      const response = await fetch('http://localhost:5000/api/student/results-batches', {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await response.json();
       if (Array.isArray(data)) {
-        setResults(data);
-        // Extract unique exams for dropdown
-        const uniqueExams = data.reduce((acc, result) => {
-          if (!acc.some(exam => exam.examId === result.examId)) {
-            acc.push({
-              examId: result.examId,
-              name: result.examName,
-              courseName: result.courseName,
-              batchName: result.batchName,
-            });
-          }
-          return acc;
-        }, []);
-        setResultExams(uniqueExams);
-      } else {
-        setResults([]);
-        setResultExams([]);
+        setResultsBatches(data);
       }
     } catch (error) {
-      setResults([]);
-      setResultExams([]);
+      showMessage(error.message, 'error');
+    }
+  };
+
+  const fetchResultExams = async () => {
+    const token = localStorage.getItem('token');
+    if (!token || !selectedResultsBatch) return;
+    try {
+      const response = await fetch(`http://localhost:5000/api/student/result-batch-exams/${selectedResultsBatch}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await response.json();
+      if (Array.isArray(data)) {
+        setResultExams(data);
+      }
+    } catch (error) {
+      showMessage(error.message, 'error');
     }
   };
 
@@ -632,6 +642,31 @@ const fetchResults = async () => {
     }
   };
 
+  const handleViewPeerResults = async (exam) => {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+    try {
+      const response = await fetch(`http://localhost:5000/api/student/peer-result-evals/${exam._id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await response.json();
+
+      if (Array.isArray(data)) {
+        setPeerResultsForExam(data);
+        setSelectedExamForPeerResult(exam);
+        setIsPeerResultOverlayOpen(true);
+      }
+    } catch (error) {
+      showMessage(error.message, 'error');
+    }
+  };
+
+  const closePeerResultOverlay = () => {
+    setIsPeerResultOverlayOpen(false);
+    setSelectedExamForPeerResult(null);
+    setPeerResultsForExam([]);
+  };
+
   const handleSidebarToggle = () => setSidebarOpen(open => !open);
 
   return (
@@ -874,10 +909,11 @@ const fetchResults = async () => {
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', color: '#2d3559', width: '100%' }}>
               <h2 style={{ ...sectionHeading, marginTop: 0, marginBottom: '2rem', color: '#3f3d56' }}>Results</h2>
               <ResultsTable
-                results={results}
+                resultBatches={resultsBatches}
+                selectedResultBatch={selectedResultsBatch}
+                setSelectedResultBatch={setSelectedResultsBatch}
                 resultExams={resultExams}
-                selectedResultExam={selectedResultExam}
-                setSelectedResultExam={setSelectedResultExam}
+                handleViewPeerResults={handleViewPeerResults}
               />
             </div>
           )}
@@ -914,6 +950,12 @@ const fetchResults = async () => {
           handleTAEvaluationUpdate={handleTAEvaluationUpdate}
         />
       )}
+      <PeerResultOverlay
+        isPeerResultOverlayOpen={isPeerResultOverlayOpen}
+        closePeerResultOverlay={closePeerResultOverlay}
+        selectedExamForPeerResult={selectedExamForPeerResult}
+        peerResultsForExam={peerResultsForExam}
+      />
     </div>
   );
 }

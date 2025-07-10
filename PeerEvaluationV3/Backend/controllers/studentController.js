@@ -372,3 +372,70 @@ export const submitEvaluation = async (req, res) => {
     res.status(500).json({ message: "Failed to submit evaluation!" });
   }
 };
+
+export const getResultsBatches = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const enrollments = await Enrollment.find({ student: userId, status: 'active' })
+      .populate({
+        path: 'batch',
+        populate: { path: 'course', select: 'courseName' }
+      });
+    
+    const batches = enrollments.map(enrollment => ({
+      batch_id: enrollment.batch._id,
+      batchId: enrollment.batch.batchId,
+      courseName: enrollment.batch.course?.courseName || 'Unknown Course'
+    }));
+    
+    res.json(batches);
+  } catch (error) {
+    res.status(500).json({ message: 'Failed to fetch batches!' });
+  }
+};
+
+export const getResultsBatchExams = async (req, res) => {
+  try {
+    const { batchId } = req.params;
+    const userId = req.user._id;
+
+    const batch = await Batch.findById({ _id: batchId });
+    if (!batch) return res.status(404).json({ message: 'Batch not found!' });
+    
+    const enrollment = await Enrollment.findOne({ 
+      student: userId, 
+      batch: batchId, 
+      status: 'active' 
+    });
+    if (!enrollment) return res.status(403).json({ message: 'Not enrolled in this batch!' });
+    
+    const exams = await Examination.find({ 
+      batch: batchId, 
+      evaluations_sent: true,
+      flags: true
+    });
+    
+    res.json(exams);
+  } catch (error) {
+    res.status(500).json({ message: 'Failed to fetch exams!' });
+  }
+};
+
+export const getPeerResultsEvaluations = async (req, res) => {
+  try {
+    const { examId } = req.params;
+    const userId = req.user._id;
+    
+    const peerEvaluations = await PeerEvaluation.find({
+      exam: examId,
+      student: userId
+    }).populate('document')
+    .populate('evaluator')
+    .populate('student');
+  
+    console.log('Peer Evaluations:', peerEvaluations);
+    res.json(peerEvaluations);
+  } catch (error) {
+    res.status(500).json({ message: 'Failed to fetch peer evaluations.' });
+  }
+};
